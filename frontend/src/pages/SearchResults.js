@@ -1,215 +1,221 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 
+// ── DESIGN TOKENS (matches Home.js) ──────────────────────────────────────────
+const C = {
+  bg:      '#0a0a0a',
+  surface: '#111111',
+  border:  '#1c1c1c',
+  bHov:    '#2e2e2e',
+  faint:   '#242424',
+  cream:   '#f0ece4',
+  muted:   '#606060',
+  gold:    '#c9a84c',
+};
+
+// ── DATA ──────────────────────────────────────────────────────────────────────
 const allProducts = [
-  {
-    id: 1,
-    name: 'Distressed Artisanal Denim',
-    price: '$450',
-    desc: 'Hand-painted Limited Edition',
-    category: 'Fashion',
-    tag: 'CUSTOM ORDER',
-    tagColor: 'bg-yellow-400 text-black',
-    img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=400',
-    path: '/product/distressed-artisanal-denim',
-  },
-  {
-    id: 2,
-    name: 'Linen Riviera Set',
-    price: '$320',
-    desc: 'Heritage Collection',
-    category: 'Fashion',
-    tag: 'READY-MADE',
-    tagColor: 'bg-gray-700 text-white',
-    img: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=400',
-    path: '/product/linen-riviera-set',
-  },
-  {
-    id: 3,
-    name: 'Gold-Infused Obsidian Beads',
-    price: '$185',
-    desc: 'Hand-threaded Jewelry',
-    category: 'Beads',
-    tag: '',
-    tagColor: '',
-    img: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400',
-    path: '/product/gold-infused-obsidian-beads',
-  },
-  {
-    id: 4,
-    name: 'Vanguard Teak Chair',
-    price: '$1,200',
-    desc: 'Bespoke Furniture Line',
-    category: 'Furniture',
-    tag: 'CUSTOM ORDER',
-    tagColor: 'bg-yellow-400 text-black',
-    img: 'https://images.unsplash.com/photo-1592078615290-033ee584e267?w=400',
-    path: '/product/vanguard-teak-chair',
-  },
-  {
-    id: 5,
-    name: 'Midnight Velvet Blazer',
-    price: '$590',
-    desc: 'Premium After-hours Wear',
-    category: 'Fashion',
-    tag: '',
-    tagColor: '',
-    img: 'https://images.unsplash.com/photo-1551537482-f2075a1d41f2?w=400',
-    path: '/product/midnight-velvet-blazer',
-  },
-  {
-    id: 6,
-    name: 'Monarch Carry-all',
-    price: '$780',
-    desc: 'Full-grain Leather Accessory',
-    category: 'Fashion',
-    tag: 'BESPOKE ONLY',
-    tagColor: 'bg-yellow-400 text-black',
-    img: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=400',
-    path: '/product/monarch-carry-all',
-  },
-  {
-    id: 7,
-    name: 'Ancestral Pulse Bracelet',
-    price: '$95',
-    desc: 'Heritage Beadwork',
-    category: 'Beads',
-    tag: 'ARTISANAL',
-    tagColor: 'bg-orange-600 text-white',
-    img: 'https://images.unsplash.com/photo-1573408301185-9519f94816b5?w=400',
-    path: '/product/gold-infused-obsidian-beads',
-  },
-  {
-    id: 8,
-    name: 'Obsidian Throne Chair',
-    price: '$850',
-    desc: 'Matte Carbon / Brass',
-    category: 'Furniture',
-    tag: 'LIMITED',
-    tagColor: 'bg-gray-700 text-white',
-    img: 'https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?w=400',
-    path: '/product/vanguard-teak-chair',
-  },
-  {
-    id: 9,
-    name: 'Solar Flare Chair',
-    price: '$675',
-    desc: 'Sculpted Resin / Yellow',
-    category: 'Furniture',
-    tag: '',
-    tagColor: '',
-    img: 'https://images.unsplash.com/photo-1592078615290-033ee584e267?w=400',
-    path: '/product/vanguard-teak-chair',
-  },
+  { id: 1,  name: 'Distressed Artisanal Denim', price: 'KSH 58,000',  desc: 'Hand-painted Limited Edition',   category: 'Fashion',   tag: 'Custom Order', img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=500',  slug: 'distressed-artisanal-denim'  },
+  { id: 2,  name: 'Linen Riviera Set',           price: 'KSH 42,000',  desc: 'Heritage Collection',            category: 'Fashion',   tag: 'Ready-Made',   img: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=500', slug: 'linen-riviera-set'            },
+  { id: 3,  name: 'Gold-Infused Obsidian Beads', price: 'KSH 24,000',  desc: 'Hand-threaded Jewelry',          category: 'Beads',     tag: 'Artisanal',    img: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=500',  slug: 'gold-infused-obsidian-beads' },
+  { id: 4,  name: 'Vanguard Teak Chair',         price: 'KSH 138,000', desc: 'Bespoke Furniture Line',         category: 'Furniture', tag: 'Custom Order', img: 'https://images.unsplash.com/photo-1592078615290-033ee584e267?w=500',  slug: 'vanguard-teak-chair'         },
+  { id: 5,  name: 'Midnight Velvet Blazer',      price: 'KSH 72,000',  desc: 'Premium After-hours Wear',       category: 'Fashion',   tag: 'Limited',      img: 'https://images.unsplash.com/photo-1551537482-f2075a1d41f2?w=500',    slug: 'midnight-velvet-blazer'      },
+  { id: 6,  name: 'Monarch Carry-all',           price: 'KSH 98,000',  desc: 'Full-grain Leather Accessory',   category: 'Fashion',   tag: 'Bespoke Only', img: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=500',    slug: 'monarch-carry-all'           },
+  { id: 7,  name: 'Ancestral Pulse Bracelet',    price: 'KSH 12,500',  desc: 'Heritage Beadwork',              category: 'Beads',     tag: 'Artisanal',    img: 'https://images.unsplash.com/photo-1573408301185-9519f94816b5?w=500',  slug: 'gold-infused-obsidian-beads' },
+  { id: 8,  name: 'Obsidian Throne Chair',       price: 'KSH 108,000', desc: 'Matte Carbon / Brass',           category: 'Furniture', tag: 'Limited',      img: 'https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?w=500',  slug: 'vanguard-teak-chair'         },
+  { id: 9,  name: 'Solar Flare Side Table',      price: 'KSH 85,000',  desc: 'Sculpted Resin / Yellow',        category: 'furniture', tag: '',             img: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=500',    slug: 'vanguard-teak-chair'         },
+  { id: 10, name: 'Kente Bead Stack',            price: 'KSH 18,000',  desc: 'Handwoven Heritage Piece',       category: 'Beads',     tag: 'New',          img: 'https://images.unsplash.com/photo-1611085583191-a3b181a88401?w=500',  slug: 'gold-infused-obsidian-beads' },
+  { id: 11, name: 'Old Money Camel Overcoat',    price: 'KSH 42,000',  desc: 'Understated Luxury',             category: 'Fashion',   tag: 'Ready-Made',   img: 'https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=500',  slug: 'distressed-artisanal-denim'  },
+  { id: 12, name: 'Magma Coffee Table',          price: 'KSH 96,000',  desc: 'Cast Iron & Reclaimed Wood',     category: 'Furniture', tag: 'Custom Order', img: 'https://images.unsplash.com/photo-1493106819501-8f9e5ce02e5d?w=500',  slug: 'vanguard-teak-chair'         },
 ];
 
-const styles = ['Old Money', 'Denim', 'Minimalist', 'Avant-garde', 'Eco-Luxury'];
-const categories = ['All', 'Fashion', 'Furniture', 'Beads'];
+const aiRecommended = [1, 3, 5, 11]; // IDs of AI-recommended products
+const categories  = ['All', 'Fashion', 'Furniture', 'Beads'];
+const sortOptions = ['Latest Drop', 'Price: Low to High', 'Price: High to Low', 'Most Popular', 'AI Recommended'];
 const popularTags = ['Denim', 'Custom Order', 'Beads', 'Furniture', 'Old Money', 'Limited Edition'];
 
+// ── COMPONENT ─────────────────────────────────────────────────────────────────
 const SearchResults = () => {
-  const [searchParams] = useSearchParams();
-  const query = searchParams.get('q') || '';
-  const navigate = useNavigate();
+  const [searchParams]  = useSearchParams();
+  const query           = searchParams.get('q') || '';
+  const navigate        = useNavigate();
+  const fileInputRef    = useRef(null);
 
-  const [searchInput, setSearchInput] = useState(query);
+  const [searchInput, setSearchInput]       = useState(query);
   const [activeCategory, setActiveCategory] = useState('All');
-  const [availability, setAvailability] = useState({
-    readyMade: true,
-    customOrders: false,
-  });
-  const [activeStyles, setActiveStyles] = useState(['Denim']);
-  const [sortBy, setSortBy] = useState('Latest Drop');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [wishlist, setWishlist] = useState([]);
+  const [sortBy, setSortBy]                 = useState('Latest Drop');
+  const [wishlist, setWishlist]             = useState([]);
+  const [priceMax, setPriceMax]             = useState(200000);
+  const [currentPage, setCurrentPage]       = useState(1);
+  const [searchMode, setSearchMode]         = useState('text'); // 'text' | 'visual'
+  const [uploadedImage, setUploadedImage]   = useState(null);
+  const [isAnalyzing, setIsAnalyzing]       = useState(false);
+  const [showAIBadge, setShowAIBadge]       = useState(false);
+  const [availability, setAvailability]     = useState({ readyMade: true, customOrders: true });
 
   const handleSearch = (e) => {
-    if (e.key === 'Enter' && searchInput.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchInput.trim())}`);
-    }
+    e.preventDefault();
+    if (searchInput.trim()) navigate(`/search?q=${encodeURIComponent(searchInput.trim())}`);
   };
 
-  const handleSearchClick = () => {
-    if (searchInput.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchInput.trim())}`);
-    }
+  const toggleWishlist = (id) =>
+    setWishlist(p => p.includes(id) ? p.filter(i => i !== id) : [...p, id]);
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setUploadedImage(ev.target.result);
+      setSearchMode('visual');
+      setIsAnalyzing(true);
+      // Simulate AI analysis
+      setTimeout(() => {
+        setIsAnalyzing(false);
+        setShowAIBadge(true);
+        setSortBy('AI Recommended');
+      }, 2200);
+    };
+    reader.readAsDataURL(file);
   };
 
-  const toggleWishlist = (name) => {
-    setWishlist(prev =>
-      prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]
-    );
+  const clearVisualSearch = () => {
+    setUploadedImage(null);
+    setSearchMode('text');
+    setShowAIBadge(false);
+    setSortBy('Latest Drop');
   };
 
-  const toggleStyle = (style) => {
-    setActiveStyles(prev =>
-      prev.includes(style) ? prev.filter(s => s !== style) : [...prev, style]
-    );
-  };
-
-  const filteredProducts = allProducts.filter(p => {
-    const matchesQuery =
-      query === '' ||
-      p.name.toLowerCase().includes(query.toLowerCase()) ||
-      p.category.toLowerCase().includes(query.toLowerCase()) ||
-      p.desc.toLowerCase().includes(query.toLowerCase());
-    const matchesCategory =
-      activeCategory === 'All' || p.category === activeCategory;
-    return matchesQuery && matchesCategory;
+  // Filter
+  const priceToNum = (p) => parseInt(p.replace(/[^0-9]/g, ''), 10);
+  const filtered = allProducts.filter(p => {
+    const matchQ    = query === '' || p.name.toLowerCase().includes(query.toLowerCase()) || p.category.toLowerCase().includes(query.toLowerCase()) || p.desc.toLowerCase().includes(query.toLowerCase());
+    const matchCat  = activeCategory === 'All' || p.category.toLowerCase() === activeCategory.toLowerCase();
+    const matchPrice= priceToNum(p.price) <= priceMax;
+    const matchAvail= (availability.readyMade && p.tag !== 'Custom Order' && p.tag !== 'Bespoke Only') || (availability.customOrders && (p.tag === 'Custom Order' || p.tag === 'Bespoke Only')) || (availability.readyMade && availability.customOrders);
+    return matchQ && matchCat && matchPrice;
   });
 
+  const sorted = [...filtered].sort((a, b) => {
+    if (sortBy === 'Price: Low to High') return priceToNum(a.price) - priceToNum(b.price);
+    if (sortBy === 'Price: High to Low') return priceToNum(b.price) - priceToNum(a.price);
+    if (sortBy === 'AI Recommended') return (aiRecommended.includes(b.id) ? 1 : 0) - (aiRecommended.includes(a.id) ? 1 : 0);
+    return 0;
+  });
+
+  const perPage = 9;
+  const totalPages = Math.ceil(sorted.length / perPage);
+  const paginated = sorted.slice((currentPage - 1) * perPage, currentPage * perPage);
+
   return (
-    <div className="min-h-screen text-white" style={{ backgroundColor: '#1a1500' }}>
+    <div style={{ backgroundColor: C.bg, color: C.cream, minHeight: '100vh' }}>
 
-      {/* SEARCH BAR SECTION */}
-      <div
-        className="border-b border-yellow-900 px-8 py-6"
-        style={{ backgroundColor: '#1a1500' }}
-      >
-        <div className="max-w-7xl mx-auto">
+      {/* ── SEARCH BAR ──────────────────────────────────────────────────────── */}
+      <div style={{ backgroundColor: C.surface, borderBottom: `1px solid ${C.border}`, padding: '24px 48px' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
 
-          {/* Search Input Row */}
-          <div className="flex items-center gap-4">
-            <div
-              className="flex-1 flex items-center gap-3 border border-gray-700 rounded-xl px-5 py-4 focus-within:border-yellow-400 transition"
-              style={{ backgroundColor: '#2a2000' }}
-            >
-              <span className="text-yellow-400 text-xl">🔍</span>
-              <input
-                type="text"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                onKeyDown={handleSearch}
-                placeholder="Search products, categories, styles..."
-                className="bg-transparent text-white text-base focus:outline-none w-full placeholder-gray-600"
-                autoFocus
-              />
-              {searchInput && (
-                <button
-                  onClick={() => setSearchInput('')}
-                  className="text-gray-500 hover:text-white text-sm transition"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-            <button
-              onClick={handleSearchClick}
-              className="bg-yellow-400 text-black px-8 py-4 rounded-xl font-black text-sm hover:bg-yellow-500 transition uppercase tracking-wide"
-            >
-              Search
-            </button>
+          {/* Mode toggle */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+            {[
+              { mode: 'text',   label: 'Text Search' },
+              { mode: 'visual', label: 'Visual Search (AI)' },
+            ].map(({ mode, label }) => (
+              <button key={mode} onClick={() => setSearchMode(mode)}
+                style={{ padding: '6px 16px', borderRadius: 100, fontSize: 11, fontWeight: 900, letterSpacing: '0.06em', border: `1px solid ${searchMode === mode ? C.gold : C.border}`, backgroundColor: searchMode === mode ? 'rgba(201,168,76,0.1)' : 'transparent', color: searchMode === mode ? C.gold : C.muted, cursor: 'pointer', transition: 'all 0.2s' }}>
+                {label}
+              </button>
+            ))}
           </div>
 
-          {/* Popular Tags */}
-          <div className="flex items-center gap-3 mt-4 flex-wrap">
-            <span className="text-gray-600 text-xs uppercase tracking-wide">Popular:</span>
-            {popularTags.map((tag) => (
-              <button
-                key={tag}
-                onClick={() => navigate(`/search?q=${encodeURIComponent(tag)}`)}
-                className="border border-gray-700 text-gray-400 text-xs px-3 py-1 rounded-full hover:border-yellow-400 hover:text-yellow-400 transition"
-              >
+          {searchMode === 'text' ? (
+            /* Text search */
+            <form onSubmit={handleSearch} style={{ display: 'flex', gap: 10, maxWidth: 720 }}>
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, border: `1px solid ${C.border}`, borderRadius: 12, padding: '13px 16px', backgroundColor: C.bg }}>
+                <svg width={14} height={14} fill="none" stroke={C.muted} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input value={searchInput} onChange={e => setSearchInput(e.target.value)} placeholder="Search products, categories, styles..."
+                  style={{ background: 'none', border: 'none', outline: 'none', color: C.cream, fontSize: 14, width: '100%' }} autoFocus />
+                {searchInput && (
+                  <button type="button" onClick={() => setSearchInput('')} style={{ background: 'none', border: 'none', color: C.muted, cursor: 'pointer', fontSize: 14 }}>✕</button>
+                )}
+              </div>
+              <button type="submit" style={{ backgroundColor: C.gold, color: '#000', border: 'none', borderRadius: 12, padding: '13px 24px', fontWeight: 900, fontSize: 13, cursor: 'pointer', letterSpacing: '0.04em' }}>
+                Search
+              </button>
+            </form>
+          ) : (
+            /* Visual search */
+            <div style={{ maxWidth: 720 }}>
+              {!uploadedImage ? (
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{ border: `2px dashed ${C.border}`, borderRadius: 14, padding: '40px 24px', textAlign: 'center', cursor: 'pointer', backgroundColor: C.bg, transition: 'border-color 0.2s' }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = C.gold}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
+                >
+                  <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
+                  <div style={{ width: 52, height: 52, borderRadius: 12, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                    <svg width={22} height={22} fill="none" stroke={C.gold} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <p style={{ color: C.cream, fontWeight: 900, fontSize: 14, marginBottom: 6 }}>Upload an image to find similar products</p>
+                  <p style={{ color: C.muted, fontSize: 12, lineHeight: 1.6, maxWidth: 320, margin: '0 auto' }}>
+                    Our AI will analyse your image and find artisan pieces with similar style, colour, and form.
+                  </p>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 20, backgroundColor: C.gold, color: '#000', padding: '10px 20px', borderRadius: 10, fontWeight: 900, fontSize: 12 }}>
+                    <svg width={13} height={13} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    Choose Image
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 14, padding: 16 }}>
+                  <div style={{ position: 'relative', width: 100, height: 100, borderRadius: 10, overflow: 'hidden', flexShrink: 0 }}>
+                    <img src={uploadedImage} alt="uploaded" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    {isAnalyzing && (
+                      <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ width: 24, height: 24, border: `2px solid ${C.gold}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    {isAnalyzing ? (
+                      <>
+                        <p style={{ color: C.cream, fontWeight: 900, fontSize: 13, marginBottom: 6 }}>Analysing your image...</p>
+                        <p style={{ color: C.muted, fontSize: 12 }}>Our AI is scanning for style, colour, and form matches across 2,400+ artisan pieces.</p>
+                        <div style={{ marginTop: 12, height: 3, backgroundColor: C.faint, borderRadius: 2, overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: '70%', backgroundColor: C.gold, borderRadius: 2, animation: 'progress 2s ease-in-out' }} />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                          <p style={{ color: C.cream, fontWeight: 900, fontSize: 13 }}>Visual match complete</p>
+                          <span style={{ backgroundColor: 'rgba(201,168,76,0.15)', color: C.gold, fontSize: 10, fontWeight: 900, padding: '3px 8px', borderRadius: 100, border: `1px solid ${C.gold}`, letterSpacing: '0.08em' }}>AI</span>
+                        </div>
+                        <p style={{ color: C.muted, fontSize: 12, marginBottom: 12 }}>Showing {sorted.length} visually similar artisan pieces, ranked by AI match score.</p>
+                        <button onClick={clearVisualSearch} style={{ backgroundColor: 'transparent', border: `1px solid ${C.border}`, color: C.muted, padding: '6px 14px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                          Clear & search again
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Popular tags */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
+            <span style={{ color: C.muted, fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Popular:</span>
+            {popularTags.map(tag => (
+              <button key={tag} onClick={() => navigate(`/search?q=${encodeURIComponent(tag)}`)}
+                style={{ border: `1px solid ${C.border}`, color: C.muted, fontSize: 11, padding: '4px 12px', borderRadius: 100, backgroundColor: 'transparent', cursor: 'pointer', transition: 'all 0.2s', fontWeight: 600 }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = C.gold; e.currentTarget.style.color = C.gold; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.muted; }}>
                 {tag}
               </button>
             ))}
@@ -217,240 +223,167 @@ const SearchResults = () => {
         </div>
       </div>
 
-      {/* MAIN CONTENT */}
-      <div className="max-w-7xl mx-auto px-8 py-8 flex gap-8">
+      {/* ── MAIN CONTENT ────────────────────────────────────────────────────── */}
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '40px 48px', display: 'flex', gap: 40 }}>
 
         {/* SIDEBAR */}
-        <div className="w-56 flex-shrink-0">
-
-          {/* Back to Home */}
-          <Link
-            to="/"
-            className="flex items-center gap-2 text-yellow-400 text-xs font-black uppercase tracking-wide mb-8 hover:text-yellow-300 transition"
-          >
+        <div style={{ width: 200, flexShrink: 0 }}>
+          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 6, color: C.gold, fontSize: 11, fontWeight: 900, textDecoration: 'none', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 32 }}>
             ← Back to Home
           </Link>
 
           {/* Categories */}
-          <div className="mb-8">
-            <h3 className="text-yellow-400 text-xs font-black uppercase tracking-widest mb-4">
-              Categories
-            </h3>
-            {[
-              { name: 'All', icon: '🔥' },
-              { name: 'Fashion', icon: '👔' },
-              { name: 'Furniture', icon: '🪑' },
-              { name: 'Beads', icon: '💎' },
-            ].map((cat) => (
-              <div
-                key={cat.name}
-                onClick={() => setActiveCategory(cat.name)}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg mb-1 cursor-pointer transition ${
-                  activeCategory === cat.name
-                    ? 'bg-yellow-400 bg-opacity-20 border border-yellow-400'
-                    : 'hover:bg-white hover:bg-opacity-5'
-                }`}
-              >
-                <span className="text-sm">{cat.icon}</span>
-                <span className={`text-sm font-semibold ${
-                  activeCategory === cat.name ? 'text-yellow-400' : 'text-gray-400'
-                }`}>
-                  {cat.name}
-                </span>
+          <div style={{ marginBottom: 32 }}>
+            <p style={{ color: C.muted, fontSize: 10, fontWeight: 900, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 14 }}>Categories</p>
+            {categories.map(cat => (
+              <div key={cat} onClick={() => setActiveCategory(cat)}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, marginBottom: 2, cursor: 'pointer', backgroundColor: activeCategory === cat ? 'rgba(201,168,76,0.08)' : 'transparent', border: `1px solid ${activeCategory === cat ? C.gold : 'transparent'}`, transition: 'all 0.2s' }}>
+                <span style={{ color: activeCategory === cat ? C.gold : C.muted, fontSize: 13, fontWeight: 700 }}>{cat}</span>
               </div>
             ))}
           </div>
 
           {/* Availability */}
-          <div className="mb-8">
-            <h3 className="text-yellow-400 text-xs font-black uppercase tracking-widest mb-4">
-              Availability
-            </h3>
-            {[
-              { key: 'readyMade', label: 'Ready-made' },
-              { key: 'customOrders', label: 'Custom Orders' },
-            ].map((item) => (
-              <div
-                key={item.key}
-                className="flex items-center gap-3 mb-3 cursor-pointer"
-                onClick={() => setAvailability(prev => ({
-                  ...prev,
-                  [item.key]: !prev[item.key],
-                }))}
-              >
-                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition ${
-                  availability[item.key]
-                    ? 'bg-yellow-400 border-yellow-400'
-                    : 'border-gray-600'
-                }`}>
-                  {availability[item.key] && (
-                    <span className="text-black text-xs font-black">✓</span>
-                  )}
+          <div style={{ marginBottom: 32 }}>
+            <p style={{ color: C.muted, fontSize: 10, fontWeight: 900, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 14 }}>Availability</p>
+            {[{ key: 'readyMade', label: 'Ready-made' }, { key: 'customOrders', label: 'Custom Orders' }].map(({ key, label }) => (
+              <div key={key} onClick={() => setAvailability(p => ({ ...p, [key]: !p[key] }))}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, cursor: 'pointer' }}>
+                <div style={{ width: 16, height: 16, borderRadius: 4, border: `1px solid ${availability[key] ? C.gold : C.border}`, backgroundColor: availability[key] ? 'rgba(201,168,76,0.2)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.2s' }}>
+                  {availability[key] && <span style={{ color: C.gold, fontSize: 10, fontWeight: 900 }}>✓</span>}
                 </div>
-                <span className="text-gray-400 text-sm">{item.label}</span>
+                <span style={{ color: C.muted, fontSize: 12 }}>{label}</span>
               </div>
             ))}
           </div>
 
           {/* Price Range */}
-          <div className="mb-8">
-            <h3 className="text-yellow-400 text-xs font-black uppercase tracking-widest mb-4">
-              Price Range
-            </h3>
-            <input
-              type="range"
-              min="50"
-              max="2500"
-              defaultValue="800"
-              className="w-full accent-yellow-400"
-            />
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>$50</span>
-              <span>$2,500+</span>
+          <div style={{ marginBottom: 32 }}>
+            <p style={{ color: C.muted, fontSize: 10, fontWeight: 900, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 14 }}>Price Range</p>
+            <input type="range" min={5000} max={200000} step={5000} value={priceMax} onChange={e => setPriceMax(Number(e.target.value))}
+              style={{ width: '100%', accentColor: C.gold }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+              <span style={{ color: C.muted, fontSize: 11 }}>KSH 5K</span>
+              <span style={{ color: C.gold, fontSize: 11, fontWeight: 900 }}>KSH {(priceMax / 1000).toFixed(0)}K</span>
             </div>
           </div>
 
-          {/* Styles */}
-          <div>
-            <h3 className="text-yellow-400 text-xs font-black uppercase tracking-widest mb-4">
-              Styles
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {styles.map((style) => (
-                <button
-                  key={style}
-                  onClick={() => toggleStyle(style)}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold transition ${
-                    activeStyles.includes(style)
-                      ? 'bg-yellow-400 text-black'
-                      : 'border border-gray-700 text-gray-400 hover:border-yellow-400'
-                  }`}
-                >
-                  {style}
-                </button>
-              ))}
+          {/* AI Features callout */}
+          <div style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <span style={{ backgroundColor: 'rgba(201,168,76,0.15)', color: C.gold, fontSize: 9, fontWeight: 900, padding: '3px 8px', borderRadius: 100, border: `1px solid rgba(201,168,76,0.3)`, letterSpacing: '0.1em' }}>AI</span>
+              <p style={{ color: C.cream, fontWeight: 900, fontSize: 12 }}>Smart Recommendations</p>
             </div>
+            <p style={{ color: C.muted, fontSize: 11, lineHeight: 1.6, marginBottom: 12 }}>
+              Let our AI suggest pieces based on your browsing history and style preferences.
+            </p>
+            <button onClick={() => setSortBy('AI Recommended')}
+              style={{ width: '100%', backgroundColor: 'transparent', border: `1px solid ${C.border}`, color: C.cream, padding: '8px', borderRadius: 8, fontSize: 11, fontWeight: 900, cursor: 'pointer', letterSpacing: '0.04em' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = C.gold; e.currentTarget.style.color = C.gold; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.cream; }}>
+              Show AI Picks →
+            </button>
           </div>
         </div>
 
-        {/* PRODUCTS SECTION */}
-        <div className="flex-1">
+        {/* PRODUCTS */}
+        <div style={{ flex: 1 }}>
 
-          {/* Header */}
-          <div className="flex justify-between items-start mb-6">
+          {/* Header row */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 24 }}>
             <div>
-              <p className="text-gray-500 text-xs mb-2 uppercase tracking-wide">
-                Home › Search Results
-              </p>
-              <h1 className="text-2xl font-black">
-                {query
-                  ? <>Results for "<span className="text-yellow-400">{query}</span>"</>
-                  : 'All Products'
-                }
+              <p style={{ color: C.muted, fontSize: 11, letterSpacing: '0.08em', marginBottom: 6 }}>Home › Search Results</p>
+              <h1 style={{ color: C.cream, fontWeight: 900, fontSize: 22, letterSpacing: '-0.01em' }}>
+                {query ? <>Results for "<span style={{ color: C.gold }}>{query}</span>"</> : 'All Products'}
               </h1>
-              <p className="text-gray-500 text-sm mt-1">
-                Showing {filteredProducts.length} pieces
-              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
+                <p style={{ color: C.muted, fontSize: 12 }}>Showing {sorted.length} pieces</p>
+                {showAIBadge && (
+                  <span style={{ backgroundColor: 'rgba(201,168,76,0.12)', color: C.gold, fontSize: 10, fontWeight: 900, padding: '3px 10px', borderRadius: 100, border: `1px solid rgba(201,168,76,0.3)`, letterSpacing: '0.1em' }}>
+                    AI VISUAL MATCH
+                  </span>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-gray-500 text-sm">Sort by:</span>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="border border-gray-700 text-white text-sm px-3 py-2 rounded-lg focus:outline-none focus:border-yellow-400"
-                style={{ backgroundColor: '#2a2000' }}
-              >
-                <option>Latest Drop</option>
-                <option>Price: Low to High</option>
-                <option>Price: High to Low</option>
-                <option>Most Popular</option>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ color: C.muted, fontSize: 12 }}>Sort:</span>
+              <select value={sortBy} onChange={e => setSortBy(e.target.value)}
+                style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, color: C.cream, fontSize: 12, padding: '8px 12px', borderRadius: 8, outline: 'none', cursor: 'pointer' }}>
+                {sortOptions.map(o => <option key={o} value={o} style={{ backgroundColor: C.surface }}>{o}</option>)}
               </select>
             </div>
           </div>
 
-          {/* Category Quick Tabs */}
-          <div className="flex gap-3 mb-6">
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className={`px-4 py-2 rounded-full text-xs font-black transition ${
-                  activeCategory === cat
-                    ? 'bg-yellow-400 text-black'
-                    : 'border border-gray-700 text-gray-400 hover:border-yellow-400 hover:text-yellow-400'
-                }`}
-              >
+          {/* Category tabs */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 28 }}>
+            {categories.map(cat => (
+              <button key={cat} onClick={() => setActiveCategory(cat)}
+                style={{ padding: '7px 16px', borderRadius: 100, fontSize: 11, fontWeight: 900, letterSpacing: '0.04em', border: `1px solid ${activeCategory === cat ? C.gold : C.border}`, backgroundColor: activeCategory === cat ? 'rgba(201,168,76,0.1)' : 'transparent', color: activeCategory === cat ? C.gold : C.muted, cursor: 'pointer', transition: 'all 0.2s' }}>
                 {cat}
               </button>
             ))}
           </div>
 
-          {/* Products Grid */}
-          {filteredProducts.length > 0 ? (
-            <div className="grid grid-cols-3 gap-5 mb-10">
-              {filteredProducts.map((product) => (
-                <div
-                  key={product.id}
-                  className="group cursor-pointer"
-                  onClick={() => navigate(product.path)}
-                >
-                  <div
-                    className="relative rounded-xl overflow-hidden mb-3"
-                    style={{ backgroundColor: '#2a2000', height: '260px' }}
-                  >
-                    <img
-                      src={product.img}
-                      alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                    />
+          {/* Grid */}
+          {paginated.length > 0 ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18, marginBottom: 40 }}>
+              {paginated.map(product => (
+                <div key={product.id} onClick={() => navigate(`/product/${product.slug}`)} style={{ cursor: 'pointer' }}>
+                  <div style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', height: 260, backgroundColor: C.surface, border: `1px solid ${aiRecommended.includes(product.id) && sortBy === 'AI Recommended' ? C.gold : C.border}`, marginBottom: 12, transition: 'border-color 0.2s' }}
+                    onMouseEnter={e => e.currentTarget.style.borderColor = C.bHov}
+                    onMouseLeave={e => e.currentTarget.style.borderColor = aiRecommended.includes(product.id) && sortBy === 'AI Recommended' ? C.gold : C.border}>
+                    <img src={product.img} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }}
+                      onMouseEnter={e => e.target.style.transform = 'scale(1.05)'}
+                      onMouseLeave={e => e.target.style.transform = 'scale(1)'} />
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.6), transparent 55%)' }} />
+
+                    {/* Tag */}
                     {product.tag && (
-                      <span className={`absolute bottom-3 left-3 ${product.tagColor} text-xs font-black px-2 py-1 rounded`}>
+                      <span style={{ position: 'absolute', bottom: 12, left: 12, backgroundColor: C.faint, color: C.cream, fontSize: 9, fontWeight: 900, padding: '4px 10px', borderRadius: 100, border: `1px solid ${C.border}`, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                         {product.tag}
                       </span>
                     )}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleWishlist(product.name);
-                      }}
-                      className="absolute top-3 right-3 bg-black bg-opacity-50 rounded-full w-8 h-8 flex items-center justify-center transition hover:bg-opacity-80"
-                    >
-                      <span className={wishlist.includes(product.name) ? 'text-red-400' : 'text-white'}>
-                        {wishlist.includes(product.name) ? '♥' : '♡'}
+
+                    {/* AI badge */}
+                    {aiRecommended.includes(product.id) && sortBy === 'AI Recommended' && (
+                      <span style={{ position: 'absolute', top: 12, left: 12, backgroundColor: 'rgba(201,168,76,0.9)', color: '#000', fontSize: 9, fontWeight: 900, padding: '4px 10px', borderRadius: 100, letterSpacing: '0.1em' }}>
+                        AI PICK
                       </span>
+                    )}
+
+                    {/* Wishlist */}
+                    <button onClick={e => { e.stopPropagation(); toggleWishlist(product.id); }}
+                      style={{ position: 'absolute', top: 12, right: 12, width: 30, height: 30, borderRadius: '50%', backgroundColor: 'rgba(0,0,0,0.5)', border: `1px solid ${C.border}`, cursor: 'pointer', color: wishlist.includes(product.id) ? '#e05c5c' : C.cream, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {wishlist.includes(product.id) ? '♥' : '♡'}
                     </button>
                   </div>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-white font-black text-sm">{product.name}</p>
-                      <p className="text-gray-500 text-xs mt-1">{product.desc}</p>
-                      <span className="inline-block mt-1 text-xs text-yellow-600 uppercase tracking-wide">
-                        {product.category}
-                      </span>
-                    </div>
-                    <p className="text-yellow-400 font-black text-sm ml-2">{product.price}</p>
+                  <p style={{ color: C.cream, fontWeight: 800, fontSize: 13, marginBottom: 3, letterSpacing: '-0.01em' }}>{product.name}</p>
+                  <p style={{ color: C.muted, fontSize: 11, marginBottom: 5 }}>{product.desc}</p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: C.muted, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{product.category}</span>
+                    <span style={{ color: C.gold, fontWeight: 900, fontSize: 13 }}>{product.price}</span>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="text-center py-20">
-              <p className="text-6xl mb-4">🔍</p>
-              <h3 className="text-white font-black text-xl mb-2">No results found</h3>
-              <p className="text-gray-500 text-sm mb-6">
-                We couldn't find anything for "<span className="text-yellow-400">{query}</span>"
+            <div style={{ textAlign: 'center', padding: '80px 0' }}>
+              <div style={{ width: 64, height: 64, borderRadius: 16, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                <svg width={24} height={24} fill="none" stroke={C.muted} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <h3 style={{ color: C.cream, fontWeight: 900, fontSize: 18, marginBottom: 8 }}>No results found</h3>
+              <p style={{ color: C.muted, fontSize: 13, marginBottom: 24 }}>
+                Nothing matched "<span style={{ color: C.cream }}>{query}</span>". Try a different search or browse all products.
               </p>
-              <div className="flex gap-3 justify-center">
-                <button
-                  onClick={() => navigate('/search')}
-                  className="border border-yellow-400 text-yellow-400 px-6 py-3 rounded-lg font-black text-sm hover:bg-yellow-400 hover:text-black transition"
-                >
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                <button onClick={() => navigate('/search')}
+                  style={{ border: `1px solid ${C.border}`, color: C.cream, padding: '12px 24px', borderRadius: 10, fontWeight: 900, fontSize: 12, cursor: 'pointer', backgroundColor: 'transparent' }}>
                   Clear Search
                 </button>
-                <Link
-                  to="/shop"
-                  className="bg-yellow-400 text-black px-6 py-3 rounded-lg font-black text-sm hover:bg-yellow-500 transition"
-                >
+                <Link to="/shop" style={{ backgroundColor: C.gold, color: '#000', padding: '12px 24px', borderRadius: 10, fontWeight: 900, fontSize: 12, textDecoration: 'none' }}>
                   Browse All Products
                 </Link>
               </div>
@@ -458,87 +391,45 @@ const SearchResults = () => {
           )}
 
           {/* Pagination */}
-          {filteredProducts.length > 0 && (
-            <div className="flex justify-center items-center gap-2">
-              <button className="w-8 h-8 rounded-full border border-gray-700 text-gray-400 hover:border-yellow-400 hover:text-yellow-400 transition text-sm">
-                ‹
-              </button>
-              {[1, 2, 3].map((page) => (
-                <button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  className={`w-8 h-8 rounded-full text-sm font-black transition ${
-                    currentPage === page
-                      ? 'bg-yellow-400 text-black'
-                      : 'border border-gray-700 text-gray-400 hover:border-yellow-400 hover:text-yellow-400'
-                  }`}
-                >
+          {totalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
+              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
+                style={{ width: 32, height: 32, borderRadius: '50%', border: `1px solid ${C.border}`, backgroundColor: 'transparent', color: C.muted, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>‹</button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button key={page} onClick={() => setCurrentPage(page)}
+                  style={{ width: 32, height: 32, borderRadius: '50%', border: `1px solid ${currentPage === page ? C.gold : C.border}`, backgroundColor: currentPage === page ? C.gold : 'transparent', color: currentPage === page ? '#000' : C.muted, fontWeight: 900, fontSize: 12, cursor: 'pointer' }}>
                   {page}
                 </button>
               ))}
-              <span className="text-gray-600 text-sm">...</span>
-              <button
-                onClick={() => setCurrentPage(12)}
-                className={`w-8 h-8 rounded-full text-sm font-black transition ${
-                  currentPage === 12
-                    ? 'bg-yellow-400 text-black'
-                    : 'border border-gray-700 text-gray-400 hover:border-yellow-400 hover:text-yellow-400'
-                }`}
-              >
-                12
-              </button>
-              <button className="w-8 h-8 rounded-full border border-gray-700 text-gray-400 hover:border-yellow-400 hover:text-yellow-400 transition text-sm">
-                ›
-              </button>
+              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}
+                style={{ width: 32, height: 32, borderRadius: '50%', border: `1px solid ${C.border}`, backgroundColor: 'transparent', color: C.muted, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>›</button>
             </div>
           )}
         </div>
       </div>
 
-      {/* FOOTER */}
-      <footer
-        style={{ backgroundColor: '#0d0d00' }}
-        className="border-t border-yellow-900 px-8 py-10 mt-8"
-      >
-        <div className="max-w-7xl mx-auto flex justify-between items-start gap-8 mb-6">
-          <div className="max-w-xs">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="bg-yellow-400 text-black w-6 h-6 rounded flex items-center justify-center text-xs font-black">
-                57
-              </span>
-              <span className="text-white font-black text-sm">57 ARTS & CUSTOMS</span>
-            </div>
-            <p className="text-gray-500 text-sm leading-relaxed">
-              Redefining modern luxury through artisanal craftsmanship and Gen-Z focused aesthetics.
-            </p>
+      {/* ── FOOTER ──────────────────────────────────────────────────────────── */}
+      <footer style={{ backgroundColor: C.surface, borderTop: `1px solid ${C.border}`, padding: '48px', marginTop: 40 }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 6, backgroundColor: C.gold, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 10, color: '#000' }}>57</div>
+            <span style={{ color: C.cream, fontWeight: 900, fontSize: 13 }}>57 ARTS & CUSTOMS</span>
           </div>
-          <div className="flex gap-16">
-            <div>
-              <h4 className="text-white font-black text-xs uppercase tracking-widest mb-4">Explore</h4>
-              {['Collections', 'Custom Orders', 'Collaborations'].map((item) => (
-                <p key={item} className="text-gray-500 text-sm mb-2 hover:text-yellow-400 cursor-pointer transition">
-                  {item}
-                </p>
-              ))}
-            </div>
-            <div>
-              <h4 className="text-white font-black text-xs uppercase tracking-widest mb-4">Support</h4>
-              {['Shipping', 'Sizing Guide', 'Contact'].map((item) => (
-                <p key={item} className="text-gray-500 text-sm mb-2 hover:text-yellow-400 cursor-pointer transition">
-                  {item}
-                </p>
-              ))}
-            </div>
+          <div style={{ display: 'flex', gap: 24 }}>
+            {[['Fashion', '/fashion'], ['Furniture', '/furniture'], ['Beads', '/beads'], ['Custom Orders', '/custom-order']].map(([label, path]) => (
+              <Link key={label} to={path} style={{ color: C.muted, fontSize: 12, textDecoration: 'none' }}
+                onMouseEnter={e => e.target.style.color = C.cream}
+                onMouseLeave={e => e.target.style.color = C.muted}>{label}</Link>
+            ))}
           </div>
-        </div>
-        <div className="border-t border-yellow-900 pt-6 flex justify-between items-center">
-          <p className="text-gray-600 text-xs">© 2024 57 Arts & Customs. All rights reserved.</p>
-          <div className="flex gap-4 text-xs text-gray-600">
-            <span className="hover:text-white cursor-pointer">Privacy Policy</span>
-            <span className="hover:text-white cursor-pointer">Terms of Service</span>
-          </div>
+          <p style={{ color: C.muted, fontSize: 11 }}>© 2024 57 Arts & Customs</p>
         </div>
       </footer>
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes progress { from { width: 0; } to { width: 70%; } }
+      `}</style>
     </div>
   );
 };

@@ -1,398 +1,292 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
+// ── DATA ──────────────────────────────────────────────────────────────────────
+
 const featuredProducts = [
-  {
-    name: 'Obsidian Throne v.2',
-    label: 'FEATURED CUSTOM',
-    price: '$1,250',
-    category: 'Furniture',
-    slug: 'vanguard-teak-chair',
-    img: 'https://images.unsplash.com/photo-1592078615290-033ee584e267?w=600',
-    bg: '#2a3a2a',
-  },
-  {
-    name: 'Midnight Denim Jacket',
-    label: 'LIMITED DROP',
-    price: '$450',
-    category: 'Fashion',
-    slug: 'distressed-artisanal-denim',
-    img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=600',
-    bg: '#2a2a3a',
-  },
-  {
-    name: 'Gold Pulse Beads',
-    label: 'HERITAGE CRAFT',
-    price: '$185',
-    category: 'Beads',
-    slug: 'gold-infused-obsidian-beads',
-    img: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600',
-    bg: '#3a2a1a',
-  },
-  {
-    name: 'Monarch Carry-all',
-    label: 'BESPOKE ONLY',
-    price: '$780',
-    category: 'Fashion',
-    slug: 'monarch-carry-all',
-    img: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=600',
-    bg: '#3a2a2a',
-  },
+  { name: 'Obsidian Throne v.2',  label: 'Featured Custom', price: 'KSH 142,000', category: 'Furniture', slug: 'vanguard-teak-chair',         img: 'https://images.unsplash.com/photo-1592078615290-033ee584e267?w=800' },
+  { name: 'Midnight Denim Jacket',label: 'Limited Drop',    price: 'KSH 58,000',  category: 'Fashion',   slug: 'distressed-artisanal-denim',  img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=800' },
+  { name: 'Gold Pulse Beads',     label: 'Heritage Craft',  price: 'KSH 24,000',  category: 'Beads',     slug: 'gold-infused-obsidian-beads', img: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800' },
+  { name: 'Monarch Carry-all',    label: 'Bespoke Only',    price: 'KSH 98,000',  category: 'Fashion',   slug: 'monarch-carry-all',           img: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=800' },
 ];
 
 const trending = [
-  {
-    name: 'Distressed Artisanal Denim',
-    price: '$450',
-    category: 'Fashion',
-    tag: 'HOT',
-    slug: 'distressed-artisanal-denim',
-    img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=400',
-  },
-  {
-    name: 'Vanguard Teak Chair',
-    price: '$1,200',
-    category: 'Furniture',
-    tag: 'CUSTOM',
-    slug: 'vanguard-teak-chair',
-    img: 'https://images.unsplash.com/photo-1592078615290-033ee584e267?w=400',
-  },
-  {
-    name: 'Gold-Infused Obsidian Beads',
-    price: '$185',
-    category: 'Beads',
-    tag: 'NEW',
-    slug: 'gold-infused-obsidian-beads',
-    img: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400',
-  },
-  {
-    name: 'Midnight Velvet Blazer',
-    price: '$590',
-    category: 'Fashion',
-    tag: 'LIMITED',
-    slug: 'midnight-velvet-blazer',
-    img: 'https://images.unsplash.com/photo-1551537482-f2075a1d41f2?w=400',
-  },
+  { name: 'Distressed Artisanal Denim', price: 'KSH 58,000',  category: 'Fashion',   tag: 'Hot',     slug: 'distressed-artisanal-denim',  img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=500' },
+  { name: 'Vanguard Teak Chair',        price: 'KSH 138,000', category: 'Furniture', tag: 'Custom',  slug: 'vanguard-teak-chair',          img: 'https://images.unsplash.com/photo-1592078615290-033ee584e267?w=500' },
+  { name: 'Gold-Infused Obsidian Beads',price: 'KSH 24,000',  category: 'Beads',     tag: 'New',     slug: 'gold-infused-obsidian-beads',  img: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=500' },
+  { name: 'Midnight Velvet Blazer',     price: 'KSH 72,000',  category: 'Fashion',   tag: 'Limited', slug: 'midnight-velvet-blazer',       img: 'https://images.unsplash.com/photo-1551537482-f2075a1d41f2?w=500' },
 ];
 
 const categories = [
-  {
-    name: 'Fashion',
-    desc: 'Street luxury & bespoke apparel',
-    icon: '👔',
-    path: '/fashion',
-    img: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=400',
-  },
-  {
-    name: 'Furniture',
-    desc: 'Artisanal handcrafted pieces',
-    icon: '🪑',
-    path: '/furniture',
-    img: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400',
-  },
-  {
-    name: 'Beads & Jewelry',
-    desc: 'Heritage tribal collections',
-    icon: '💎',
-    path: '/beads',
-    img: 'https://images.unsplash.com/photo-1611085583191-a3b181a88401?w=400',
-  },
+  { name: 'Fashion',        desc: 'Street luxury & bespoke apparel', path: '/fashion',   count: '1,200+ pieces', img: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=700' },
+  { name: 'Furniture',      desc: 'Artisanal handcrafted pieces',    path: '/furniture', count: '480+ pieces',   img: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=700' },
+  { name: 'Beads & Jewelry',desc: 'Heritage tribal collections',     path: '/beads',     count: '720+ pieces',   img: 'https://images.unsplash.com/photo-1611085583191-a3b181a88401?w=700' },
 ];
+
+const testimonials = [
+  { name: 'Njambi K.',   location: 'Nairobi, Kenya', initials: 'NK', rating: 5, product: 'Custom Kente Blazer',      text: 'I commissioned a custom Kente blazer through 57 Arts. The artisan sent progress photos at every stage. It arrived in 3 weeks and is the most talked-about piece I own.' },
+  { name: 'Kofi Mensah', location: 'Accra, Ghana',   initials: 'KM', rating: 5, product: 'Vanguard Teak Chair',      text: 'The visual search actually works. I uploaded a photo from Pinterest and found three similar teak chairs from local artisans at a fraction of the international price.' },
+  { name: 'Adaeze O.',   location: 'Lagos, Nigeria', initials: 'AO', rating: 5, product: 'Vendor — Aso-Oke Designs', text: 'As a vendor, the AI analytics dashboard changed how I price my pieces. My revenue went up 34% in the first two months after joining.' },
+];
+
+const howItWorks = [
+  { step: '01', title: 'Browse or Upload',      desc: 'Explore artisan pieces or upload an image to find something similar using AI visual search.' },
+  { step: '02', title: 'Customise Your Order',  desc: 'Choose materials, sizes, and colours. Our AI suggests combinations based on your preferences.' },
+  { step: '03', title: 'Connect with Artisans', desc: 'Chat directly with the maker. Get progress updates and track your commission in real time.' },
+  { step: '04', title: 'Receive & Review',      desc: 'Your piece arrives with a certificate of authenticity. Review to help the artisan grow.' },
+];
+
+// ── DESIGN TOKENS ─────────────────────────────────────────────────────────────
+// Deep black base · cream typography · gold used ONLY as a precise accent
+const C = {
+  bg:      '#0a0a0a',   // near-black base
+  surface: '#111111',   // card / section surface
+  border:  '#1c1c1c',   // default border
+  bHov:    '#2e2e2e',   // hover border
+  faint:   '#242424',   // subtle fill
+  cream:   '#f0ece4',   // primary text
+  muted:   '#606060',   // secondary text
+  dim:     '#333333',   // very subtle text / large step numbers
+  gold:    '#c9a84c',   // accent — CTAs, prices, active dots ONLY
+  goldHov: '#deba60',   // gold hover
+};
+
+const s = {
+  // reusable inline styles
+  section:   { maxWidth: 1200, margin: '0 auto', padding: '0 48px' },
+  eyebrow:   { color: C.gold, fontSize: 10, fontWeight: 900, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 10 },
+  h2:        { color: C.cream, fontSize: 36, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.02em', lineHeight: 1 },
+  tag:       { backgroundColor: C.faint, color: C.cream, fontSize: 9, fontWeight: 900, padding: '4px 10px', borderRadius: 100, letterSpacing: '0.12em', textTransform: 'uppercase', border: `1px solid ${C.border}` },
+  btnPrimary:{ backgroundColor: C.cream, color: '#000', padding: '13px 26px', borderRadius: 10, fontWeight: 900, fontSize: 12, textDecoration: 'none', letterSpacing: '0.04em', display: 'inline-block', border: 'none', cursor: 'pointer' },
+  btnGhost:  { backgroundColor: 'transparent', color: C.cream, padding: '13px 26px', borderRadius: 10, fontWeight: 900, fontSize: 12, textDecoration: 'none', border: `1px solid ${C.border}`, letterSpacing: '0.04em', display: 'inline-block', cursor: 'pointer' },
+  btnGold:   { backgroundColor: C.gold, color: '#000', padding: '13px 26px', borderRadius: 10, fontWeight: 900, fontSize: 12, textDecoration: 'none', letterSpacing: '0.04em', display: 'inline-block', border: 'none', cursor: 'pointer' },
+  card:      { backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 16 },
+};
+
+// ── COMPONENT ─────────────────────────────────────────────────────────────────
 
 const Home = () => {
   const navigate = useNavigate();
-  const [currentProduct, setCurrentProduct] = useState(0);
-  const [cartAdded, setCartAdded] = useState(false);
-  const [wishlist, setWishlist] = useState([]);
-  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [current, setCurrent]       = useState(0);
+  const [fading, setFading]         = useState(false);
+  const [wishlist, setWishlist]     = useState([]);
+  const [cartAdded, setCartAdded]   = useState(false);
+  const [activeTesti, setActiveTesti] = useState(0);
+  const [email, setEmail]           = useState('');
+  const [subscribed, setSubscribed] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setCurrentProduct(prev => (prev + 1) % featuredProducts.length);
-        setIsTransitioning(false);
-      }, 300);
-    }, 4000);
-    return () => clearInterval(interval);
+    const t = setInterval(() => {
+      setFading(true);
+      setTimeout(() => { setCurrent(p => (p + 1) % featuredProducts.length); setFading(false); }, 350);
+    }, 4500);
+    return () => clearInterval(t);
   }, []);
 
-  const handleDotClick = (index) => {
-    setIsTransitioning(true);
-    setTimeout(() => {
-      setCurrentProduct(index);
-      setIsTransitioning(false);
-    }, 300);
-  };
+  useEffect(() => {
+    const t = setInterval(() => setActiveTesti(p => (p + 1) % testimonials.length), 5500);
+    return () => clearInterval(t);
+  }, []);
 
-  const handleAddToCart = () => {
-    setCartAdded(true);
-    setTimeout(() => setCartAdded(false), 2000);
-  };
+  const goTo   = (i) => { setFading(true); setTimeout(() => { setCurrent(i); setFading(false); }, 350); };
+  const toggle = (slug) => setWishlist(p => p.includes(slug) ? p.filter(s => s !== slug) : [...p, slug]);
+  const addCart = () => { setCartAdded(true); setTimeout(() => setCartAdded(false), 2000); };
+  const doSearch = (e) => { e.preventDefault(); if (searchQuery.trim()) navigate(`/search?q=${encodeURIComponent(searchQuery)}`); };
+  const doSubscribe = (e) => { e.preventDefault(); if (email) setSubscribed(true); };
 
-  const toggleWishlist = (slug) => {
-    setWishlist(prev =>
-      prev.includes(slug) ? prev.filter(s => s !== slug) : [...prev, slug]
-    );
-  };
-
-  const featured = featuredProducts[currentProduct];
+  const fp = featuredProducts[current];
 
   return (
-    <div className="min-h-screen text-white" style={{ backgroundColor: '#1a1500' }}>
+    <div style={{ backgroundColor: C.bg, color: C.cream, minHeight: '100vh' }}>
 
-      {/* ── HERO ── */}
-      <section
-        style={{ backgroundColor: '#1a1a00', height: 'calc(100vh - 65px)' }}
-        className="relative flex items-center px-8 overflow-hidden"
-      >
-        <div
-          className="absolute inset-0 opacity-5 pointer-events-none"
-          style={{ backgroundImage: 'radial-gradient(circle at 70% 50%, #FFD700, transparent 60%)' }}
-        />
+      {/* ── ANNOUNCEMENT BAR ──────────────────────────────────────────────── */}
+      <div style={{ backgroundColor: C.gold, color: '#000', fontSize: 11, fontWeight: 900, textAlign: 'center', padding: '7px 16px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+        Free shipping on custom orders over KSH 50,000 · M-Pesa accepted · New drop every Friday
+      </div>
 
-        <div className="max-w-6xl mx-auto w-full grid grid-cols-2 gap-10 items-center relative z-10">
+      {/* ── HERO ──────────────────────────────────────────────────────────── */}
+      <section style={{ backgroundColor: C.bg, minHeight: 'calc(100vh - 32px - 65px)', display: 'flex', alignItems: 'center', padding: '80px 0', position: 'relative', overflow: 'hidden' }}>
+        {/* Centre vertical rule — structural, not decorative */}
+        <div style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: 1, backgroundColor: C.border, pointerEvents: 'none' }} />
+
+        <div style={{ ...s.section, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center', position: 'relative', zIndex: 1 }}>
 
           {/* LEFT */}
           <div>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-6 h-px bg-yellow-400" />
-              <span className="text-yellow-400 text-xs font-black uppercase tracking-widest">
-                AI-Powered Multi-Vendor Marketplace
-              </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28 }}>
+              <div style={{ width: 24, height: 1, backgroundColor: C.gold }} />
+              <span style={s.eyebrow}>AI-Powered Multi-Vendor Marketplace</span>
             </div>
-            <h1 className="text-5xl font-black uppercase leading-tight mb-4">
-              Design Your<br />
-              <span className="text-yellow-400 italic">Identity.</span>
+
+            <h1 style={{ fontSize: 'clamp(3rem, 5.5vw, 4.5rem)', fontWeight: 900, lineHeight: 0.95, letterSpacing: '-0.03em', textTransform: 'uppercase', marginBottom: 24 }}>
+              Design<br />Your<br />
+              <em style={{ color: C.gold, fontStyle: 'italic' }}>Identity.</em>
             </h1>
-            <p className="text-gray-400 text-sm leading-relaxed mb-6 max-w-sm">
-              The ultimate multi-vendor hub for Gen Z creators. From bespoke
-              streetwear to artisanal furniture, use our AI tools to visualize
-              and craft your next masterpiece.
+
+            <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.85, maxWidth: 350, marginBottom: 36 }}>
+              The multi-vendor hub for the bold generation. Bespoke streetwear,
+              artisanal furniture, heritage jewellery — commissioned from African
+              makers, powered by AI.
             </p>
-            <div className="flex gap-3 mb-8">
-              <Link
-                to="/custom-order"
-                className="flex items-center gap-2 bg-yellow-400 text-black px-6 py-3 rounded-xl font-black text-sm hover:bg-yellow-500 transition"
-              >
-                ✦ Custom Made
-              </Link>
-              <Link
-                to="/shop"
-                className="flex items-center gap-2 border-2 border-white text-white px-6 py-3 rounded-xl font-black text-sm hover:border-yellow-400 hover:text-yellow-400 transition"
-              >
-                ⊞ Shop Collection
-              </Link>
+
+            {/* Search */}
+            <form onSubmit={doSearch} style={{ display: 'flex', gap: 8, maxWidth: 420, marginBottom: 32 }}>
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, border: `1px solid ${C.border}`, borderRadius: 10, padding: '11px 14px', backgroundColor: C.surface }}>
+                <svg width={13} height={13} fill="none" stroke={C.muted} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search artisan products..." style={{ background: 'none', border: 'none', outline: 'none', color: C.cream, fontSize: 13, width: '100%' }} />
+              </div>
+              <button type="submit" style={{ ...s.btnGold, padding: '11px 18px', borderRadius: 10, fontSize: 12 }}>Search</button>
+            </form>
+
+            {/* CTAs */}
+            <div style={{ display: 'flex', gap: 10, marginBottom: 48 }}>
+              <Link to="/custom-order" style={s.btnPrimary}>Custom Made</Link>
+              <Link to="/shop" style={s.btnGhost}>Shop Collection</Link>
             </div>
-            <div className="flex gap-8 pt-6 border-t border-gray-800">
-              {[
-                { value: '2,400+', label: 'Artisan Products' },
-                { value: '340+',   label: 'Vendors'          },
-                { value: '98%',    label: 'Satisfaction'     },
-              ].map(stat => (
-                <div key={stat.label}>
-                  <p className="text-yellow-400 font-black text-xl">{stat.value}</p>
-                  <p className="text-gray-500 text-xs mt-0.5">{stat.label}</p>
+
+            {/* Stats */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, auto)', gap: 28, paddingTop: 28, borderTop: `1px solid ${C.border}`, width: 'fit-content' }}>
+              {[{ v: '2,400+', l: 'Products' }, { v: '340+', l: 'Vendors' }, { v: '98%', l: 'Satisfaction' }, { v: 'KSH', l: 'M-Pesa Ready' }].map(({ v, l }) => (
+                <div key={l}>
+                  <p style={{ color: C.cream, fontWeight: 900, fontSize: 20, letterSpacing: '-0.02em' }}>{v}</p>
+                  <p style={{ color: C.muted, fontSize: 10, marginTop: 3, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{l}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* RIGHT — Featured Product Card */}
-          <div className="relative">
-            <div
-              className={`rounded-2xl overflow-hidden border border-gray-800 transition-opacity duration-300 ${
-                isTransitioning ? 'opacity-0' : 'opacity-100'
-              }`}
-              style={{ backgroundColor: featured.bg }}
-            >
-              <div
-                className="relative overflow-hidden cursor-pointer"
-                style={{ height: '260px' }}
-                onClick={() => navigate(`/product/${featured.slug}`)}
-              >
-                <img
-                  src={featured.img}
-                  alt={featured.name}
-                  className="w-full h-full object-cover hover:scale-105 transition duration-700"
-                />
-                <div className="absolute top-3 left-3 pointer-events-none">
-                  <span className="bg-yellow-400 text-black text-xs font-black px-3 py-1 rounded-full">
-                    {featured.label}
-                  </span>
-                </div>
-                <button
-                  onClick={e => { e.stopPropagation(); toggleWishlist(featured.slug); }}
-                  className="absolute top-3 right-3 bg-black bg-opacity-50 rounded-full w-9 h-9 flex items-center justify-center hover:bg-opacity-80 transition z-20"
-                >
-                  <span className={wishlist.includes(featured.slug) ? 'text-red-400' : 'text-white'}>
-                    {wishlist.includes(featured.slug) ? '♥' : '♡'}
-                  </span>
+          {/* RIGHT — rotating product card */}
+          <div style={{ position: 'relative' }}>
+            <div style={{ ...s.card, opacity: fading ? 0 : 1, transition: 'opacity 0.35s ease' }}>
+              {/* Image */}
+              <div style={{ height: 310, position: 'relative', overflow: 'hidden', cursor: 'pointer', borderRadius: '16px 16px 0 0' }}
+                onClick={() => navigate(`/product/${fp.slug}`)}>
+                <img src={fp.img} alt={fp.name} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.7s ease' }}
+                  onMouseEnter={e => e.target.style.transform = 'scale(1.04)'}
+                  onMouseLeave={e => e.target.style.transform = 'scale(1)'} />
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 55%)' }} />
+                <span style={{ position: 'absolute', top: 14, left: 14, ...s.tag }}>{fp.label}</span>
+                <button onClick={e => { e.stopPropagation(); toggle(fp.slug); }}
+                  style={{ position: 'absolute', top: 14, right: 14, width: 34, height: 34, borderRadius: '50%', backgroundColor: 'rgba(0,0,0,0.45)', border: `1px solid ${C.border}`, cursor: 'pointer', color: wishlist.includes(fp.slug) ? '#e05c5c' : C.cream, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {wishlist.includes(fp.slug) ? '♥' : '♡'}
                 </button>
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
+                {/* Dots */}
+                <div style={{ position: 'absolute', bottom: 14, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 5 }}>
                   {featuredProducts.map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={e => { e.stopPropagation(); handleDotClick(i); }}
-                      className={`rounded-full transition-all ${
-                        i === currentProduct
-                          ? 'bg-yellow-400 w-5 h-2'
-                          : 'bg-white bg-opacity-50 w-2 h-2'
-                      }`}
-                    />
+                    <button key={i} onClick={e => { e.stopPropagation(); goTo(i); }}
+                      style={{ height: 3, width: i === current ? 18 : 5, borderRadius: 2, backgroundColor: i === current ? C.gold : 'rgba(255,255,255,0.25)', border: 'none', cursor: 'pointer', padding: 0, transition: 'all 0.3s' }} />
                   ))}
                 </div>
               </div>
-              <div className="p-4">
-                <div className="flex justify-between items-start mb-3">
+
+              {/* Body */}
+              <div style={{ padding: 20 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
                   <div>
-                    <p className="text-yellow-400 text-xs font-black uppercase tracking-wide">
-                      {featured.label}
-                    </p>
-                    <h3
-                      className="text-white font-black text-lg cursor-pointer hover:text-yellow-400 transition mt-0.5"
-                      onClick={() => navigate(`/product/${featured.slug}`)}
-                    >
-                      {featured.name}
-                    </h3>
-                    <p className="text-gray-400 text-xs">{featured.category}</p>
+                    <p style={{ color: C.muted, fontSize: 10, fontWeight: 900, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 4 }}>{fp.category}</p>
+                    <h3 style={{ color: C.cream, fontWeight: 900, fontSize: 17, letterSpacing: '-0.01em', cursor: 'pointer' }} onClick={() => navigate(`/product/${fp.slug}`)}>{fp.name}</h3>
                   </div>
-                  <div className="text-right">
-                    <p className="text-gray-400 text-xs">Starting at</p>
-                    <p className="text-yellow-400 font-black text-xl">{featured.price}</p>
+                  <div style={{ textAlign: 'right' }}>
+                    <p style={{ color: C.muted, fontSize: 10, marginBottom: 2 }}>Starting at</p>
+                    <p style={{ color: C.gold, fontWeight: 900, fontSize: 18 }}>{fp.price}</p>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => navigate(`/product/${featured.slug}`)}
-                    className="flex-1 border border-gray-600 text-white py-2.5 rounded-xl font-black text-xs hover:border-yellow-400 hover:text-yellow-400 transition"
-                  >
-                    👁 View Details
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => navigate(`/product/${fp.slug}`)} style={{ flex: 1, padding: 11, borderRadius: 9, border: `1px solid ${C.border}`, backgroundColor: 'transparent', color: C.cream, fontWeight: 900, fontSize: 12, cursor: 'pointer', letterSpacing: '0.03em' }}>
+                    View Details
                   </button>
-                  <button
-                    onClick={handleAddToCart}
-                    className={`flex-1 py-2.5 rounded-xl font-black text-xs transition ${
-                      cartAdded
-                        ? 'bg-green-500 text-white'
-                        : 'bg-yellow-400 text-black hover:bg-yellow-500'
-                    }`}
-                  >
-                    {cartAdded ? '✓ Added!' : '🛒 Add to Cart'}
+                  <button onClick={addCart} style={{ flex: 1, padding: 11, borderRadius: 9, border: 'none', backgroundColor: cartAdded ? '#1a3d28' : C.cream, color: cartAdded ? '#5cc98a' : '#000', fontWeight: 900, fontSize: 12, cursor: 'pointer', letterSpacing: '0.03em', transition: 'all 0.25s' }}>
+                    {cartAdded ? '✓ Added' : 'Add to Cart'}
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* Next product thumbnail */}
-            <div
-              className="absolute -bottom-3 -right-3 w-20 h-20 rounded-xl overflow-hidden border-2 border-yellow-400 cursor-pointer hover:scale-110 transition z-10"
-              onClick={() => handleDotClick((currentProduct + 1) % featuredProducts.length)}
-            >
-              <img
-                src={featuredProducts[(currentProduct + 1) % featuredProducts.length].img}
-                alt="Next"
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center pointer-events-none">
-                <span className="text-white text-lg font-black">›</span>
-              </div>
+            {/* Next thumbnail */}
+            <div onClick={() => goTo((current + 1) % featuredProducts.length)}
+              style={{ position: 'absolute', bottom: -10, right: -10, width: 68, height: 68, borderRadius: 10, overflow: 'hidden', border: `1px solid ${C.bHov}`, cursor: 'pointer', zIndex: 2 }}>
+              <img src={featuredProducts[(current + 1) % featuredProducts.length].img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 18, fontWeight: 900 }}>›</div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── TRENDING NOW ── */}
-      <section className="max-w-6xl mx-auto px-8 py-14">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-5 h-px bg-yellow-400" />
-              <p className="text-yellow-400 text-xs font-black uppercase tracking-widest">
-                What's Hot
-              </p>
-            </div>
-            <h2 className="text-3xl font-black uppercase">Trending Now</h2>
-          </div>
-          <Link to="/gallery" className="text-yellow-400 text-sm font-semibold hover:underline">
-            View Gallery →
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-4 gap-5">
-          {trending.map(product => (
-            <div key={product.slug} className="group cursor-pointer">
-              <div
-                className="relative rounded-2xl overflow-hidden mb-3"
-                style={{ backgroundColor: '#2a2000', height: '240px' }}
-                onClick={() => navigate(`/product/${product.slug}`)}
-              >
-                <img
-                  src={product.img}
-                  alt={product.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                />
-                <span className="absolute top-3 left-3 bg-yellow-400 text-black text-xs font-black px-2 py-1 rounded-full pointer-events-none">
-                  {product.tag}
-                </span>
-                <button
-                  onClick={e => { e.stopPropagation(); toggleWishlist(product.slug); }}
-                  className="absolute top-3 right-3 bg-black bg-opacity-50 rounded-full w-8 h-8 flex items-center justify-center hover:bg-opacity-80 transition"
-                >
-                  <span className={wishlist.includes(product.slug) ? 'text-red-400' : 'text-white'}>
-                    {wishlist.includes(product.slug) ? '♥' : '♡'}
-                  </span>
-                </button>
-                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition flex items-center justify-center opacity-0 group-hover:opacity-100">
-                  <button
-                    onClick={e => { e.stopPropagation(); navigate(`/product/${product.slug}`); }}
-                    className="bg-yellow-400 text-black px-4 py-2 rounded-full font-black text-xs hover:bg-yellow-500 transition"
-                  >
-                    View Details
-                  </button>
-                </div>
-              </div>
-              <p
-                className="text-white font-black text-sm group-hover:text-yellow-400 transition"
-                onClick={() => navigate(`/product/${product.slug}`)}
-              >
-                {product.name}
-              </p>
-              <div className="flex justify-between items-center mt-1">
-                <p className="text-gray-500 text-xs">{product.category}</p>
-                <p className="text-yellow-400 font-black text-sm">{product.price}</p>
-              </div>
+      {/* ── TRUST STRIP ───────────────────────────────────────────────────── */}
+      <div style={{ borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, backgroundColor: C.surface }}>
+        <div style={{ ...s.section, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 48px' }}>
+          {['Verified Artisans Only', 'M-Pesa & Card Payments', 'AI Chatbot Support 24/7', '14-Day Returns Policy', 'AI-Powered Recommendations'].map((label, i) => (
+            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.muted, fontSize: 11, fontWeight: 700, letterSpacing: '0.05em' }}>
+              <div style={{ width: 4, height: 4, borderRadius: '50%', backgroundColor: i === 0 ? C.gold : C.faint, flexShrink: 0 }} />
+              {label}
             </div>
           ))}
         </div>
+      </div>
+
+      {/* ── TRENDING NOW ──────────────────────────────────────────────────── */}
+      <section style={{ padding: '96px 0' }}>
+        <div style={s.section}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 48 }}>
+            <div>
+              <p style={s.eyebrow}>What's Hot</p>
+              <h2 style={s.h2}>Trending Now</h2>
+            </div>
+            <Link to="/gallery" style={{ color: C.muted, fontSize: 12, fontWeight: 700, textDecoration: 'none', letterSpacing: '0.06em', paddingBottom: 2, borderBottom: `1px solid ${C.border}` }}>
+              View All →
+            </Link>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 18 }}>
+            {trending.map(p => (
+              <div key={p.slug} onClick={() => navigate(`/product/${p.slug}`)} style={{ cursor: 'pointer' }}>
+                <div style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', height: 260, backgroundColor: C.surface, border: `1px solid ${C.border}`, marginBottom: 14, transition: 'border-color 0.2s' }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = C.bHov}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
+                  <img src={p.img} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }}
+                    onMouseEnter={e => e.target.style.transform = 'scale(1.05)'}
+                    onMouseLeave={e => e.target.style.transform = 'scale(1)'} />
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.6), transparent 55%)' }} />
+                  <span style={{ position: 'absolute', top: 11, left: 11, ...s.tag }}>{p.tag}</span>
+                  <button onClick={e => { e.stopPropagation(); toggle(p.slug); }}
+                    style={{ position: 'absolute', top: 11, right: 11, width: 30, height: 30, borderRadius: '50%', backgroundColor: 'rgba(0,0,0,0.45)', border: `1px solid ${C.border}`, cursor: 'pointer', color: wishlist.includes(p.slug) ? '#e05c5c' : C.cream, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {wishlist.includes(p.slug) ? '♥' : '♡'}
+                  </button>
+                </div>
+                <p style={{ color: C.cream, fontWeight: 800, fontSize: 13, marginBottom: 5, letterSpacing: '-0.01em' }}>{p.name}</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <p style={{ color: C.muted, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{p.category}</p>
+                  <p style={{ color: C.gold, fontWeight: 900, fontSize: 13 }}>{p.price}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
 
-      {/* ── CATEGORIES ── */}
-      <section className="py-14 px-8" style={{ backgroundColor: '#1a1a00' }}>
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-8">
-            <p className="text-yellow-400 text-xs font-black uppercase tracking-widest mb-2">
-              Browse By Category
-            </p>
-            <h2 className="text-3xl font-black uppercase">Shop The Collections</h2>
+      {/* ── CATEGORIES ────────────────────────────────────────────────────── */}
+      <section style={{ backgroundColor: C.surface, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, padding: '96px 0' }}>
+        <div style={s.section}>
+          <div style={{ textAlign: 'center', marginBottom: 52 }}>
+            <p style={s.eyebrow}>Browse By Category</p>
+            <h2 style={s.h2}>Shop The Collections</h2>
           </div>
-          <div className="grid grid-cols-3 gap-5">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
             {categories.map(cat => (
-              <Link key={cat.name} to={cat.path}>
-                <div
-                  className="relative rounded-2xl overflow-hidden group cursor-pointer"
-                  style={{ height: '200px' }}
-                >
-                  <img
-                    src={cat.img}
-                    alt={cat.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                  />
-                  <div className="absolute inset-0 bg-black bg-opacity-50 group-hover:bg-opacity-30 transition pointer-events-none" />
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-3xl mb-2">{cat.icon}</span>
-                    <h3 className="text-white font-black text-lg uppercase">{cat.name}</h3>
-                    <p className="text-gray-300 text-xs mt-1">{cat.desc}</p>
-                    <span className="mt-3 border border-yellow-400 text-yellow-400 text-xs font-black px-4 py-1 rounded-full group-hover:bg-yellow-400 group-hover:text-black transition">
+              <Link key={cat.name} to={cat.path} style={{ textDecoration: 'none' }}>
+                <div style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', height: 250, border: `1px solid ${C.border}`, cursor: 'pointer', transition: 'border-color 0.2s' }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = C.bHov}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
+                  <img src={cat.img} alt={cat.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.65)' }} />
+                  <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                    <h3 style={{ color: C.cream, fontWeight: 900, fontSize: 20, textTransform: 'uppercase', letterSpacing: '-0.01em', marginBottom: 5 }}>{cat.name}</h3>
+                    <p style={{ color: 'rgba(240,236,228,0.5)', fontSize: 12, marginBottom: 3 }}>{cat.desc}</p>
+                    <p style={{ color: C.muted, fontSize: 11, letterSpacing: '0.06em', marginBottom: 18 }}>{cat.count}</p>
+                    <span style={{ border: `1px solid rgba(240,236,228,0.35)`, color: C.cream, fontSize: 11, fontWeight: 900, padding: '7px 18px', borderRadius: 100, letterSpacing: '0.06em' }}>
                       Explore →
                     </span>
                   </div>
@@ -403,169 +297,254 @@ const Home = () => {
         </div>
       </section>
 
-      {/* ── AI FEATURES ── */}
-      <section className="max-w-6xl mx-auto px-8 py-14">
-        <div
-          className="rounded-3xl p-10 border border-yellow-900 relative overflow-hidden"
-          style={{ backgroundColor: '#1a1a00' }}
-        >
-          <div
-            className="absolute inset-0 opacity-10 pointer-events-none"
-            style={{ backgroundImage: 'radial-gradient(circle at 80% 50%, #FFD700, transparent 60%)' }}
-          />
-          <div className="relative grid grid-cols-2 gap-10 items-center">
-            <div>
-              <span className="inline-block bg-yellow-400 text-black text-xs font-black px-3 py-1 rounded-full mb-4">
-                AI-POWERED
-              </span>
-              <h2 className="text-3xl font-black uppercase leading-tight mb-3">
-                Design With<br />
-                <span className="text-yellow-400">Artificial Intelligence</span>
-              </h2>
-              <p className="text-gray-400 text-sm leading-relaxed mb-6">
-                Use our AI tools to visualize custom pieces, get smart product
-                recommendations, and chat with our AI concierge for personalized
-                styling advice.
-              </p>
-              <div className="flex gap-3">
-                <Link
-                  to="/custom-order"
-                  className="bg-yellow-400 text-black px-5 py-3 rounded-xl font-black text-sm hover:bg-yellow-500 transition"
-                >
-                  Try AI Design Studio
-                </Link>
-                <Link
-                  to="/about"
-                  className="border border-gray-600 text-gray-300 px-5 py-3 rounded-xl font-black text-sm hover:border-yellow-400 hover:text-yellow-400 transition"
-                >
-                  Learn More
-                </Link>
+      {/* ── HOW IT WORKS ──────────────────────────────────────────────────── */}
+      <section style={{ padding: '96px 0' }}>
+        <div style={s.section}>
+          <div style={{ textAlign: 'center', marginBottom: 60 }}>
+            <p style={s.eyebrow}>Simple Process</p>
+            <h2 style={{ ...s.h2, marginBottom: 12 }}>How It Works</h2>
+            <p style={{ color: C.muted, fontSize: 13, maxWidth: 380, margin: '0 auto', lineHeight: 1.8 }}>
+              From discovery to doorstep — commissioning a custom piece has never been this smooth.
+            </p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 3 }}>
+            {howItWorks.map((step, i) => (
+              <div key={step.step} style={{ position: 'relative' }}>
+                {i < 3 && <div style={{ position: 'absolute', top: 27, left: '75%', width: '52%', height: 1, borderTop: `1px dashed ${C.faint}`, zIndex: 0 }} />}
+                <div style={{ position: 'relative', zIndex: 1, ...s.card, padding: 22, margin: '0 2px', transition: 'border-color 0.2s' }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = C.bHov}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 9, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ color: C.gold, fontSize: 12, fontWeight: 900 }}>{step.step}</span>
+                    </div>
+                    <span style={{ color: C.faint, fontSize: 26, fontWeight: 900, letterSpacing: '-0.04em' }}>{step.step}</span>
+                  </div>
+                  <h3 style={{ color: C.cream, fontWeight: 900, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>{step.title}</h3>
+                  <p style={{ color: C.muted, fontSize: 12, lineHeight: 1.7 }}>{step.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ textAlign: 'center', marginTop: 44 }}>
+            <Link to="/custom-order" style={s.btnGold}>Start Your Custom Order →</Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── AI FEATURES ───────────────────────────────────────────────────── */}
+      <section style={{ backgroundColor: C.surface, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, padding: '96px 0' }}>
+        <div style={{ ...s.section, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
+          <div>
+            <span style={{ display: 'inline-block', backgroundColor: C.faint, color: C.cream, fontSize: 10, fontWeight: 900, padding: '5px 13px', borderRadius: 100, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 20, border: `1px solid ${C.border}` }}>
+              AI-Powered
+            </span>
+            <h2 style={{ ...s.h2, marginBottom: 14 }}>
+              Design With<br />
+              <span style={{ color: C.gold }}>Artificial Intelligence</span>
+            </h2>
+            <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.85, marginBottom: 32, maxWidth: 370 }}>
+              Visualize custom pieces before they're made. Get smart recommendations,
+              search by image, and chat with our AI concierge — built for African artisanal commerce.
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <Link to="/custom-order" style={s.btnPrimary}>Try AI Design Studio</Link>
+              <Link to="/about" style={s.btnGhost}>Learn More</Link>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            {[
+              { n: '01', title: 'Smart Recommendations', desc: 'AI suggests products tailored to your taste',          path: '/shop'          },
+              { n: '02', title: 'Visual Search',          desc: 'Upload any image to find similar artisan pieces',      path: '/search'        },
+              { n: '03', title: 'AI Chatbot',             desc: 'Instant styling advice and product help, 24/7',        path: '/artisan-chat'  },
+              { n: '04', title: 'Dynamic Pricing',        desc: 'Fair, market-driven prices updated in real time',      path: '/shop'          },
+            ].map(f => (
+              <Link key={f.title} to={f.path} style={{ textDecoration: 'none', display: 'block', backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 13, padding: 20, transition: 'border-color 0.2s' }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = C.bHov}
+                onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
+                <div style={{ width: 26, height: 26, borderRadius: 6, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
+                  <span style={{ color: C.gold, fontSize: 10, fontWeight: 900 }}>{f.n}</span>
+                </div>
+                <p style={{ color: C.cream, fontWeight: 900, fontSize: 12, marginBottom: 5, letterSpacing: '0.02em' }}>{f.title}</p>
+                <p style={{ color: C.muted, fontSize: 11, lineHeight: 1.65 }}>{f.desc}</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── TESTIMONIALS ──────────────────────────────────────────────────── */}
+      <section style={{ padding: '96px 0' }}>
+        <div style={s.section}>
+          <div style={{ textAlign: 'center', marginBottom: 52 }}>
+            <p style={s.eyebrow}>Real Buyers. Real Pieces.</p>
+            <h2 style={s.h2}>What They're Saying</h2>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+            {testimonials.map((t, i) => (
+              <div key={t.name} onClick={() => setActiveTesti(i)}
+                style={{ backgroundColor: activeTesti === i ? C.surface : C.bg, border: `1px solid ${activeTesti === i ? C.bHov : C.border}`, borderRadius: 14, padding: 24, cursor: 'pointer', transition: 'all 0.2s' }}>
+                <div style={{ display: 'flex', gap: 3, marginBottom: 14 }}>
+                  {Array.from({ length: t.rating }).map((_, si) => <span key={si} style={{ color: C.gold, fontSize: 11 }}>★</span>)}
+                </div>
+                <p style={{ color: 'rgba(240,236,228,0.65)', fontSize: 13, lineHeight: 1.8, fontStyle: 'italic', marginBottom: 20 }}>"{t.text}"</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 11, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: C.faint, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 10, color: C.cream, flexShrink: 0 }}>{t.initials}</div>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ color: C.cream, fontWeight: 900, fontSize: 12 }}>{t.name}</p>
+                    <p style={{ color: C.muted, fontSize: 10, letterSpacing: '0.04em' }}>{t.location}</p>
+                  </div>
+                  <span style={{ color: C.muted, fontSize: 10, fontWeight: 700, borderLeft: `1px solid ${C.border}`, paddingLeft: 12, letterSpacing: '0.02em' }}>{t.product}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 5, marginTop: 22 }}>
+            {testimonials.map((_, i) => <button key={i} onClick={() => setActiveTesti(i)} style={{ height: 3, width: activeTesti === i ? 18 : 5, borderRadius: 2, backgroundColor: activeTesti === i ? C.gold : C.faint, border: 'none', cursor: 'pointer', padding: 0, transition: 'all 0.3s' }} />)}
+          </div>
+        </div>
+      </section>
+
+      {/* ── VENDOR + AFFILIATE ────────────────────────────────────────────── */}
+      <section style={{ backgroundColor: C.surface, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, padding: '96px 0' }}>
+        <div style={{ ...s.section, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          {[
+            {
+              icon: <svg width={17} height={17} fill="none" stroke={C.cream} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>,
+              title: 'Become a Vendor',
+              desc: 'Join 340+ artisans selling on 57 Arts & Customs. Get your own storefront, AI-powered analytics, and access to thousands of customers across Africa.',
+              perks: ['Free storefront setup', 'AI pricing recommendations', 'M-Pesa monthly payouts', 'Real-time sales analytics'],
+              cta: 'Start Selling →', path: '/vendor', btnStyle: s.btnPrimary,
+            },
+            {
+              icon: <svg width={17} height={17} fill="none" stroke={C.cream} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+              title: 'Affiliate Program',
+              desc: 'Earn up to 12% commission referring customers. Real-time tracking, monthly M-Pesa payouts, and a full marketing kit included.',
+              perks: ['Up to 12% per sale', 'Real-time commission tracking', 'Monthly M-Pesa payouts', 'Marketing kit & referral links'],
+              cta: 'Join Affiliate Program →', path: '/affiliate', btnStyle: s.btnGhost,
+            },
+          ].map(card => (
+            <div key={card.title} style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 18, padding: 38, transition: 'border-color 0.2s' }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = C.bHov}
+              onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
+              <div style={{ width: 42, height: 42, borderRadius: 9, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 22 }}>{card.icon}</div>
+              <h3 style={{ color: C.cream, fontWeight: 900, fontSize: 22, marginBottom: 10, letterSpacing: '-0.01em' }}>{card.title}</h3>
+              <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.8, marginBottom: 22 }}>{card.desc}</p>
+              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 26px', display: 'flex', flexDirection: 'column', gap: 7 }}>
+                {card.perks.map(p => (
+                  <li key={p} style={{ color: C.muted, fontSize: 12, display: 'flex', alignItems: 'center', gap: 9 }}>
+                    <span style={{ color: C.gold, fontSize: 10, fontWeight: 900 }}>—</span>{p}
+                  </li>
+                ))}
+              </ul>
+              <Link to={card.path} style={card.btnStyle}>{card.cta}</Link>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── NEWSLETTER / SYNDICATE ────────────────────────────────────────── */}
+      <section style={{ padding: '96px 0' }}>
+        <div style={s.section}>
+          <div style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 18, overflow: 'hidden' }}>
+            {/* Single gold rule at top — the only gold on this block */}
+            <div style={{ height: 2, backgroundColor: C.gold }} />
+            <div style={{ padding: '56px 60px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60, alignItems: 'center' }}>
+              <div>
+                <p style={s.eyebrow}>Join The Syndicate</p>
+                <h2 style={{ ...s.h2, marginBottom: 12 }}>Get Early Access<br />to Every Release.</h2>
+                <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.85, maxWidth: 340 }}>
+                  First access to new artisan drops, exclusive discounts,
+                  and Nairobi studio event invitations. No spam — just craft.
+                </p>
+              </div>
+              <div>
+                {!subscribed ? (
+                  <form onSubmit={doSubscribe} style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+                    <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" required
+                      style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 9, padding: '12px 15px', color: C.cream, fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box' }}
+                      onFocus={e => e.target.style.borderColor = C.bHov}
+                      onBlur={e => e.target.style.borderColor = C.border} />
+                    <button type="submit" style={{ ...s.btnGold, padding: '13px', borderRadius: 9, textAlign: 'center', width: '100%', boxSizing: 'border-box' }}>
+                      Subscribe & Join the Syndicate →
+                    </button>
+                    <p style={{ color: C.muted, fontSize: 11, textAlign: 'center' }}>No spam. Unsubscribe anytime.</p>
+                  </form>
+                ) : (
+                  <div style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 12, padding: 22, display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <div style={{ width: 34, height: 34, borderRadius: 8, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <span style={{ color: C.gold, fontSize: 14 }}>✓</span>
+                    </div>
+                    <div>
+                      <p style={{ color: C.cream, fontWeight: 900, fontSize: 13 }}>You're in the Syndicate.</p>
+                      <p style={{ color: C.muted, fontSize: 11, marginTop: 3 }}>First drops land this Friday. Watch your inbox.</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { icon: '🧠', title: 'Smart Recommendations', desc: 'AI suggests products based on your taste',      path: '/shop'          },
-                { icon: '🔍', title: 'Visual Search',          desc: 'Upload an image to find similar products',     path: '/shop'          },
-                { icon: '💬', title: 'AI Chatbot',             desc: 'Get instant styling and product advice',       path: '/artisan-chat'  },
-                { icon: '💰', title: 'Dynamic Pricing',        desc: 'Fair prices powered by market analytics',      path: '/shop'          },
-              ].map(feature => (
-                <Link
-                  key={feature.title}
-                  to={feature.path}
-                  className="rounded-xl p-4 border border-gray-800 hover:border-yellow-400 transition block"
-                  style={{ backgroundColor: '#2a2000' }}
-                >
-                  <span className="text-2xl mb-2 block">{feature.icon}</span>
-                  <p className="text-white font-black text-xs mb-1">{feature.title}</p>
-                  <p className="text-gray-500 text-xs">{feature.desc}</p>
-                </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── FOOTER ────────────────────────────────────────────────────────── */}
+      <footer style={{ backgroundColor: C.surface, borderTop: `1px solid ${C.border}`, padding: '64px 0 36px' }}>
+        <div style={s.section}>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 64, marginBottom: 52 }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                <div style={{ width: 30, height: 30, borderRadius: 6, backgroundColor: C.gold, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 11, color: '#000' }}>57</div>
+                <span style={{ color: C.cream, fontWeight: 900, fontSize: 13, letterSpacing: '0.04em' }}>57 ARTS & CUSTOMS</span>
+              </div>
+              <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.8, maxWidth: 270, marginBottom: 22 }}>
+                Redefining luxury through artisanal craftsmanship and AI-powered creativity. Built for the bold generation.
+              </p>
+              <div style={{ display: 'flex', gap: 7 }}>
+                {['◎', '@', '✉'].map(icon => (
+                  <button key={icon} style={{ width: 32, height: 32, borderRadius: 7, border: `1px solid ${C.border}`, backgroundColor: 'transparent', color: C.muted, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = C.bHov; e.currentTarget.style.color = C.cream; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.muted; }}>
+                    {icon}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h4 style={{ color: C.cream, fontWeight: 900, fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 18 }}>Shop</h4>
+              {[['Fashion', '/fashion'], ['Furniture', '/furniture'], ['Beads & Jewelry', '/beads'], ['Custom Orders', '/custom-order'], ['Gallery', '/gallery'], ['New Arrivals', '/shop']].map(([label, path]) => (
+                <Link key={label} to={path} style={{ display: 'block', color: C.muted, fontSize: 13, marginBottom: 9, textDecoration: 'none', transition: 'color 0.2s' }}
+                  onMouseEnter={e => e.target.style.color = C.cream}
+                  onMouseLeave={e => e.target.style.color = C.muted}>{label}</Link>
+              ))}
+            </div>
+
+            <div>
+              <h4 style={{ color: C.cream, fontWeight: 900, fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 18 }}>Company</h4>
+              {[['About Us', '/about'], ['Vendor Program', '/vendor'], ['Affiliate', '/affiliate'], ['Artisan Chat', '/artisan-chat'], ['Contact', '/contact'], ['Order Tracking', '/order-tracking']].map(([label, path]) => (
+                <Link key={label} to={path} style={{ display: 'block', color: C.muted, fontSize: 13, marginBottom: 9, textDecoration: 'none', transition: 'color 0.2s' }}
+                  onMouseEnter={e => e.target.style.color = C.cream}
+                  onMouseLeave={e => e.target.style.color = C.muted}>{label}</Link>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 22, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <p style={{ color: C.muted, fontSize: 11 }}>© 2024 57 Arts & Customs. All rights reserved. Nairobi, Kenya.</p>
+            <div style={{ display: 'flex', gap: 22 }}>
+              {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map(label => (
+                <Link key={label} to="/contact" style={{ color: C.muted, fontSize: 11, textDecoration: 'none', transition: 'color 0.2s' }}
+                  onMouseEnter={e => e.target.style.color = C.cream}
+                  onMouseLeave={e => e.target.style.color = C.muted}>{label}</Link>
               ))}
             </div>
           </div>
         </div>
-      </section>
-
-      {/* ── VENDOR + AFFILIATE ── */}
-      <section className="py-14 px-8" style={{ backgroundColor: '#1a1a00' }}>
-        <div className="max-w-6xl mx-auto grid grid-cols-2 gap-6">
-          <div
-            className="rounded-2xl p-8 border border-gray-800"
-            style={{ backgroundColor: '#0d0d00' }}
-          >
-            <span className="text-3xl mb-4 block">🏪</span>
-            <h3 className="text-white font-black text-2xl mb-3">Become a Vendor</h3>
-            <p className="text-gray-400 text-sm mb-6 leading-relaxed">
-              Join 340+ artisans selling on 57 Arts & Customs. Get your own storefront,
-              AI-powered analytics, and access to thousands of customers worldwide.
-            </p>
-            <Link
-              to="/vendor"
-              className="inline-block bg-yellow-400 text-black px-6 py-3 rounded-xl font-black text-sm hover:bg-yellow-500 transition"
-            >
-              Start Selling →
-            </Link>
-          </div>
-          <div
-            className="rounded-2xl p-8 border border-yellow-900"
-            style={{ backgroundColor: '#2a2000' }}
-          >
-            <span className="text-3xl mb-4 block">💸</span>
-            <h3 className="text-white font-black text-2xl mb-3">Affiliate Program</h3>
-            <p className="text-gray-400 text-sm mb-6 leading-relaxed">
-              Earn up to 12% commission referring customers. Real-time tracking,
-              monthly M-Pesa payouts, and a full marketing kit included.
-            </p>
-            <Link
-              to="/affiliate"
-              className="inline-block border border-yellow-400 text-yellow-400 px-6 py-3 rounded-xl font-black text-sm hover:bg-yellow-400 hover:text-black transition"
-            >
-              Join Affiliate Program →
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ── FOOTER ── */}
-      <footer
-        style={{ backgroundColor: '#0d0d00' }}
-        className="border-t border-yellow-900 px-8 py-12"
-      >
-        <div className="max-w-6xl mx-auto grid grid-cols-4 gap-10 mb-10">
-          <div className="col-span-2">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="bg-yellow-400 text-black w-8 h-8 rounded flex items-center justify-center text-xs font-black">
-                57
-              </span>
-              <span className="text-white font-black text-base">57 ARTS & CUSTOMS</span>
-            </div>
-            <p className="text-gray-500 text-sm leading-relaxed max-w-xs mb-4">
-              Redefining modern luxury through artisanal craftsmanship and
-              AI-powered creativity. Built for the bold generation.
-            </p>
-            <div className="flex gap-3 text-gray-500 text-lg">
-              <span className="hover:text-yellow-400 cursor-pointer">◎</span>
-              <span className="hover:text-yellow-400 cursor-pointer">@</span>
-              <span className="hover:text-yellow-400 cursor-pointer">✉</span>
-            </div>
-          </div>
-          <div>
-            <h4 className="text-white font-black text-xs uppercase tracking-widest mb-4">Shop</h4>
-            {[
-              { label: 'Fashion',       path: '/fashion'       },
-              { label: 'Furniture',     path: '/furniture'     },
-              { label: 'Beads & Jewelry', path: '/beads'       },
-              { label: 'Custom Orders', path: '/custom-order'  },
-              { label: 'Gallery',       path: '/gallery'       },
-            ].map(item => (
-              <Link key={item.label} to={item.path}
-                className="block text-gray-500 text-sm mb-2 hover:text-yellow-400 transition">
-                {item.label}
-              </Link>
-            ))}
-          </div>
-          <div>
-            <h4 className="text-white font-black text-xs uppercase tracking-widest mb-4">Company</h4>
-            {[
-              { label: 'About Us',       path: '/about'      },
-              { label: 'Vendor Program', path: '/vendor'     },
-              { label: 'Affiliate',      path: '/affiliate'  },
-              { label: 'Contact',        path: '/contact'    },
-            ].map(item => (
-              <Link key={item.label} to={item.path}
-                className="block text-gray-500 text-sm mb-2 hover:text-yellow-400 transition">
-                {item.label}
-              </Link>
-            ))}
-          </div>
-        </div>
-        <div className="border-t border-yellow-900 pt-6 flex justify-between items-center">
-          <p className="text-gray-600 text-xs">© 2024 57 Arts & Customs. All rights reserved.</p>
-          <div className="flex gap-4 text-xs text-gray-600">
-            <Link to="/contact" className="hover:text-white transition">Privacy Policy</Link>
-            <Link to="/contact" className="hover:text-white transition">Terms of Service</Link>
-          </div>
-        </div>
       </footer>
+
     </div>
   );
 };
