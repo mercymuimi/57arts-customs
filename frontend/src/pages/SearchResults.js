@@ -93,7 +93,7 @@ const SearchResults = () => {
     const matchCat  = activeCategory === 'All' || p.category.toLowerCase() === activeCategory.toLowerCase();
     const matchPrice= priceToNum(p.price) <= priceMax;
     const matchAvail= (availability.readyMade && p.tag !== 'Custom Order' && p.tag !== 'Bespoke Only') || (availability.customOrders && (p.tag === 'Custom Order' || p.tag === 'Bespoke Only')) || (availability.readyMade && availability.customOrders);
-    return matchQ && matchCat && matchPrice;
+    return matchQ && matchCat && matchPrice && matchAvail;
   });
 
   const sorted = [...filtered].sort((a, b) => {

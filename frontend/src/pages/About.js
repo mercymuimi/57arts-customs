@@ -1,206 +1,236 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-const About = () => {
-  return (
-    <div className="min-h-screen text-white" style={{ backgroundColor: '#0d0d0d' }}>
-
-
-
-      {/* HERO */}
-      <div className="relative h-screen flex items-center overflow-hidden">
-        <img
-          src="https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=1400"
-          alt="About Hero"
-          className="absolute inset-0 w-full h-full object-cover opacity-30"
-        />
-        <div className="absolute inset-0"
-          style={{ background: 'linear-gradient(to right, rgba(13,13,13,0.95) 50%, rgba(13,13,13,0.3))' }}>
-        </div>
-        <div className="relative z-10 px-16 max-w-2xl">
-          <p className="text-yellow-400 text-xs uppercase tracking-widest font-black mb-4">
-            Our Origin
-          </p>
-          <h1 className="text-6xl font-black leading-tight mb-6">
-            <span className="text-white">Tradition meets </span><br />
-            <span className="text-yellow-400 italic">Technology</span>
-          </h1>
-          <p className="text-gray-400 text-sm leading-relaxed max-w-md">
-            We aren't just making products; we're crafting digital legacies.
-            Blending heritage craftsmanship with the cutting edge of digital design.
-          </p>
-        </div>
-      </div>
-
-      {/* OUR VISION */}
-      <div className="max-w-6xl mx-auto px-8 py-20 grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
-        <div>
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-8 h-0.5 bg-yellow-400"></div>
-            <h2 className="text-3xl font-black">Our Vision</h2>
-          </div>
-          <p className="text-gray-300 text-sm leading-relaxed mb-6">
-            Empowering Gen Z creators with tools that bridge the gap between imagination and reality.
-          </p>
-          <p className="text-gray-500 text-sm leading-relaxed mb-8">
-            In a world that's increasingly digital, we believe physical artifacts
-            should hold the same weight as digital assets. We provide the canvas
-            for a new generation of digital and physical artists to express their
-            unique identities.
-          </p>
-          <div className="grid grid-cols-2 gap-4">
-            {[
-              { icon: '✏', title: 'Creator First', desc: 'Tools designed for the modern auteur.' },
-              { icon: '✦', title: 'Ecosystem', desc: 'A global network of custom artisans.' },
-            ].map((item) => (
-              <div key={item.title}
-                className="rounded-xl p-4 border border-gray-800"
-                style={{ backgroundColor: '#1a1a1a' }}>
-                <span className="text-yellow-400 text-lg block mb-2">{item.icon}</span>
-                <h4 className="text-white font-black text-sm mb-1">{item.title}</h4>
-                <p className="text-gray-500 text-xs">{item.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Illustration */}
-        <div className="rounded-2xl overflow-hidden h-96 bg-gray-100 flex items-center justify-center">
-          <img
-            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500"
-            alt="Vision"
-            className="w-full h-full object-cover"
-          />
-        </div>
-      </div>
-
-      {/* THE CRAFT */}
-      <div className="py-20 px-8" style={{ backgroundColor: '#111' }}>
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12">
-            <p className="text-yellow-400 text-xs uppercase tracking-widest font-black mb-3">
-              Mastery in Detail
-            </p>
-            <h2 className="text-5xl font-black mb-4">The Craft</h2>
-            <p className="text-gray-500 text-sm max-w-xl mx-auto">
-              Every piece is a testament to the pursuit of perfection. Bespoke artisanal
-              quality that honors time-tested techniques while embracing modern precision.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              {
-                title: 'Heritage',
-                desc: 'Decades of manual mastery preserved in every stitch.',
-                img: 'https://images.unsplash.com/photo-1452860606245-08befc0ff44b?w=500',
-              },
-              {
-                title: 'Precision',
-                desc: 'Micron-level accuracy powered by custom industrial tech.',
-                img: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=500',
-              },
-              {
-                title: 'Uniqueness',
-                desc: 'No two pieces are alike. Each holds its own digital DNA.',
-                img: 'https://images.unsplash.com/photo-1493106819501-8f9e5ce02e5d?w=500',
-              },
-            ].map((item) => (
-              <div key={item.title}
-                className="rounded-2xl overflow-hidden group cursor-pointer border border-gray-800 hover:border-yellow-400 transition">
-                <div className="h-56 overflow-hidden">
-                  <img
-                    src={item.img}
-                    alt={item.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                  />
-                </div>
-                <div className="p-5" style={{ backgroundColor: '#1a1a1a' }}>
-                  <h3 className="text-white font-black text-lg mb-2">{item.title}</h3>
-                  <p className="text-gray-500 text-sm">{item.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* THE FUTURE */}
-      <div className="max-w-6xl mx-auto px-8 py-20">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-
-          {/* Left Card */}
-          <div className="rounded-2xl p-10 border border-yellow-900"
-            style={{ backgroundColor: '#1a1500' }}>
-            <span className="text-yellow-400 text-3xl block mb-6">💡</span>
-            <h2 className="text-4xl font-black mb-4">The Future</h2>
-            <p className="text-gray-300 text-sm italic leading-relaxed mb-4">
-              "Design is no longer static. It is a living dialogue between creator and machine."
-            </p>
-            <p className="text-yellow-600 text-sm leading-relaxed mb-8">
-              We are developing AI-driven personalization engines that analyze your digital
-              footprint to suggest aesthetic enhancements that are truly, uniquely yours.
-              Your story, translated into matter through intelligence.
-            </p>
-            <button className="border border-yellow-400 text-yellow-400 px-6 py-3 rounded-lg font-black text-sm hover:bg-yellow-400 hover:text-black transition">
-              Pre-order Beta Access
-            </button>
-          </div>
-
-          {/* Right - Phone Mockup */}
-          <div className="flex justify-center">
-            <div className="rounded-3xl border-2 border-gray-700 p-4 w-56"
-              style={{ backgroundColor: '#1a1a2e' }}>
-              <div className="h-2 w-16 bg-gray-700 rounded-full mx-auto mb-4"></div>
-              <div className="h-8 bg-yellow-400 rounded-lg mb-3"></div>
-              <div className="h-4 w-20 bg-gray-700 rounded mb-4"></div>
-              <div className="h-24 bg-gray-800 rounded-xl flex items-center justify-center mb-3">
-                <span className="text-gray-600 text-2xl">🖼</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                <div className="h-12 bg-gray-800 rounded-lg"></div>
-                <div className="h-12 bg-gray-800 rounded-lg"></div>
-              </div>
-              <div className="w-8 h-8 rounded-full bg-gray-700 mx-auto"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* FOOTER */}
-      <footer style={{ backgroundColor: '#080808' }}
-        className="border-t border-gray-800 px-8 py-10">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-start gap-8 mb-8">
-          <div className="max-w-xs">
-            <h3 className="text-yellow-400 font-black text-lg mb-2">57 Arts & Customs</h3>
-            <p className="text-gray-500 text-sm">
-              The gold standard in bespoke digital-physical synergy.
-            </p>
-          </div>
-          <div className="flex gap-16">
-            <div>
-              <h4 className="text-white font-black text-xs uppercase tracking-widest mb-4">Company</h4>
-              {['Journal', 'Manifesto', 'Careers'].map((item) => (
-                <p key={item} className="text-gray-500 text-sm mb-2 hover:text-yellow-400 cursor-pointer transition">{item}</p>
-              ))}
-            </div>
-            <div>
-              <h4 className="text-white font-black text-xs uppercase tracking-widest mb-4">Social</h4>
-              {['Instagram', 'X / Twitter', 'Discord'].map((item) => (
-                <p key={item} className="text-gray-500 text-sm mb-2 hover:text-yellow-400 cursor-pointer transition">{item}</p>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="border-t border-gray-800 pt-6 text-center">
-          <p className="text-gray-600 text-xs">
-            © 2024 57 Arts & Customs. All Rights Reserved. Defined by tradition, designed by code.
-          </p>
-        </div>
-      </footer>
-
-    </div>
-  );
+const C = {
+  bg: '#0a0a0a', surface: '#111111', border: '#1c1c1c', bHov: '#2e2e2e',
+  faint: '#242424', cream: '#f0ece4', muted: '#606060', gold: '#c9a84c',
 };
+const s = {
+  section: { maxWidth: 1200, margin: '0 auto', padding: '0 48px' },
+  eyebrow: { color: C.gold, fontSize: 10, fontWeight: 900, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 12 },
+  h2: { color: C.cream, fontSize: 40, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.02em', lineHeight: 1 },
+};
+
+const team = [
+  { name: 'Amara Osei', role: 'Founder & Creative Director', initials: 'AO', bio: 'Former architect turned marketplace builder. Spent 7 years designing buildings before realising she wanted to build ecosystems.' },
+  { name: 'Julian M.',  role: 'Head of Artisan Relations',   initials: 'JM', bio: 'Master woodworker with 20 years of craft. Bridges the gap between traditional technique and modern commerce.' },
+  { name: 'Adaeze N.',  role: 'AI & Product Lead',           initials: 'AN', bio: 'ML engineer and textile obsessive. Built the visual search and recommendation engine from the ground up.' },
+  { name: 'Kofi A.',    role: 'Head of Vendor Growth',       initials: 'KA', bio: 'Serial entrepreneur. Helped 50+ African artisans take their craft from local markets to global platforms.' },
+];
+
+const values = [
+  { title: 'Heritage First',   desc: 'Every piece connects to a tradition. We build tools that honour craft knowledge, not replace it.', icon: '◈' },
+  { title: 'Maker Economics',  desc: 'Artisans keep the majority of every sale. Fair compensation is not a feature — it is the model.', icon: '◇' },
+  { title: 'Open AI',          desc: 'Our recommendation and pricing AI is transparent. Vendors see exactly how their products are ranked.', icon: '◉' },
+  { title: 'African Scale',    desc: 'Built for Nairobi, Lagos, Accra, Dakar. M-Pesa native. Kiswahili and Pidgin supported.', icon: '△' },
+];
+
+const milestones = [
+  { year: '2022', event: 'Founded in Nairobi by Amara Osei and Julian M.' },
+  { year: '2023', event: 'First 100 artisans onboarded. KSH 4M in commissions processed.' },
+  { year: '2023', event: 'Visual search AI launched. 87% match accuracy on first run.' },
+  { year: '2024', event: '340+ vendors, 2,400+ products, 12,000+ orders. Expanding to Lagos and Accra.' },
+];
+
+const About = () => (
+  <div style={{ backgroundColor: C.bg, color: C.cream, minHeight: '100vh' }}>
+
+    {/* ── HERO ─────────────────────────────────────────────────────────────── */}
+    <section style={{ position: 'relative', minHeight: '80vh', display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
+      <img src="https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=1400" alt=""
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.2 }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(10,10,10,0.97) 55%, rgba(10,10,10,0.5))' }} />
+      <div style={{ ...s.section, position: 'relative', zIndex: 1, padding: '80px 48px' }}>
+        <p style={s.eyebrow}>Our Origin</p>
+        <h1 style={{ fontSize: 'clamp(3rem, 6vw, 5rem)', fontWeight: 900, lineHeight: 0.95, textTransform: 'uppercase', letterSpacing: '-0.03em', marginBottom: 24, maxWidth: 700 }}>
+          Tradition<br />Meets<br /><span style={{ color: C.gold, fontStyle: 'italic' }}>Technology.</span>
+        </h1>
+        <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.85, maxWidth: 420, marginBottom: 36 }}>
+          We aren't just building a marketplace. We're building the infrastructure for African artisanal craft to reach the world — powered by AI, rooted in heritage.
+        </p>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <Link to="/shop" style={{ backgroundColor: C.cream, color: '#000', padding: '13px 28px', borderRadius: 10, fontWeight: 900, fontSize: 13, textDecoration: 'none', letterSpacing: '0.04em' }}>
+            Shop the Collections
+          </Link>
+          <Link to="/vendor" style={{ backgroundColor: 'transparent', color: C.cream, padding: '13px 28px', borderRadius: 10, fontWeight: 900, fontSize: 13, textDecoration: 'none', border: `1px solid ${C.border}`, letterSpacing: '0.04em' }}>
+            Join as Artisan
+          </Link>
+        </div>
+      </div>
+    </section>
+
+    {/* ── MISSION ──────────────────────────────────────────────────────────── */}
+    <section style={{ borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, backgroundColor: C.surface, padding: '80px 0' }}>
+      <div style={{ ...s.section, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
+        <div>
+          <p style={s.eyebrow}>Our Mission</p>
+          <h2 style={{ ...s.h2, marginBottom: 20 }}>Empowering the<br />Makers of Africa.</h2>
+          <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.85, marginBottom: 20 }}>
+            In a world that mass-produces everything, we exist to preserve the value of the handmade. Every piece on 57 Arts & Customs carries the fingerprints of the person who made it.
+          </p>
+          <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.85, marginBottom: 32 }}>
+            We provide artisans with technology they couldn't afford to build themselves — AI pricing, visual search, affiliate marketing, and a global storefront — so they can focus on the craft.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            {[{ v: '340+', l: 'Active Artisans' }, { v: 'KSH 4M+', l: 'Commissions Paid' }, { v: '98%', l: 'Satisfaction' }, { v: '50+', l: 'Countries Reached' }].map(({ v, l }) => (
+              <div key={l} style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 12, padding: '20px' }}>
+                <p style={{ color: C.cream, fontWeight: 900, fontSize: 24, letterSpacing: '-0.02em' }}>{v}</p>
+                <p style={{ color: C.muted, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 4 }}>{l}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{ borderRadius: 16, overflow: 'hidden', height: 480, border: `1px solid ${C.border}` }}>
+          <img src="https://images.unsplash.com/photo-1452860606245-08befc0ff44b?w=700" alt="Artisan at work"
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        </div>
+      </div>
+    </section>
+
+    {/* ── VALUES ───────────────────────────────────────────────────────────── */}
+    <section style={{ padding: '80px 0' }}>
+      <div style={s.section}>
+        <div style={{ textAlign: 'center', marginBottom: 56 }}>
+          <p style={s.eyebrow}>What We Stand For</p>
+          <h2 style={s.h2}>Our Values</h2>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+          {values.map(v => (
+            <div key={v.title} style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: 28, transition: 'border-color 0.2s' }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = C.bHov}
+              onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
+              <span style={{ color: C.gold, fontSize: 18, display: 'block', marginBottom: 16 }}>{v.icon}</span>
+              <h3 style={{ color: C.cream, fontWeight: 900, fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 10 }}>{v.title}</h3>
+              <p style={{ color: C.muted, fontSize: 12, lineHeight: 1.75 }}>{v.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    {/* ── THE CRAFT ────────────────────────────────────────────────────────── */}
+    <section style={{ backgroundColor: C.surface, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, padding: '80px 0' }}>
+      <div style={s.section}>
+        <div style={{ textAlign: 'center', marginBottom: 52 }}>
+          <p style={s.eyebrow}>Mastery in Detail</p>
+          <h2 style={s.h2}>The Craft</h2>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+          {[
+            { title: 'Heritage',   desc: 'Decades of manual mastery preserved in every stitch, carving, and bead threaded.',     img: 'https://images.unsplash.com/photo-1452860606245-08befc0ff44b?w=600' },
+            { title: 'Precision',  desc: 'Micron-level accuracy. Materials sourced, tested, and approved before a single cut.',   img: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=600' },
+            { title: 'Uniqueness', desc: 'No two pieces are alike. Each carries the unique signature of the hand that made it.', img: 'https://images.unsplash.com/photo-1493106819501-8f9e5ce02e5d?w=600' },
+          ].map(item => (
+            <div key={item.title} style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 14, overflow: 'hidden', transition: 'border-color 0.2s' }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = C.bHov}
+              onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
+              <div style={{ height: 220, overflow: 'hidden' }}>
+                <img src={item.img} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s' }}
+                  onMouseEnter={e => e.target.style.transform = 'scale(1.05)'}
+                  onMouseLeave={e => e.target.style.transform = 'scale(1)'} />
+              </div>
+              <div style={{ padding: 22 }}>
+                <h3 style={{ color: C.cream, fontWeight: 900, fontSize: 16, textTransform: 'uppercase', marginBottom: 8 }}>{item.title}</h3>
+                <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.7 }}>{item.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    {/* ── TIMELINE ─────────────────────────────────────────────────────────── */}
+    <section style={{ padding: '80px 0' }}>
+      <div style={s.section}>
+        <div style={{ textAlign: 'center', marginBottom: 52 }}>
+          <p style={s.eyebrow}>How Far We've Come</p>
+          <h2 style={s.h2}>Our Story</h2>
+        </div>
+        <div style={{ position: 'relative', maxWidth: 700, margin: '0 auto' }}>
+          <div style={{ position: 'absolute', left: 60, top: 0, bottom: 0, width: 1, backgroundColor: C.border }} />
+          {milestones.map((m, i) => (
+            <div key={i} style={{ display: 'flex', gap: 32, marginBottom: 40, position: 'relative' }}>
+              <div style={{ width: 120, flexShrink: 0, textAlign: 'right', paddingTop: 2 }}>
+                <span style={{ color: C.gold, fontWeight: 900, fontSize: 13 }}>{m.year}</span>
+              </div>
+              <div style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: C.gold, flexShrink: 0, marginTop: 4, border: `3px solid ${C.bg}`, boxSizing: 'border-box' }} />
+              <div style={{ flex: 1, backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: '14px 18px' }}>
+                <p style={{ color: C.cream, fontSize: 13, lineHeight: 1.7 }}>{m.event}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    {/* ── TEAM ─────────────────────────────────────────────────────────────── */}
+    <section style={{ backgroundColor: C.surface, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, padding: '80px 0' }}>
+      <div style={s.section}>
+        <div style={{ textAlign: 'center', marginBottom: 52 }}>
+          <p style={s.eyebrow}>The People Behind It</p>
+          <h2 style={s.h2}>Our Team</h2>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+          {team.map(person => (
+            <div key={person.name} style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 14, padding: 24, transition: 'border-color 0.2s' }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = C.bHov}
+              onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
+              <div style={{ width: 52, height: 52, borderRadius: 12, backgroundColor: C.faint, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 14, color: C.cream, marginBottom: 16 }}>
+                {person.initials}
+              </div>
+              <h3 style={{ color: C.cream, fontWeight: 900, fontSize: 14, marginBottom: 4 }}>{person.name}</h3>
+              <p style={{ color: C.gold, fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 12 }}>{person.role}</p>
+              <p style={{ color: C.muted, fontSize: 12, lineHeight: 1.7 }}>{person.bio}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    {/* ── CTA ──────────────────────────────────────────────────────────────── */}
+    <section style={{ padding: '80px 0' }}>
+      <div style={s.section}>
+        <div style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 20, overflow: 'hidden' }}>
+          <div style={{ height: 2, backgroundColor: C.gold }} />
+          <div style={{ padding: '60px', display: 'grid', gridTemplateColumns: '1fr auto', gap: 40, alignItems: 'center' }}>
+            <div>
+              <p style={s.eyebrow}>Ready to Start?</p>
+              <h2 style={{ ...s.h2, marginBottom: 12 }}>Join the Platform.</h2>
+              <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.8, maxWidth: 400 }}>
+                Whether you're a buyer looking for something unique or an artisan ready to take your craft global — 57 Arts & Customs was built for you.
+              </p>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flexShrink: 0 }}>
+              <Link to="/shop" style={{ backgroundColor: C.cream, color: '#000', padding: '13px 28px', borderRadius: 10, fontWeight: 900, fontSize: 13, textDecoration: 'none', letterSpacing: '0.04em', textAlign: 'center' }}>
+                Shop the Collections
+              </Link>
+              <Link to="/vendor" style={{ backgroundColor: 'transparent', color: C.cream, padding: '13px 28px', borderRadius: 10, fontWeight: 900, fontSize: 13, textDecoration: 'none', border: `1px solid ${C.border}`, letterSpacing: '0.04em', textAlign: 'center' }}>
+                Become an Artisan
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {/* ── FOOTER ───────────────────────────────────────────────────────────── */}
+    <footer style={{ backgroundColor: C.surface, borderTop: `1px solid ${C.border}`, padding: '48px' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 28, height: 28, borderRadius: 6, backgroundColor: C.gold, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 10, color: '#000' }}>57</div>
+          <span style={{ color: C.cream, fontWeight: 900, fontSize: 13 }}>57 ARTS & CUSTOMS</span>
+        </div>
+        <div style={{ display: 'flex', gap: 24 }}>
+          {[['Home', '/'], ['Shop', '/shop'], ['Gallery', '/gallery'], ['Contact', '/contact'], ['Vendors', '/vendor']].map(([l, p]) => (
+            <Link key={l} to={p} style={{ color: C.muted, fontSize: 12, textDecoration: 'none' }}
+              onMouseEnter={e => e.target.style.color = C.cream}
+              onMouseLeave={e => e.target.style.color = C.muted}>{l}</Link>
+          ))}
+        </div>
+        <p style={{ color: C.muted, fontSize: 11 }}>© 2024 57 Arts & Customs. Nairobi, Kenya.</p>
+      </div>
+    </footer>
+  </div>
+);
 
 export default About;
