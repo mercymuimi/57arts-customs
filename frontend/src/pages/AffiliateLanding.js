@@ -1,45 +1,93 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 
+// ── DESIGN TOKENS ─────────────────────────────────────────────────────────────
+const C = {
+  bg: '#0a0a0a', surface: '#111111', border: '#1c1c1c', bHov: '#2e2e2e',
+  faint: '#242424', cream: '#f0ece4', muted: '#606060', dim: '#333333',
+  gold: '#c9a84c', err: '#f87171',
+};
+const s = {
+  section:  { maxWidth: 1100, margin: '0 auto', padding: '0 48px' },
+  eyebrow:  { color: C.gold, fontSize: 10, fontWeight: 900, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 10 },
+  btnGold:  { backgroundColor: C.gold, color: '#000', padding: '13px 26px', borderRadius: 10, fontWeight: 900, fontSize: 12, textDecoration: 'none', letterSpacing: '0.04em', display: 'inline-block', border: 'none', cursor: 'pointer' },
+  btnGhost: { backgroundColor: 'transparent', color: C.cream, padding: '13px 26px', borderRadius: 10, fontWeight: 900, fontSize: 12, textDecoration: 'none', border: `1px solid ${C.border}`, letterSpacing: '0.04em', display: 'inline-block', cursor: 'pointer' },
+  input:    { backgroundColor: C.faint, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 16px', color: C.cream, fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box' },
+  label:    { color: C.muted, fontSize: 10, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase', display: 'block', marginBottom: 7 },
+  card:     { backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 16 },
+};
+
 const tiers = [
-  { name: 'Starter', commission: '5%', threshold: 'KES 0', color: 'border-gray-700', text: 'text-gray-400' },
-  { name: 'Silver', commission: '8%', threshold: 'KES 50,000 / mo', color: 'border-yellow-400', text: 'text-yellow-400', featured: true },
-  { name: 'Gold', commission: '12%', threshold: 'KES 200,000 / mo', color: 'border-yellow-600', text: 'text-yellow-300' },
+  { name: 'Starter', commission: '5%',  threshold: 'KES 0 — open to all',     featured: false },
+  { name: 'Silver',  commission: '8%',  threshold: 'KES 50,000 / mo referred', featured: true  },
+  { name: 'Gold',    commission: '12%', threshold: 'KES 200,000 / mo referred',featured: false },
 ];
 
+const howItWorks = [
+  { num: '01', icon: '🔗', title: 'Get your link',    desc: 'Receive a unique referral link after approval.' },
+  { num: '02', icon: '📣', title: 'Share it',         desc: 'Post on social media, blogs, YouTube, newsletters.' },
+  { num: '03', icon: '🛍', title: 'Buyer purchases',  desc: '30-day cookie tracks all purchases from your referral.' },
+  { num: '04', icon: '💰', title: 'Get paid',         desc: 'Monthly payouts via M-Pesa or bank transfer.' },
+];
+
+const whoJoins = [
+  { type: 'Content Creators',          desc: 'Fashion, lifestyle, and interior design creators who want to monetise their audience authentically.' },
+  { type: 'Bloggers & Writers',        desc: 'Writers covering African culture, design, and craft who want to earn from their content.' },
+  { type: 'Event Planners',            desc: 'Planners who regularly source handmade décor and gifts for clients.' },
+  { type: 'Diaspora Community Leaders',desc: 'Community organisers connecting African diaspora members with authentic crafts from home.' },
+  { type: 'Interior Designers',        desc: 'Designers who source unique artisan pieces for client projects.' },
+  { type: 'Gift Curators',             desc: 'Anyone who regularly recommends gifts and lifestyle products to their network.' },
+];
+
+const Footer = () => (
+  <footer style={{ backgroundColor: C.surface, borderTop: `1px solid ${C.border}`, padding: '52px 0 32px' }}>
+    <div style={s.section}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+          <div style={{ width: 28, height: 28, borderRadius: 6, backgroundColor: C.gold, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 10, color: '#000' }}>57</div>
+          <span style={{ color: C.cream, fontWeight: 900, fontSize: 13, letterSpacing: '0.04em' }}>57 ARTS & CUSTOMS</span>
+        </Link>
+        <div style={{ display: 'flex', gap: 24 }}>
+          {[['Vendor Programme', '/vendor'], ['Shop', '/shop'], ['Contact', '/contact'], ['Home', '/']].map(([label, path]) => (
+            <Link key={label} to={path} style={{ color: C.muted, fontSize: 12, textDecoration: 'none' }}
+              onMouseEnter={e => e.target.style.color = C.cream} onMouseLeave={e => e.target.style.color = C.muted}>{label}</Link>
+          ))}
+        </div>
+        <p style={{ color: C.dim, fontSize: 11 }}>© 2024 57 Arts & Customs.</p>
+      </div>
+    </div>
+  </footer>
+);
+
 const AffiliateLanding = () => {
-  const [form, setForm] = useState({ name: '', email: '', channel: '', audience: '', why: '' });
+  const [form, setForm]         = useState({ name: '', email: '', channel: '', audience: '', why: '' });
   const [submitted, setSubmitted] = useState(false);
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors]     = useState({});
 
   const validate = () => {
     const e = {};
     if (!form.name.trim()) e.name = 'Required';
     if (!form.email.trim()) e.email = 'Required';
     if (!form.channel) e.channel = 'Required';
-    if (!form.why.trim() || form.why.length < 20) e.why = 'Tell us a bit more';
+    if (!form.why.trim() || form.why.length < 20) e.why = 'Tell us a bit more (min 20 chars)';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
+  const inputStyle = (field) => ({ ...s.input, borderColor: errors[field] ? C.err : C.border });
+
   if (submitted) {
     return (
-      <div className="min-h-screen text-white flex items-center justify-center px-8"
-        style={{ backgroundColor: '#1a1500' }}>
-        <div className="max-w-md w-full text-center">
-          <div className="w-20 h-20 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl">✦</div>
-          <h1 className="text-white font-black text-2xl uppercase mb-2">Application Submitted!</h1>
-          <p className="text-gray-400 text-sm mb-6 leading-relaxed">
-            Thanks <span className="text-yellow-400 font-black">{form.name}</span>! We'll send your
-            affiliate link and dashboard access to <span className="text-yellow-400">{form.email}</span> within 24 hours.
+      <div style={{ backgroundColor: C.bg, color: C.cream, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ maxWidth: 440, width: '100%', textAlign: 'center', padding: '0 24px' }}>
+          <div style={{ width: 72, height: 72, borderRadius: '50%', backgroundColor: C.gold, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', fontSize: 26 }}>✦</div>
+          <h1 style={{ color: C.cream, fontWeight: 900, fontSize: 28, textTransform: 'uppercase', marginBottom: 12 }}>Application Submitted!</h1>
+          <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.8, marginBottom: 28 }}>
+            Thanks <span style={{ color: C.gold, fontWeight: 900 }}>{form.name}</span>! We'll send your affiliate link and dashboard access to <span style={{ color: C.gold }}>{form.email}</span> within 24 hours.
           </p>
-          <div className="flex gap-3 justify-center">
-            <Link to="/" className="border border-gray-700 text-gray-300 px-5 py-3 rounded-xl font-black text-sm hover:border-yellow-400 transition">
-              Back to Home
-            </Link>
-            <Link to="/affiliate/dashboard" className="bg-yellow-400 text-black px-5 py-3 rounded-xl font-black text-sm hover:bg-yellow-500 transition">
-              View Dashboard
-            </Link>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+            <Link to="/" style={s.btnGhost}>Back to Home</Link>
+            <Link to="/affiliate/dashboard" style={s.btnGold}>View Dashboard →</Link>
           </div>
         </div>
       </div>
@@ -47,44 +95,38 @@ const AffiliateLanding = () => {
   }
 
   return (
-    <div className="min-h-screen text-white" style={{ backgroundColor: '#1a1500' }}>
+    <div style={{ backgroundColor: C.bg, color: C.cream, minHeight: '100vh' }}>
+      <div style={{ backgroundColor: C.gold, color: '#000', fontSize: 11, fontWeight: 900, textAlign: 'center', padding: '7px 16px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+        Earn up to 12% commission · 30-day cookie · Monthly M-Pesa payouts
+      </div>
 
       {/* HERO */}
-      <div style={{ backgroundColor: '#1a1a00' }} className="border-b border-gray-800 px-8 py-16 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-5 pointer-events-none"
-          style={{ backgroundImage: 'radial-gradient(circle at 60% 50%, #FFD700, transparent 60%)' }} />
-        <div className="max-w-5xl mx-auto relative z-10">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-5 h-px bg-yellow-400" />
-            <span className="text-yellow-400 text-xs font-black uppercase tracking-widest">Affiliate Programme</span>
-          </div>
-          <div className="grid grid-cols-2 gap-12 items-center">
+      <div style={{ backgroundColor: C.surface, borderBottom: `1px solid ${C.border}`, padding: '72px 0' }}>
+        <div style={s.section}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }}>
             <div>
-              <h1 className="text-5xl font-black uppercase leading-tight mb-4">
-                Earn by sharing<br />
-                <span className="text-yellow-400 italic">African craft.</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                <div style={{ width: 20, height: 1, backgroundColor: C.gold }} />
+                <p style={{ ...s.eyebrow, marginBottom: 0 }}>Affiliate Programme</p>
+              </div>
+              <h1 style={{ color: C.cream, fontSize: 62, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.04em', lineHeight: 0.9, marginBottom: 20 }}>
+                Earn by<br />sharing<br /><span style={{ color: C.gold }}>African craft.</span>
               </h1>
-              <p className="text-gray-400 text-sm leading-relaxed mb-6 max-w-md">
-                Join our affiliate programme and earn up to 12% commission on every sale
-                you refer. Share your unique link, track your earnings in real time,
-                and get paid monthly to your M-Pesa.
+              <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.85, maxWidth: 380, marginBottom: 28 }}>
+                Join our affiliate programme and earn up to 12% commission on every sale you refer. Share your unique link, track your earnings in real time, and get paid monthly to your M-Pesa.
               </p>
-              <a href="#apply"
-                className="inline-flex items-center gap-2 bg-yellow-400 text-black px-6 py-3 rounded-xl font-black text-sm hover:bg-yellow-500 transition">
-                Join the Programme → Free
-              </a>
+              <a href="#apply" style={s.btnGold}>Join the Programme — Free →</a>
             </div>
-            <div className="space-y-4">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {[
-                { label: 'Average monthly payout', value: 'KES 18,400' },
+                { label: 'Average monthly payout',   value: 'KES 18,400' },
                 { label: 'Highest earning affiliate', value: 'KES 142,000 / mo' },
-                { label: 'Active affiliates', value: '340+' },
-                { label: 'Cookie duration', value: '30 days' },
-              ].map(s => (
-                <div key={s.label} className="flex items-center justify-between px-5 py-3 rounded-xl border border-gray-800"
-                  style={{ backgroundColor: '#2a2000' }}>
-                  <span className="text-gray-400 text-sm">{s.label}</span>
-                  <span className="text-yellow-400 font-black text-sm">{s.value}</span>
+                { label: 'Active affiliates',         value: '340+' },
+                { label: 'Cookie duration',           value: '30 days' },
+              ].map(stat => (
+                <div key={stat.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', backgroundColor: C.faint, border: `1px solid ${C.border}`, borderRadius: 12 }}>
+                  <span style={{ color: C.muted, fontSize: 13 }}>{stat.label}</span>
+                  <span style={{ color: C.gold, fontWeight: 900, fontSize: 14 }}>{stat.value}</span>
                 </div>
               ))}
             </div>
@@ -92,28 +134,27 @@ const AffiliateLanding = () => {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-8 py-12">
+      <div style={{ ...s.section, padding: '64px 48px' }}>
 
         {/* COMMISSION TIERS */}
-        <div className="mb-14">
-          <h2 className="text-white font-black text-xl uppercase mb-2">Commission tiers</h2>
-          <p className="text-gray-500 text-sm mb-6">Your tier updates automatically based on monthly referred sales.</p>
-          <div className="grid grid-cols-3 gap-5">
+        <div style={{ marginBottom: 56 }}>
+          <p style={s.eyebrow}>Commission Structure</p>
+          <h2 style={{ color: C.cream, fontSize: 28, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.02em', marginBottom: 8 }}>Tier Levels</h2>
+          <p style={{ color: C.muted, fontSize: 13, marginBottom: 28 }}>Your tier updates automatically based on monthly referred sales.</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
             {tiers.map(tier => (
-              <div key={tier.name}
-                className={`rounded-2xl border-2 p-6 relative ${tier.color} ${tier.featured ? 'bg-yellow-400 bg-opacity-5' : ''}`}
-                style={{ backgroundColor: tier.featured ? undefined : '#1a1a00' }}>
+              <div key={tier.name} style={{ ...s.card, padding: 28, position: 'relative', border: `2px solid ${tier.featured ? C.gold : C.border}`, backgroundColor: tier.featured ? 'rgba(201,168,76,0.05)' : C.surface }}>
                 {tier.featured && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-yellow-400 text-black text-xs font-black px-3 py-1 rounded-full">
+                  <div style={{ position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)', backgroundColor: C.gold, color: '#000', fontSize: 10, fontWeight: 900, padding: '4px 14px', borderRadius: 100, whiteSpace: 'nowrap', letterSpacing: '0.08em' }}>
                     Most common
                   </div>
                 )}
-                <p className={`font-black text-sm uppercase tracking-widest mb-1 ${tier.text}`}>{tier.name}</p>
-                <p className="text-white font-black text-4xl mb-1">{tier.commission}</p>
-                <p className="text-gray-500 text-xs mb-4">commission per sale</p>
-                <div className="pt-4 border-t border-gray-800">
-                  <p className="text-gray-500 text-xs">Unlocked at</p>
-                  <p className="text-white font-black text-sm">{tier.threshold}</p>
+                <p style={{ color: tier.featured ? C.gold : C.muted, fontWeight: 900, fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 10 }}>{tier.name}</p>
+                <p style={{ color: C.cream, fontWeight: 900, fontSize: 44, lineHeight: 1, marginBottom: 4 }}>{tier.commission}</p>
+                <p style={{ color: C.muted, fontSize: 12, marginBottom: 20 }}>commission per sale</p>
+                <div style={{ paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
+                  <p style={{ color: C.dim, fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 5 }}>Unlocked at</p>
+                  <p style={{ color: C.cream, fontWeight: 900, fontSize: 13 }}>{tier.threshold}</p>
                 </div>
               </div>
             ))}
@@ -121,141 +162,90 @@ const AffiliateLanding = () => {
         </div>
 
         {/* HOW IT WORKS */}
-        <div className="rounded-2xl border border-gray-800 p-8 mb-14"
-          style={{ backgroundColor: '#1a1a00' }}>
-          <h2 className="text-white font-black text-xl uppercase mb-6">How it works</h2>
-          <div className="grid grid-cols-4 gap-4">
-            {[
-              { num: '01', icon: '🔗', title: 'Get your link', desc: 'Receive a unique referral link after approval.' },
-              { num: '02', icon: '📣', title: 'Share it', desc: 'Post on social media, blogs, YouTube, newsletters.' },
-              { num: '03', icon: '🛍', title: 'Buyer purchases', desc: '30-day cookie tracks all purchases from your referral.' },
-              { num: '04', icon: '💰', title: 'Get paid', desc: 'Monthly payouts via M-Pesa or bank transfer.' },
-            ].map(s => (
-              <div key={s.num} className="text-center">
-                <div className="w-12 h-12 bg-yellow-400 bg-opacity-20 border border-yellow-900 rounded-xl flex items-center justify-center mx-auto mb-3 text-xl">
-                  {s.icon}
-                </div>
-                <p className="text-white font-black text-sm mb-1">{s.title}</p>
-                <p className="text-gray-500 text-xs leading-relaxed">{s.desc}</p>
+        <div style={{ ...s.card, padding: 36, marginBottom: 56 }}>
+          <p style={s.eyebrow}>Process</p>
+          <h2 style={{ color: C.cream, fontSize: 22, fontWeight: 900, textTransform: 'uppercase', marginBottom: 28 }}>How it works</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
+            {howItWorks.map((step, i) => (
+              <div key={step.num} style={{ textAlign: 'center', position: 'relative' }}>
+                {i < 3 && <div style={{ position: 'absolute', top: 24, left: '60%', width: '80%', height: 1, backgroundColor: C.border }} />}
+                <div style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: C.faint, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', fontSize: 20 }}>{step.icon}</div>
+                <p style={{ color: C.cream, fontWeight: 900, fontSize: 13, marginBottom: 6 }}>{step.title}</p>
+                <p style={{ color: C.muted, fontSize: 12, lineHeight: 1.65 }}>{step.desc}</p>
               </div>
             ))}
           </div>
         </div>
 
         {/* WHO IT'S FOR */}
-        <div className="mb-14">
-          <h2 className="text-white font-black text-xl uppercase mb-6">Who joins our programme</h2>
-          <div className="grid grid-cols-3 gap-5">
-            {[
-              { type: 'Content creators', desc: 'Fashion, lifestyle, and interior design creators who want to monetise their audience authentically.' },
-              { type: 'Bloggers & writers', desc: 'Writers covering African culture, design, and craft who want to earn from their content.' },
-              { type: 'Event planners', desc: 'Planners who regularly source handmade décor and gifts for clients.' },
-              { type: 'Diaspora community leaders', desc: 'Community organisers who connect African diaspora members with authentic crafts from home.' },
-              { type: 'Interior designers', desc: 'Designers who source unique artisan pieces for client projects.' },
-              { type: 'Gift curators', desc: 'Anyone who regularly recommends gifts and lifestyle products to their network.' },
-            ].map(w => (
-              <div key={w.type} className="rounded-2xl border border-gray-800 p-5"
-                style={{ backgroundColor: '#1a1a00' }}>
-                <p className="text-yellow-400 font-black text-sm mb-2">✦ {w.type}</p>
-                <p className="text-gray-400 text-xs leading-relaxed">{w.desc}</p>
+        <div style={{ marginBottom: 56 }}>
+          <p style={s.eyebrow}>Who joins</p>
+          <h2 style={{ color: C.cream, fontSize: 22, fontWeight: 900, textTransform: 'uppercase', marginBottom: 24 }}>Our Programme Members</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+            {whoJoins.map(w => (
+              <div key={w.type} style={{ ...s.card, padding: 22 }}>
+                <p style={{ color: C.gold, fontWeight: 900, fontSize: 13, marginBottom: 8 }}>✦ {w.type}</p>
+                <p style={{ color: C.muted, fontSize: 12, lineHeight: 1.65 }}>{w.desc}</p>
               </div>
             ))}
           </div>
         </div>
 
         {/* APPLICATION FORM */}
-        <div id="apply" className="rounded-3xl border border-gray-800 overflow-hidden"
-          style={{ backgroundColor: '#1a1a00' }}>
-          <div className="p-6 border-b border-gray-800">
-            <h2 className="text-white font-black text-sm uppercase tracking-widest">Apply to join</h2>
-            <p className="text-gray-500 text-xs mt-1">Free to join · Instant link on approval · No minimum traffic required</p>
+        <div id="apply" style={{ ...s.card, overflow: 'hidden' }}>
+          <div style={{ height: 3, backgroundColor: C.gold }} />
+          <div style={{ padding: '24px 28px', borderBottom: `1px solid ${C.border}` }}>
+            <p style={s.eyebrow}>Apply to join</p>
+            <h2 style={{ color: C.cream, fontWeight: 900, fontSize: 20 }}>Join the Affiliate Programme</h2>
+            <p style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>Free to join · Instant link on approval · No minimum traffic required</p>
           </div>
-          <div className="p-6 space-y-5">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-gray-500 text-xs font-black uppercase tracking-widest block mb-2">Full Name</label>
-                <input type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
-                  placeholder="Your name"
-                  className={`w-full px-4 py-3 rounded-xl text-white text-sm outline-none border transition placeholder-gray-700 ${errors.name ? 'border-red-500' : 'border-gray-700 focus:border-yellow-400'}`}
-                  style={{ backgroundColor: '#2a2000' }} />
-                {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
-              </div>
-              <div>
-                <label className="text-gray-500 text-xs font-black uppercase tracking-widest block mb-2">Email</label>
-                <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
-                  placeholder="hello@yourchannel.com"
-                  className={`w-full px-4 py-3 rounded-xl text-white text-sm outline-none border transition placeholder-gray-700 ${errors.email ? 'border-red-500' : 'border-gray-700 focus:border-yellow-400'}`}
-                  style={{ backgroundColor: '#2a2000' }} />
-                {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
-              </div>
+          <div style={{ padding: 28, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              {[['Full Name', 'name', 'text', 'Your name'], ['Email', 'email', 'email', 'hello@yourchannel.com']].map(([label, field, type, ph]) => (
+                <div key={field}>
+                  <label style={s.label}>{label}</label>
+                  <input type={type} value={form[field]} placeholder={ph} onChange={e => setForm({ ...form, [field]: e.target.value })}
+                    style={inputStyle(field)}
+                    onFocus={e => e.target.style.borderColor = C.bHov} onBlur={e => e.target.style.borderColor = errors[field] ? C.err : C.border} />
+                  {errors[field] && <p style={{ color: C.err, fontSize: 11, marginTop: 4 }}>{errors[field]}</p>}
+                </div>
+              ))}
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               <div>
-                <label className="text-gray-500 text-xs font-black uppercase tracking-widest block mb-2">Primary Channel</label>
+                <label style={s.label}>Primary Channel</label>
                 <select value={form.channel} onChange={e => setForm({ ...form, channel: e.target.value })}
-                  className={`w-full px-4 py-3 rounded-xl text-sm outline-none border transition ${errors.channel ? 'border-red-500' : 'border-gray-700 focus:border-yellow-400'} ${form.channel ? 'text-white' : 'text-gray-700'}`}
-                  style={{ backgroundColor: '#2a2000' }}>
+                  style={{ ...inputStyle('channel'), cursor: 'pointer' }}>
                   <option value="" disabled>Select your channel</option>
-                  <option>Instagram</option>
-                  <option>TikTok</option>
-                  <option>YouTube</option>
-                  <option>Blog / Website</option>
-                  <option>Newsletter</option>
-                  <option>WhatsApp Community</option>
-                  <option>Podcast</option>
-                  <option>Other</option>
+                  {['Instagram', 'TikTok', 'YouTube', 'Blog / Website', 'Newsletter', 'WhatsApp Community', 'Podcast', 'Other'].map(o => <option key={o}>{o}</option>)}
                 </select>
-                {errors.channel && <p className="text-red-400 text-xs mt-1">{errors.channel}</p>}
+                {errors.channel && <p style={{ color: C.err, fontSize: 11, marginTop: 4 }}>{errors.channel}</p>}
               </div>
               <div>
-                <label className="text-gray-500 text-xs font-black uppercase tracking-widest block mb-2">Audience Size (approx)</label>
+                <label style={s.label}>Audience Size</label>
                 <select value={form.audience} onChange={e => setForm({ ...form, audience: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl text-sm outline-none border border-gray-700 focus:border-yellow-400 transition text-white"
-                  style={{ backgroundColor: '#2a2000' }}>
+                  style={{ ...s.input, cursor: 'pointer' }}>
                   <option value="">Select range</option>
-                  <option>Under 1,000</option>
-                  <option>1,000 – 10,000</option>
-                  <option>10,000 – 50,000</option>
-                  <option>50,000 – 200,000</option>
-                  <option>200,000+</option>
+                  {['Under 1,000', '1,000 – 10,000', '10,000 – 50,000', '50,000 – 200,000', '200,000+'].map(o => <option key={o}>{o}</option>)}
                 </select>
               </div>
             </div>
-
             <div>
-              <label className="text-gray-500 text-xs font-black uppercase tracking-widest block mb-2">Why do you want to join?</label>
-              <textarea value={form.why} onChange={e => setForm({ ...form, why: e.target.value })}
+              <label style={s.label}>Why do you want to join?</label>
+              <textarea value={form.why} onChange={e => setForm({ ...form, why: e.target.value })} rows={4}
                 placeholder="Tell us about your audience, how you plan to promote 57 Arts & Customs, and why you're a good fit..."
-                rows={4}
-                className={`w-full px-4 py-3 rounded-xl text-white text-sm outline-none border transition resize-none placeholder-gray-700 ${errors.why ? 'border-red-500' : 'border-gray-700 focus:border-yellow-400'}`}
-                style={{ backgroundColor: '#2a2000' }} />
-              {errors.why && <p className="text-red-400 text-xs mt-1">{errors.why}</p>}
+                style={{ ...inputStyle('why'), resize: 'none', lineHeight: 1.7 }}
+                onFocus={e => e.target.style.borderColor = C.bHov} onBlur={e => e.target.style.borderColor = errors.why ? C.err : C.border} />
+              {errors.why && <p style={{ color: C.err, fontSize: 11, marginTop: 4 }}>{errors.why}</p>}
             </div>
-
             <button onClick={() => { if (validate()) setSubmitted(true); }}
-              className="w-full bg-yellow-400 text-black py-4 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-yellow-500 transition">
+              style={{ ...s.btnGold, width: '100%', padding: '14px', borderRadius: 10, textAlign: 'center', boxSizing: 'border-box', fontSize: 12, letterSpacing: '0.08em' }}>
               Join the Affiliate Programme — Free →
             </button>
           </div>
         </div>
       </div>
-
-      {/* FOOTER */}
-      <footer style={{ backgroundColor: '#0d0d00' }} className="border-t border-yellow-900 px-8 py-8 mt-8">
-        <div className="max-w-5xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <span className="bg-yellow-400 text-black w-6 h-6 rounded flex items-center justify-center text-xs font-black">57</span>
-            <span className="text-white font-black text-sm">57 ARTS & CUSTOMS</span>
-          </div>
-          <div className="flex gap-6 text-xs text-gray-500">
-            <Link to="/vendor" className="hover:text-yellow-400 transition">Sell on 57 Arts</Link>
-            <Link to="/shop" className="hover:text-yellow-400 transition">Shop</Link>
-            <Link to="/contact" className="hover:text-yellow-400 transition">Contact</Link>
-          </div>
-          <p className="text-gray-700 text-xs">© 2024 57 Arts & Customs.</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };

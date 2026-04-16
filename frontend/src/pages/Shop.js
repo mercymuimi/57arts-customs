@@ -1,91 +1,88 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
+// ── DESIGN TOKENS (matches Home.js exactly) ───────────────────────────────────
+const C = {
+  bg:      '#0a0a0a',
+  surface: '#111111',
+  border:  '#1c1c1c',
+  bHov:    '#2e2e2e',
+  faint:   '#242424',
+  cream:   '#f0ece4',
+  muted:   '#606060',
+  dim:     '#333333',
+  gold:    '#c9a84c',
+  goldHov: '#deba60',
+};
+
+const s = {
+  section:    { maxWidth: 1200, margin: '0 auto', padding: '0 48px' },
+  eyebrow:    { color: C.gold, fontSize: 10, fontWeight: 900, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 10 },
+  h2:         { color: C.cream, fontSize: 36, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.02em', lineHeight: 1 },
+  tag:        { backgroundColor: C.faint, color: C.cream, fontSize: 9, fontWeight: 900, padding: '4px 10px', borderRadius: 100, letterSpacing: '0.12em', textTransform: 'uppercase', border: `1px solid ${C.border}` },
+  btnPrimary: { backgroundColor: C.cream, color: '#000', padding: '12px 24px', borderRadius: 10, fontWeight: 900, fontSize: 12, textDecoration: 'none', letterSpacing: '0.04em', display: 'inline-block', border: 'none', cursor: 'pointer' },
+  btnGhost:   { backgroundColor: 'transparent', color: C.cream, padding: '12px 24px', borderRadius: 10, fontWeight: 900, fontSize: 12, textDecoration: 'none', border: `1px solid ${C.border}`, letterSpacing: '0.04em', display: 'inline-block', cursor: 'pointer' },
+  btnGold:    { backgroundColor: C.gold, color: '#000', padding: '12px 24px', borderRadius: 10, fontWeight: 900, fontSize: 12, textDecoration: 'none', letterSpacing: '0.04em', display: 'inline-block', border: 'none', cursor: 'pointer' },
+  card:       { backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 16 },
+};
+
+// ── DATA ──────────────────────────────────────────────────────────────────────
 const allProducts = [
-  {
-    name: 'Vintage Denim Jacket',
-    price: 250,
-    desc: 'Heritage Street Wear',
-    category: 'Fashion',
-    tag: 'LIMITED',
-    tagColor: 'bg-yellow-400 text-black',
-    img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=400',
-    slug: 'distressed-artisanal-denim',
-  },
-  {
-    name: 'Raw Silk Polo',
-    price: 180,
-    desc: 'Old Money Collection',
-    category: 'Fashion',
-    tag: '',
-    tagColor: '',
-    img: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=400',
-    slug: 'linen-riviera-set',
-  },
-  {
-    name: 'Handcrafted Stool',
-    price: 450,
-    desc: 'Artisanal Furniture',
-    category: 'Furniture',
-    tag: 'CUSTOM',
-    tagColor: 'bg-yellow-400 text-black',
-    img: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400',
-    slug: 'handcrafted-stool',
-  },
-  {
-    name: 'Traditional Bead Set',
-    price: 120,
-    desc: 'Heritage Jewelry',
-    category: 'Beads',
-    tag: '',
-    tagColor: '',
-    img: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400',
-    slug: 'traditional-bead-set',
-  },
-  {
-    name: 'The Sculptor Chair',
-    price: 600,
-    desc: 'Statement Furniture Art',
-    category: 'Furniture',
-    tag: 'BESPOKE',
-    tagColor: 'bg-yellow-400 text-black',
-    img: 'https://images.unsplash.com/photo-1592078615290-033ee584e267?w=400',
-    slug: 'the-sculptor-chair',
-  },
-  {
-    name: 'Kente Bead Stack',
-    price: 85,
-    desc: 'Modern African Heritage',
-    category: 'Beads',
-    tag: '',
-    tagColor: '',
-    img: 'https://images.unsplash.com/photo-1611085583191-a3b181a88401?w=400',
-    slug: 'kente-bead-stack',
-  },
-  {
-    name: 'Midnight Velvet Blazer',
-    price: 590,
-    desc: 'Premium After-hours Wear',
-    category: 'Fashion',
-    tag: 'LIMITED',
-    tagColor: 'bg-yellow-400 text-black',
-    img: 'https://images.unsplash.com/photo-1551537482-f2075a1d41f2?w=400',
-    slug: 'midnight-velvet-blazer',
-  },
-  {
-    name: 'Monarch Carry-all',
-    price: 780,
-    desc: 'Full-grain Leather Accessory',
-    category: 'Fashion',
-    tag: 'BESPOKE ONLY',
-    tagColor: 'bg-yellow-400 text-black',
-    img: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=400',
-    slug: 'monarch-carry-all',
-  },
+  { name: 'Vintage Denim Jacket',    price: 'KSH 18,250', priceNum: 18250, desc: 'Heritage Street Wear',          category: 'Fashion',   tag: 'LIMITED',      img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=600', slug: 'distressed-artisanal-denim' },
+  { name: 'Raw Silk Polo',           price: 'KSH 13,140', priceNum: 13140, desc: 'Old Money Collection',          category: 'Fashion',   tag: '',             img: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=600', slug: 'linen-riviera-set' },
+  { name: 'Handcrafted Stool',       price: 'KSH 32,850', priceNum: 32850, desc: 'Artisanal Furniture',           category: 'Furniture', tag: 'CUSTOM',       img: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600', slug: 'handcrafted-stool' },
+  { name: 'Traditional Bead Set',    price: 'KSH 8,760',  priceNum: 8760,  desc: 'Heritage Jewelry',             category: 'Beads',     tag: '',             img: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600', slug: 'traditional-bead-set' },
+  { name: 'The Sculptor Chair',      price: 'KSH 43,800', priceNum: 43800, desc: 'Statement Furniture Art',       category: 'Furniture', tag: 'BESPOKE',      img: 'https://images.unsplash.com/photo-1592078615290-033ee584e267?w=600', slug: 'the-sculptor-chair' },
+  { name: 'Kente Bead Stack',        price: 'KSH 6,205',  priceNum: 6205,  desc: 'Modern African Heritage',       category: 'Beads',     tag: '',             img: 'https://images.unsplash.com/photo-1611085583191-a3b181a88401?w=600', slug: 'kente-bead-stack' },
+  { name: 'Midnight Velvet Blazer',  price: 'KSH 43,070', priceNum: 43070, desc: 'Premium After-hours Wear',      category: 'Fashion',   tag: 'LIMITED',      img: 'https://images.unsplash.com/photo-1551537482-f2075a1d41f2?w=600', slug: 'midnight-velvet-blazer' },
+  { name: 'Monarch Carry-all',       price: 'KSH 56,940', priceNum: 56940, desc: 'Full-grain Leather Accessory',  category: 'Fashion',   tag: 'BESPOKE ONLY', img: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=600', slug: 'monarch-carry-all' },
 ];
 
 const categories = ['ALL', 'FASHION', 'FURNITURE', 'BEADS'];
 
+// ── SHARED FOOTER ─────────────────────────────────────────────────────────────
+const Footer = () => (
+  <footer style={{ backgroundColor: C.surface, borderTop: `1px solid ${C.border}`, padding: '64px 0 36px' }}>
+    <div style={s.section}>
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 64, marginBottom: 52 }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <div style={{ width: 30, height: 30, borderRadius: 6, backgroundColor: C.gold, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 11, color: '#000' }}>57</div>
+            <span style={{ color: C.cream, fontWeight: 900, fontSize: 13, letterSpacing: '0.04em' }}>57 ARTS & CUSTOMS</span>
+          </div>
+          <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.8, maxWidth: 270, marginBottom: 22 }}>
+            Redefining luxury through artisanal craftsmanship and AI-powered creativity. Built for the bold generation.
+          </p>
+        </div>
+        <div>
+          <h4 style={{ color: C.cream, fontWeight: 900, fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 18 }}>Shop</h4>
+          {[['Fashion', '/fashion'], ['Furniture', '/furniture'], ['Beads & Jewelry', '/beads'], ['Custom Orders', '/custom-order']].map(([label, path]) => (
+            <Link key={label} to={path} style={{ display: 'block', color: C.muted, fontSize: 13, marginBottom: 9, textDecoration: 'none' }}
+              onMouseEnter={e => e.target.style.color = C.cream} onMouseLeave={e => e.target.style.color = C.muted}>{label}</Link>
+          ))}
+        </div>
+        <div>
+          <h4 style={{ color: C.cream, fontWeight: 900, fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 18 }}>Company</h4>
+          {[['About Us', '/about'], ['Vendor Program', '/vendor'], ['Affiliate', '/affiliate'], ['Contact', '/contact']].map(([label, path]) => (
+            <Link key={label} to={path} style={{ display: 'block', color: C.muted, fontSize: 13, marginBottom: 9, textDecoration: 'none' }}
+              onMouseEnter={e => e.target.style.color = C.cream} onMouseLeave={e => e.target.style.color = C.muted}>{label}</Link>
+          ))}
+        </div>
+      </div>
+      <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 22, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <p style={{ color: C.muted, fontSize: 11 }}>© 2024 57 Arts & Customs. All rights reserved. Nairobi, Kenya.</p>
+        <div style={{ display: 'flex', gap: 22 }}>
+          {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map(label => (
+            <Link key={label} to="/contact" style={{ color: C.muted, fontSize: 11, textDecoration: 'none' }}
+              onMouseEnter={e => e.target.style.color = C.cream} onMouseLeave={e => e.target.style.color = C.muted}>{label}</Link>
+          ))}
+        </div>
+      </div>
+    </div>
+  </footer>
+);
+
+// ── COMPONENT ─────────────────────────────────────────────────────────────────
 const Shop = () => {
   const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState('ALL');
@@ -93,269 +90,231 @@ const Shop = () => {
   const [wishlist, setWishlist] = useState([]);
   const [cartAdded, setCartAdded] = useState([]);
   const [quickView, setQuickView] = useState(null);
+  const [hoveredCard, setHoveredCard] = useState(null);
+  const [visualSearchOpen, setVisualSearchOpen] = useState(false);
+  const [vsImage, setVsImage] = useState(null);
+  const [vsSearching, setVsSearching] = useState(false);
+  const [vsResults, setVsResults] = useState([]);
 
   const toggleWishlist = (e, slug) => {
     e.stopPropagation();
-    setWishlist(prev =>
-      prev.includes(slug) ? prev.filter(s => s !== slug) : [...prev, slug]
-    );
+    setWishlist(p => p.includes(slug) ? p.filter(s => s !== slug) : [...p, slug]);
   };
 
   const handleAddToCart = (e, product) => {
     e.stopPropagation();
-    setCartAdded(prev => [...prev, product.slug]);
+    setCartAdded(p => [...p, product.slug]);
+    setTimeout(() => setCartAdded(p => p.filter(s => s !== product.slug)), 2200);
+  };
+
+  const handleVisualSearch = (file) => {
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    setVsImage(url);
+    setVsSearching(true);
+    setVsResults([]);
+    // Simulate AI matching — returns random products as "visually similar"
     setTimeout(() => {
-      setCartAdded(prev => prev.filter(s => s !== product.slug));
+      const shuffled = [...allProducts].sort(() => Math.random() - 0.5).slice(0, 4);
+      setVsResults(shuffled);
+      setVsSearching(false);
     }, 2000);
   };
 
-  const openQuickView = (e, product) => {
-    e.stopPropagation();
-    setQuickView(product);
-  };
-
   const filtered = allProducts
-    .filter(p =>
-      activeCategory === 'ALL' || p.category.toUpperCase() === activeCategory
-    )
+    .filter(p => activeCategory === 'ALL' || p.category.toUpperCase() === activeCategory)
     .sort((a, b) => {
-      if (sortBy === 'Price: Low') return a.price - b.price;
-      if (sortBy === 'Price: High') return b.price - a.price;
+      if (sortBy === 'Price: Low') return a.priceNum - b.priceNum;
+      if (sortBy === 'Price: High') return b.priceNum - a.priceNum;
       return 0;
     });
 
   return (
-    <div className="min-h-screen text-white" style={{ backgroundColor: '#1a1500' }}>
+    <div style={{ backgroundColor: C.bg, color: C.cream, minHeight: '100vh' }}>
+
+      {/* ANNOUNCEMENT BAR */}
+      <div style={{ backgroundColor: C.gold, color: '#000', fontSize: 11, fontWeight: 900, textAlign: 'center', padding: '7px 16px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+        Free shipping on custom orders over KSH 50,000 · M-Pesa accepted · New drop every Friday
+      </div>
 
       {/* HERO BANNER */}
-      <div
-        className="relative px-8 py-16 text-center overflow-hidden"
-        style={{ backgroundColor: '#1a1a00' }}
-      >
-        <div
-          className="absolute inset-0 opacity-10"
-          style={{
-            backgroundImage: 'radial-gradient(circle at 50% 50%, #FFD700, transparent 70%)',
-          }}
-        />
-        <span className="inline-block border border-yellow-400 text-yellow-400 text-xs font-black px-4 py-1 rounded-full mb-4 uppercase tracking-widest">
-          Limited Drops Available
-        </span>
-        <h1 className="text-6xl font-black uppercase leading-none mb-4">
-          Shop <span className="text-yellow-400">Collection</span>
-        </h1>
-        <p className="text-gray-400 text-sm max-w-md mx-auto">
-          Curated artisanal pieces across fashion, furniture, and heritage beadwork.
-          Each piece is one-of-a-kind.
-        </p>
+      <div style={{ backgroundColor: C.surface, borderBottom: `1px solid ${C.border}`, padding: '72px 0 64px', position: 'relative', overflow: 'hidden' }}>
+        {/* Decorative vertical rule */}
+        <div style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: 1, backgroundColor: C.border, transform: 'translateX(-50%)' }} />
+        <div style={s.section}>
+          <div style={{ maxWidth: 640 }}>
+            <p style={s.eyebrow}>Curated Artisanal Marketplace</p>
+            <h1 style={{ color: C.cream, fontSize: 72, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.04em', lineHeight: 0.9, marginBottom: 20 }}>
+              Shop the<br /><span style={{ color: C.gold }}>Collection</span>
+            </h1>
+            <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.8, maxWidth: 440, marginBottom: 32 }}>
+              Curated artisanal pieces across fashion, furniture, and heritage beadwork.
+              Each piece is one-of-a-kind — made for the bold generation.
+            </p>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <Link to="/custom-order" style={s.btnGold}>Commission a Piece →</Link>
+              <button onClick={() => { setVisualSearchOpen(true); setVsImage(null); setVsResults([]); }} style={s.btnGhost}>◎ Try Visual Search</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* FILTERS */}
-      <div className="max-w-6xl mx-auto px-8 py-6">
-        <div className="flex flex-wrap justify-between items-center gap-4">
-
+      <div style={{ borderBottom: `1px solid ${C.border}`, position: 'sticky', top: 0, zIndex: 40, backgroundColor: C.bg, backdropFilter: 'blur(12px)' }}>
+        <div style={{ ...s.section, padding: '0 48px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: 56 }}>
           {/* Category Tabs */}
-          <div className="flex gap-2 flex-wrap">
+          <div style={{ display: 'flex', gap: 4 }}>
             {categories.map(cat => (
-              <button
-                key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className={`px-5 py-2 rounded-full text-xs font-black uppercase tracking-wide transition ${
-                  activeCategory === cat
-                    ? 'bg-yellow-400 text-black'
-                    : 'border border-gray-700 text-gray-400 hover:border-yellow-400 hover:text-yellow-400'
-                }`}
-              >
+              <button key={cat} onClick={() => setActiveCategory(cat)}
+                style={{
+                  padding: '6px 16px', borderRadius: 8, fontSize: 11, fontWeight: 900, letterSpacing: '0.08em',
+                  cursor: 'pointer', border: 'none', transition: 'all 0.15s',
+                  backgroundColor: activeCategory === cat ? C.gold : 'transparent',
+                  color: activeCategory === cat ? '#000' : C.muted,
+                }}
+                onMouseEnter={e => { if (activeCategory !== cat) { e.currentTarget.style.color = C.cream; } }}
+                onMouseLeave={e => { if (activeCategory !== cat) { e.currentTarget.style.color = C.muted; } }}>
                 {cat}
               </button>
             ))}
           </div>
 
-          {/* Sort */}
-          <div className="flex items-center gap-3">
-            <span className="text-gray-500 text-xs">Sort by:</span>
-            <select
-              value={sortBy}
-              onChange={e => setSortBy(e.target.value)}
-              className="border border-gray-700 text-white text-xs px-3 py-2 rounded-lg focus:outline-none focus:border-yellow-400"
-              style={{ backgroundColor: '#2a2000' }}
-            >
+          {/* Sort + count */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <span style={{ color: C.dim, fontSize: 11 }}>{filtered.length} pieces</span>
+            <select value={sortBy} onChange={e => setSortBy(e.target.value)}
+              style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, color: C.cream, fontSize: 11, fontWeight: 700, padding: '6px 12px', borderRadius: 8, cursor: 'pointer', outline: 'none' }}>
               <option>Latest</option>
               <option>Price: Low</option>
               <option>Price: High</option>
             </select>
-            <span className="text-gray-600 text-xs">{filtered.length} pieces</span>
           </div>
         </div>
       </div>
 
       {/* PRODUCTS GRID */}
-      <div className="max-w-6xl mx-auto px-8 pb-16">
-        <div className="grid grid-cols-4 gap-6">
-          {filtered.map(product => (
-            <div key={product.slug} className="group">
+      <div style={{ ...s.section, padding: '48px 48px 80px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
+          {filtered.map(product => {
+            const isHov = hoveredCard === product.slug;
+            const inCart = cartAdded.includes(product.slug);
+            const inWish = wishlist.includes(product.slug);
+            return (
+              <div key={product.slug}
+                onMouseEnter={() => setHoveredCard(product.slug)}
+                onMouseLeave={() => setHoveredCard(null)}
+                style={{ cursor: 'pointer' }}>
 
-              {/* Image */}
-              <div
-                className="relative rounded-2xl overflow-hidden mb-3 cursor-pointer"
-                style={{ backgroundColor: '#2a2000', height: '280px' }}
-                onClick={() => navigate(`/product/${product.slug}`)}
-              >
-                <img
-                  src={product.img}
-                  alt={product.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                />
+                {/* Image container */}
+                <div style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', height: 290, backgroundColor: C.surface, border: `1px solid ${isHov ? C.bHov : C.border}`, transition: 'border-color 0.2s', marginBottom: 14 }}
+                  onClick={() => navigate(`/product/${product.slug}`)}>
+                  <img src={product.img} alt={product.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease', transform: isHov ? 'scale(1.06)' : 'scale(1)' }} />
 
-                {/* Tag */}
-                {product.tag && (
-                  <span className={`absolute top-3 left-3 ${product.tagColor} text-xs font-black px-2 py-1 rounded-full`}>
-                    {product.tag}
-                  </span>
-                )}
+                  {/* Tag */}
+                  {product.tag && (
+                    <span style={{ position: 'absolute', top: 12, left: 12, backgroundColor: C.gold, color: '#000', fontSize: 9, fontWeight: 900, padding: '4px 10px', borderRadius: 100, letterSpacing: '0.1em' }}>
+                      {product.tag}
+                    </span>
+                  )}
 
-                {/* Wishlist Heart */}
-                <button
-                  onClick={e => toggleWishlist(e, product.slug)}
-                  className="absolute top-3 right-3 bg-black bg-opacity-50 rounded-full w-8 h-8 flex items-center justify-center hover:bg-opacity-80 transition z-10"
-                >
-                  <span className={wishlist.includes(product.slug) ? 'text-red-400' : 'text-white'}>
-                    {wishlist.includes(product.slug) ? '♥' : '♡'}
-                  </span>
+                  {/* Wishlist */}
+                  <button onClick={e => toggleWishlist(e, product.slug)}
+                    style={{ position: 'absolute', top: 12, right: 12, width: 32, height: 32, borderRadius: 8, border: `1px solid ${C.border}`, backgroundColor: 'rgba(10,10,10,0.8)', color: inWish ? '#e74c3c' : C.muted, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
+                    {inWish ? '♥' : '♡'}
+                  </button>
+
+                  {/* Hover overlay */}
+                  <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.55)', opacity: isHov ? 1 : 0, transition: 'opacity 0.3s', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                    <button onClick={e => { e.stopPropagation(); setQuickView(product); }}
+                      style={{ ...s.btnPrimary, padding: '10px 24px', fontSize: 11 }}>
+                      ◎ Quick View
+                    </button>
+                    <button onClick={e => { e.stopPropagation(); navigate(`/product/${product.slug}`); }}
+                      style={{ ...s.btnGhost, padding: '10px 24px', fontSize: 11 }}>
+                      Full Details
+                    </button>
+                  </div>
+                </div>
+
+                {/* Product info */}
+                <div onClick={() => navigate(`/product/${product.slug}`)}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                    <div style={{ flex: 1, marginRight: 8 }}>
+                      <p style={{ color: isHov ? C.gold : C.cream, fontSize: 13, fontWeight: 900, marginBottom: 3, transition: 'color 0.2s' }}>{product.name}</p>
+                      <p style={{ color: C.muted, fontSize: 11 }}>{product.desc}</p>
+                      <p style={{ color: C.dim, fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 3 }}>{product.category}</p>
+                    </div>
+                    <p style={{ color: C.gold, fontWeight: 900, fontSize: 13, flexShrink: 0 }}>{product.price}</p>
+                  </div>
+                </div>
+
+                {/* Add to Cart */}
+                <button onClick={e => handleAddToCart(e, product)}
+                  style={{
+                    width: '100%', padding: '10px', borderRadius: 10, fontWeight: 900, fontSize: 11, letterSpacing: '0.05em', cursor: 'pointer', transition: 'all 0.2s',
+                    backgroundColor: inCart ? '#1a3a1a' : 'transparent',
+                    color: inCart ? '#4ade80' : C.muted,
+                    border: `1px solid ${inCart ? '#2a5a2a' : C.border}`,
+                  }}
+                  onMouseEnter={e => { if (!inCart) { e.currentTarget.style.backgroundColor = C.gold; e.currentTarget.style.color = '#000'; e.currentTarget.style.borderColor = C.gold; } }}
+                  onMouseLeave={e => { if (!inCart) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = C.muted; e.currentTarget.style.borderColor = C.border; } }}>
+                  {inCart ? '✓ Added to Cart' : '+ Add to Cart'}
                 </button>
-
-                {/* Hover Overlay */}
-                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-60 transition duration-300 flex flex-col items-center justify-center gap-3 opacity-0 group-hover:opacity-100">
-                  <button
-                    onClick={e => openQuickView(e, product)}
-                    className="bg-white text-black px-5 py-2 rounded-full font-black text-xs hover:bg-yellow-400 transition w-36"
-                  >
-                    👁 Quick View
-                  </button>
-                  <button
-                    onClick={() => navigate(`/product/${product.slug}`)}
-                    className="border-2 border-white text-white px-5 py-2 rounded-full font-black text-xs hover:border-yellow-400 hover:text-yellow-400 transition w-36"
-                  >
-                    View Details
-                  </button>
-                </div>
               </div>
-
-              {/* Product Info */}
-              <div
-                className="flex justify-between items-start mb-2 cursor-pointer"
-                onClick={() => navigate(`/product/${product.slug}`)}
-              >
-                <div>
-                  <p className="text-white font-black text-sm group-hover:text-yellow-400 transition">
-                    {product.name}
-                  </p>
-                  <p className="text-gray-500 text-xs mt-1">{product.desc}</p>
-                  <p className="text-yellow-700 text-xs mt-1 uppercase tracking-wide">
-                    {product.category}
-                  </p>
-                </div>
-                <p className="text-yellow-400 font-black text-sm ml-2">${product.price}</p>
-              </div>
-
-              {/* Add to Cart Button */}
-              <button
-                onClick={e => handleAddToCart(e, product)}
-                className={`w-full py-2 rounded-xl font-black text-xs transition ${
-                  cartAdded.includes(product.slug)
-                    ? 'bg-green-500 text-white'
-                    : 'border border-gray-700 text-gray-400 hover:bg-yellow-400 hover:text-black hover:border-yellow-400'
-                }`}
-              >
-                {cartAdded.includes(product.slug) ? '✓ Added to Cart!' : '+ Add to Cart'}
-              </button>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
-        {/* Custom Order CTA Banner */}
-        <div
-          className="mt-14 rounded-2xl p-10 text-center border border-yellow-900"
-          style={{ backgroundColor: '#1a1a00' }}
-        >
-          <p className="text-yellow-400 font-black text-xs uppercase tracking-widest mb-2">
-            Can't find what you're looking for?
-          </p>
-          <h3 className="text-white font-black text-3xl mb-3">
-            Want Something Unique?
-          </h3>
-          <p className="text-gray-500 text-sm mb-6 max-w-md mx-auto">
-            Commission a bespoke piece crafted to your exact specifications by our master artisans.
-          </p>
-          <Link
-            to="/custom-order"
-            className="inline-block bg-yellow-400 text-black px-8 py-3 rounded-xl font-black text-sm hover:bg-yellow-500 transition"
-          >
-            Start Custom Order →
-          </Link>
+        {/* Custom Order CTA */}
+        <div style={{ marginTop: 64, backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 18, overflow: 'hidden' }}>
+          <div style={{ height: 2, backgroundColor: C.gold }} />
+          <div style={{ padding: '52px 60px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60, alignItems: 'center' }}>
+            <div>
+              <p style={s.eyebrow}>Can't find what you're looking for?</p>
+              <h2 style={{ ...s.h2, marginBottom: 12 }}>Want Something<br />Truly Unique?</h2>
+              <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.85 }}>
+                Commission a bespoke piece crafted to your exact specifications by our master artisans. Every material, every dimension — your vision.
+              </p>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <Link to="/custom-order" style={{ ...s.btnGold, textAlign: 'center', padding: '14px' }}>
+                Start Custom Order →
+              </Link>
+              <Link to="/artisan-chat" style={{ ...s.btnGhost, textAlign: 'center', padding: '14px' }}>
+                Chat with an Artisan
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* QUICK VIEW MODAL */}
       {quickView && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center px-4"
-          onClick={() => setQuickView(null)}
-        >
-          <div
-            className="rounded-2xl p-6 max-w-lg w-full border border-gray-700 relative"
-            style={{ backgroundColor: '#1a1a00' }}
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Close */}
-            <button
-              onClick={() => setQuickView(null)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white text-xl transition"
-            >
-              ✕
-            </button>
-
-            <div className="flex gap-5">
-              <img
-                src={quickView.img}
-                alt={quickView.name}
-                className="w-44 h-44 rounded-xl object-cover flex-shrink-0"
-              />
-              <div className="flex-1">
+        <div onClick={() => setQuickView(null)}
+          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 20, padding: 28, maxWidth: 520, width: '100%', position: 'relative' }}>
+            <button onClick={() => setQuickView(null)}
+              style={{ position: 'absolute', top: 16, right: 16, background: 'transparent', border: 'none', color: C.muted, fontSize: 18, cursor: 'pointer' }}>✕</button>
+            <div style={{ display: 'flex', gap: 20 }}>
+              <img src={quickView.img} alt={quickView.name}
+                style={{ width: 180, height: 180, borderRadius: 12, objectFit: 'cover', flexShrink: 0 }} />
+              <div style={{ flex: 1 }}>
                 {quickView.tag && (
-                  <span className="inline-block bg-yellow-400 text-black text-xs font-black px-2 py-0.5 rounded-full mb-2">
+                  <span style={{ display: 'inline-block', backgroundColor: C.gold, color: '#000', fontSize: 9, fontWeight: 900, padding: '3px 10px', borderRadius: 100, marginBottom: 10, letterSpacing: '0.1em' }}>
                     {quickView.tag}
                   </span>
                 )}
-                <p className="text-yellow-600 text-xs uppercase tracking-wide mb-1">
-                  {quickView.category}
-                </p>
-                <h3 className="text-white font-black text-xl leading-tight mb-1">
-                  {quickView.name}
-                </h3>
-                <p className="text-gray-400 text-sm mb-3">{quickView.desc}</p>
-                <p className="text-yellow-400 font-black text-3xl mb-5">
-                  ${quickView.price}
-                </p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => {
-                      navigate(`/product/${quickView.slug}`);
-                      setQuickView(null);
-                    }}
-                    className="flex-1 border border-yellow-400 text-yellow-400 py-2 rounded-lg font-black text-xs hover:bg-yellow-400 hover:text-black transition"
-                  >
-                    Full Details
-                  </button>
-                  <button
-                    onClick={e => {
-                      handleAddToCart(e, quickView);
-                      setQuickView(null);
-                    }}
-                    className="flex-1 bg-yellow-400 text-black py-2 rounded-lg font-black text-xs hover:bg-yellow-500 transition"
-                  >
-                    Add to Cart
-                  </button>
+                <p style={{ color: C.dim, fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>{quickView.category}</p>
+                <h3 style={{ color: C.cream, fontSize: 20, fontWeight: 900, lineHeight: 1.1, marginBottom: 8 }}>{quickView.name}</h3>
+                <p style={{ color: C.muted, fontSize: 12, marginBottom: 14 }}>{quickView.desc}</p>
+                <p style={{ color: C.gold, fontWeight: 900, fontSize: 28, marginBottom: 20 }}>{quickView.price}</p>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button onClick={() => { navigate(`/product/${quickView.slug}`); setQuickView(null); }}
+                    style={{ ...s.btnGhost, flex: 1, textAlign: 'center', padding: '10px' }}>Full Details</button>
+                  <button onClick={e => { handleAddToCart(e, quickView); setQuickView(null); }}
+                    style={{ ...s.btnGold, flex: 1, textAlign: 'center', padding: '10px' }}>Add to Cart</button>
                 </div>
               </div>
             </div>
@@ -363,27 +322,119 @@ const Shop = () => {
         </div>
       )}
 
-      {/* FOOTER */}
-      <footer
-        style={{ backgroundColor: '#0d0d00' }}
-        className="border-t border-yellow-900 px-8 py-10"
-      >
-        <div className="max-w-6xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <span className="bg-yellow-400 text-black w-6 h-6 rounded flex items-center justify-center text-xs font-black">
-              57
-            </span>
-            <span className="text-white font-black text-sm">57 ARTS & CUSTOMS</span>
+      {/* VISUAL SEARCH MODAL */}
+      {visualSearchOpen && (
+        <div onClick={() => setVisualSearchOpen(false)}
+          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.88)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 20, width: '100%', maxWidth: 680, maxHeight: '88vh', overflowY: 'auto' }}>
+
+            {/* Modal header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 28px', borderBottom: `1px solid ${C.border}` }}>
+              <div>
+                <p style={{ color: C.gold, fontSize: 10, fontWeight: 900, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 4 }}>AI-Powered</p>
+                <h2 style={{ color: C.cream, fontWeight: 900, fontSize: 18, textTransform: 'uppercase', letterSpacing: '-0.01em' }}>Visual Search</h2>
+              </div>
+              <button onClick={() => setVisualSearchOpen(false)}
+                style={{ background: 'none', border: 'none', color: C.muted, cursor: 'pointer', fontSize: 20, lineHeight: 1 }}>✕</button>
+            </div>
+
+            <div style={{ padding: 28 }}>
+              {/* Upload zone */}
+              {!vsImage ? (
+                <div
+                  onClick={() => document.getElementById('vs-file-input').click()}
+                  style={{ border: `2px dashed ${C.border}`, borderRadius: 16, padding: '56px 24px', textAlign: 'center', cursor: 'pointer', backgroundColor: C.faint, transition: 'all 0.2s' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = C.gold; e.currentTarget.style.backgroundColor = 'rgba(201,168,76,0.04)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.backgroundColor = C.faint; }}
+                  onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = C.gold; }}
+                  onDragLeave={e => { e.currentTarget.style.borderColor = C.border; }}
+                  onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f && f.type.startsWith('image/')) handleVisualSearch(f); }}>
+                  <input id="vs-file-input" type="file" accept="image/*" hidden
+                    onChange={e => { const f = e.target.files[0]; if (f) handleVisualSearch(f); }} />
+                  <p style={{ fontSize: 40, marginBottom: 16 }}>◎</p>
+                  <p style={{ color: C.cream, fontWeight: 900, fontSize: 15, marginBottom: 8 }}>Upload an image to find similar pieces</p>
+                  <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>Drag & drop or click to browse · JPG, PNG, WEBP</p>
+                  <span style={{ backgroundColor: C.gold, color: '#000', padding: '10px 22px', borderRadius: 9, fontWeight: 900, fontSize: 12, letterSpacing: '0.04em' }}>
+                    Choose Image
+                  </span>
+                </div>
+              ) : (
+                <div>
+                  {/* Uploaded image preview + change */}
+                  <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', marginBottom: 24, padding: 16, backgroundColor: C.faint, border: `1px solid ${C.border}`, borderRadius: 12 }}>
+                    <img src={vsImage} alt="Search" style={{ width: 80, height: 80, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <p style={{ color: C.cream, fontWeight: 900, fontSize: 13, marginBottom: 4 }}>
+                        {vsSearching ? '⟳ AI is scanning for similar pieces...' : `Found ${vsResults.length} visually similar items`}
+                      </p>
+                      <p style={{ color: C.muted, fontSize: 12 }}>
+                        {vsSearching ? 'Analysing colours, shapes, and style...' : 'Results ranked by visual similarity'}
+                      </p>
+                    </div>
+                    <button onClick={() => { setVsImage(null); setVsResults([]); document.getElementById('vs-file-input').click(); }}
+                      style={{ color: C.gold, fontWeight: 900, fontSize: 11, background: 'none', border: `1px solid ${C.border}`, borderRadius: 8, padding: '6px 12px', cursor: 'pointer', flexShrink: 0 }}>
+                      Change Image
+                    </button>
+                  </div>
+
+                  {/* Searching animation */}
+                  {vsSearching && (
+                    <div style={{ textAlign: 'center', padding: '32px 0' }}>
+                      <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginBottom: 16 }}>
+                        {[0, 1, 2, 3].map(i => (
+                          <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: C.gold, opacity: 0.4, animation: `pulse ${0.8 + i * 0.15}s infinite alternate` }} />
+                        ))}
+                      </div>
+                      <div style={{ height: 4, backgroundColor: C.border, borderRadius: 100, overflow: 'hidden', maxWidth: 280, margin: '0 auto' }}>
+                        <div style={{ height: '100%', backgroundColor: C.gold, borderRadius: 100, width: '65%' }} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Results grid */}
+                  {!vsSearching && vsResults.length > 0 && (
+                    <div>
+                      <p style={{ color: C.muted, fontSize: 11, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 16 }}>Visually Similar Pieces</p>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14 }}>
+                        {vsResults.map(product => (
+                          <div key={product.slug}
+                            onClick={() => { setVisualSearchOpen(false); navigate(`/product/${product.slug}`); }}
+                            style={{ backgroundColor: C.faint, border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden', cursor: 'pointer', transition: 'border-color 0.15s' }}
+                            onMouseEnter={e => { e.currentTarget.style.borderColor = C.bHov; }}
+                            onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; }}>
+                            <div style={{ height: 140, overflow: 'hidden' }}>
+                              <img src={product.img} alt={product.name}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.4s' }}
+                                onMouseEnter={e => e.target.style.transform = 'scale(1.05)'}
+                                onMouseLeave={e => e.target.style.transform = 'scale(1)'} />
+                            </div>
+                            <div style={{ padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div>
+                                <p style={{ color: C.cream, fontWeight: 900, fontSize: 12, marginBottom: 2 }}>{product.name}</p>
+                                <p style={{ color: C.muted, fontSize: 11 }}>{product.desc}</p>
+                              </div>
+                              <p style={{ color: C.gold, fontWeight: 900, fontSize: 13, flexShrink: 0, marginLeft: 8 }}>{product.price}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ textAlign: 'center', marginTop: 20 }}>
+                        <button onClick={() => setVisualSearchOpen(false)}
+                          style={{ color: C.muted, fontWeight: 900, fontSize: 11, background: 'none', border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 18px', cursor: 'pointer', letterSpacing: '0.06em' }}>
+                          Browse full shop instead →
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-          <div className="flex gap-6 text-xs text-gray-500">
-            <Link to="/fashion" className="hover:text-yellow-400 transition">Fashion</Link>
-            <Link to="/furniture" className="hover:text-yellow-400 transition">Furniture</Link>
-            <Link to="/beads" className="hover:text-yellow-400 transition">Beads</Link>
-            <Link to="/custom-order" className="hover:text-yellow-400 transition">Custom Orders</Link>
-          </div>
-          <p className="text-gray-600 text-xs">© 2024 57 Arts & Customs.</p>
         </div>
-      </footer>
+      )}
+
+      <Footer />
     </div>
   );
 };

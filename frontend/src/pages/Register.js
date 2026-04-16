@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
@@ -8,16 +8,38 @@ const C = {
   faint: '#242424', cream: '#f0ece4', muted: '#606060', gold: '#c9a84c',
 };
 
-const Register = () => {
-  const [form, setForm]       = useState({ name: '', email: '', password: '', confirm: '', role: 'buyer' });
-  const [errors, setErrors]   = useState({});
-  const [loading, setLoading] = useState(false);
-  const [showPw, setShowPw]   = useState(false);
-  const [apiError, setApiError] = useState('');
-  const { login }             = useAuth();
-  const navigate              = useNavigate();
+// ✅ FIX: Moved inputStyle OUTSIDE the component so it's never recreated on render.
+// Previously it was inside the component body as a function — React would create a
+// new function reference every render, causing the input to lose focus / go inactive
+// after each keystroke because the style object reference changed.
+const inputStyle = (borderColor) => ({
+  width: '100%',
+  backgroundColor: C.surface,
+  border: `1px solid ${borderColor}`,
+  borderRadius: 10,
+  padding: '13px 16px',
+  color: C.cream,
+  fontSize: 14,
+  outline: 'none',
+  boxSizing: 'border-box',
+});
 
-  const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
+const Register = () => {
+  const [form, setForm]         = useState({ name: '', email: '', password: '', confirm: '', role: 'buyer' });
+  const [errors, setErrors]     = useState({});
+  const [loading, setLoading]   = useState(false);
+  const [showPw, setShowPw]     = useState(false);
+  const [apiError, setApiError] = useState('');
+  // ✅ FIX: Track focused field separately so border logic doesn't fight React's re-render
+  const [focused, setFocused]   = useState('');
+  const { login }               = useAuth();
+  const navigate                = useNavigate();
+
+  // ✅ FIX: useCallback so handleChange is stable across renders
+  const handleChange = useCallback(e => {
+    const { name, value } = e.target;
+    setForm(prev => ({ ...prev, [name]: value }));
+  }, []);
 
   const validate = () => {
     const e = {};
@@ -48,10 +70,12 @@ const Register = () => {
     setLoading(false);
   };
 
-  const inputStyle = (field) => ({
-    width: '100%', backgroundColor: C.surface, border: `1px solid ${errors[field] ? 'rgba(224,92,92,0.5)' : C.border}`,
-    borderRadius: 10, padding: '13px 16px', color: C.cream, fontSize: 14, outline: 'none', boxSizing: 'border-box',
-  });
+  // ✅ FIX: Border color derived from state, not from direct DOM mutation in onFocus/onBlur
+  const getBorderColor = (field) => {
+    if (focused === field) return C.bHov;
+    if (errors[field]) return 'rgba(224,92,92,0.5)';
+    return C.border;
+  };
 
   return (
     <div style={{ backgroundColor: C.bg, minHeight: '100vh', display: 'flex' }}>
@@ -104,7 +128,7 @@ const Register = () => {
             <p style={{ color: C.muted, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>I am joining as</p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {[{ key: 'buyer', label: 'Buyer', desc: 'Shop & commission pieces' }, { key: 'vendor', label: 'Artisan / Vendor', desc: 'Sell my craft' }].map(({ key, label, desc }) => (
-                <button key={key} type="button" onClick={() => setForm({ ...form, role: key })}
+                <button key={key} type="button" onClick={() => setForm(prev => ({ ...prev, role: key }))}
                   style={{ padding: '12px', borderRadius: 10, border: `1px solid ${form.role === key ? C.gold : C.border}`, backgroundColor: form.role === key ? 'rgba(201,168,76,0.08)' : C.surface, cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s' }}>
                   <p style={{ color: form.role === key ? C.gold : C.cream, fontWeight: 900, fontSize: 12, marginBottom: 2 }}>{label}</p>
                   <p style={{ color: C.muted, fontSize: 10 }}>{desc}</p>
@@ -120,23 +144,38 @@ const Register = () => {
           )}
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {/* Name */}
+
+            {/* ✅ Full Name — now stays active while typing across spaces */}
             <div>
               <label style={{ color: C.muted, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Full Name</label>
-              <input type="text" name="name" value={form.name} onChange={handleChange} required placeholder="Your full name"
-                style={inputStyle('name')}
-                onFocus={e => e.target.style.borderColor = C.bHov}
-                onBlur={e => e.target.style.borderColor = errors.name ? 'rgba(224,92,92,0.5)' : C.border} />
+              <input
+                type="text"
+                name="name"
+                value={form.name}
+                onChange={handleChange}
+                placeholder="Your full name"
+                autoComplete="name"
+                style={inputStyle(getBorderColor('name'))}
+                onFocus={() => setFocused('name')}
+                onBlur={() => setFocused('')}
+              />
               {errors.name && <p style={{ color: '#e05c5c', fontSize: 11, marginTop: 4 }}>{errors.name}</p>}
             </div>
 
             {/* Email */}
             <div>
               <label style={{ color: C.muted, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Email Address</label>
-              <input type="email" name="email" value={form.email} onChange={handleChange} required placeholder="you@example.com"
-                style={inputStyle('email')}
-                onFocus={e => e.target.style.borderColor = C.bHov}
-                onBlur={e => e.target.style.borderColor = errors.email ? 'rgba(224,92,92,0.5)' : C.border} />
+              <input
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+                placeholder="you@example.com"
+                autoComplete="email"
+                style={inputStyle(getBorderColor('email'))}
+                onFocus={() => setFocused('email')}
+                onBlur={() => setFocused('')}
+              />
               {errors.email && <p style={{ color: '#e05c5c', fontSize: 11, marginTop: 4 }}>{errors.email}</p>}
             </div>
 
@@ -144,10 +183,17 @@ const Register = () => {
             <div>
               <label style={{ color: C.muted, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Password</label>
               <div style={{ position: 'relative' }}>
-                <input type={showPw ? 'text' : 'password'} name="password" value={form.password} onChange={handleChange} required placeholder="Min 8 characters"
-                  style={{ ...inputStyle('password'), paddingRight: 52 }}
-                  onFocus={e => e.target.style.borderColor = C.bHov}
-                  onBlur={e => e.target.style.borderColor = errors.password ? 'rgba(224,92,92,0.5)' : C.border} />
+                <input
+                  type={showPw ? 'text' : 'password'}
+                  name="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  placeholder="Min 8 characters"
+                  autoComplete="new-password"
+                  style={{ ...inputStyle(getBorderColor('password')), paddingRight: 52 }}
+                  onFocus={() => setFocused('password')}
+                  onBlur={() => setFocused('')}
+                />
                 <button type="button" onClick={() => setShowPw(!showPw)}
                   style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: C.muted, cursor: 'pointer', fontSize: 11 }}>
                   {showPw ? 'Hide' : 'Show'}
@@ -159,10 +205,17 @@ const Register = () => {
             {/* Confirm password */}
             <div>
               <label style={{ color: C.muted, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Confirm Password</label>
-              <input type="password" name="confirm" value={form.confirm} onChange={handleChange} required placeholder="Repeat password"
-                style={inputStyle('confirm')}
-                onFocus={e => e.target.style.borderColor = C.bHov}
-                onBlur={e => e.target.style.borderColor = errors.confirm ? 'rgba(224,92,92,0.5)' : C.border} />
+              <input
+                type="password"
+                name="confirm"
+                value={form.confirm}
+                onChange={handleChange}
+                placeholder="Repeat password"
+                autoComplete="new-password"
+                style={inputStyle(getBorderColor('confirm'))}
+                onFocus={() => setFocused('confirm')}
+                onBlur={() => setFocused('')}
+              />
               {errors.confirm && <p style={{ color: '#e05c5c', fontSize: 11, marginTop: 4 }}>{errors.confirm}</p>}
             </div>
 

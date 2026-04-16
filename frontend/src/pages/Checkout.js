@@ -12,50 +12,110 @@ const cartItems = [
 ];
 
 const paymentMethods = [
-  { id: 'mpesa',  label: 'M-Pesa',         desc: 'Pay via Safaricom M-Pesa STK push', icon: '📱' },
-  { id: 'card',   label: 'Visa / Mastercard', desc: 'Credit or debit card',             icon: '💳' },
-  { id: 'paypal', label: 'PayPal',          desc: 'Pay with your PayPal account',       icon: '🅿' },
-  { id: 'bank',   label: 'Bank Transfer',   desc: 'Direct bank transfer',               icon: '🏦' },
+  { id: 'mpesa',  label: 'M-Pesa',          desc: 'Pay via Safaricom M-Pesa STK push', icon: '📱' },
+  { id: 'card',   label: 'Visa / Mastercard', desc: 'Credit or debit card',              icon: '💳' },
+  { id: 'paypal', label: 'PayPal',           desc: 'Pay with your PayPal account',       icon: '🅿' },
+  { id: 'bank',   label: 'Bank Transfer',    desc: 'Direct bank transfer',               icon: '🏦' },
 ];
 
-const steps = ['Delivery', 'Payment', 'Review'];
+// ✅ Added 'Verify' as a 4th step between Payment and Review
+const steps = ['Delivery', 'Payment', 'Verify', 'Review'];
 const fmt = n => `KSH ${n.toLocaleString()}`;
 
+// ── Order ID generated once per session ──────────────────────────────────────
+const ORDER_ID = `57-${Math.floor(Math.random() * 9000) + 1000}`;
+
 const Checkout = () => {
-  const [step, setStep]               = useState(0);
-  const [payMethod, setPayMethod]     = useState('mpesa');
-  const [mpesaPhone, setMpesaPhone]   = useState('');
-  const [stkSent, setStkSent]         = useState(false);
-  const [placed, setPlaced]           = useState(false);
-  const [form, setForm]               = useState({ name: '', email: '', phone: '', address: '', city: '', country: 'Kenya', notes: '' });
-  const [errors, setErrors]           = useState({});
+  const [step, setStep]             = useState(0);
+  const [payMethod, setPayMethod]   = useState('mpesa');
+  const [mpesaPhone, setMpesaPhone] = useState('');
+  const [stkSent, setStkSent]       = useState(false);
+  const [placed, setPlaced]         = useState(false);
+  const [form, setForm]             = useState({ name: '', email: '', phone: '', address: '', city: '', country: 'Kenya', notes: '' });
+  const [errors, setErrors]         = useState({});
+
+  // ✅ Payment verification state
+  const [verifying, setVerifying]   = useState(false);
+  const [verifyError, setVerifyError] = useState('');
+  const [verified, setVerified]     = useState(false);
+
+  // Card form state
+  const [cardForm, setCardForm]     = useState({ number: '', expiry: '', cvv: '', holder: '' });
 
   const subtotal = cartItems.reduce((s, i) => s + i.price * i.qty, 0);
-  const shipping = 0;
-  const total    = subtotal + shipping;
+  const total    = subtotal;
 
   const validateDelivery = () => {
     const e = {};
-    if (!form.name.trim()) e.name = 'Required';
-    if (!form.email.trim()) e.email = 'Required';
-    if (!form.phone.trim()) e.phone = 'Required';
+    if (!form.name.trim())    e.name    = 'Required';
+    if (!form.email.trim())   e.email   = 'Required';
+    if (!form.phone.trim())   e.phone   = 'Required';
     if (!form.address.trim()) e.address = 'Required';
-    if (!form.city.trim()) e.city = 'Required';
+    if (!form.city.trim())    e.city    = 'Required';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
+  // ✅ FIX: handleNext now routes to the Verify step (step 2) after Payment (step 1)
   const handleNext = () => {
     if (step === 0 && !validateDelivery()) return;
+
+    // After payment method selected, go to Verify step
+    if (step === 1) {
+      if (payMethod === 'mpesa' && !stkSent) {
+        setVerifyError('Please send the STK push first before continuing.');
+        return;
+      }
+      setVerifyError('');
+      setVerified(false);
+    }
+
     setStep(s => s + 1);
   };
 
   const sendSTK = () => {
     if (!mpesaPhone.trim()) return;
     setStkSent(true);
+    setVerifyError('');
+  };
+
+  // ✅ NEW: Simulates checking payment confirmation (in production, poll your backend)
+  const handleVerifyPayment = () => {
+    setVerifying(true);
+    setVerifyError('');
+
+    // Simulate API call to check payment status
+    setTimeout(() => {
+      if (payMethod === 'mpesa' && stkSent) {
+        setVerified(true);
+        setVerifying(false);
+      } else if (payMethod === 'card') {
+        // Basic card validation
+        if (!cardForm.number || !cardForm.expiry || !cardForm.cvv || !cardForm.holder) {
+          setVerifyError('Please fill in all card details.');
+          setVerifying(false);
+        } else {
+          setVerified(true);
+          setVerifying(false);
+        }
+      } else if (payMethod === 'paypal') {
+        setVerified(true);
+        setVerifying(false);
+      } else if (payMethod === 'bank') {
+        setVerified(true);
+        setVerifying(false);
+      } else {
+        setVerifyError('Payment not confirmed yet. Please complete the payment on your phone and try again.');
+        setVerifying(false);
+      }
+    }, 2000);
   };
 
   const placeOrder = () => {
+    if (!verified) {
+      setVerifyError('Please verify your payment before placing the order.');
+      return;
+    }
     setPlaced(true);
   };
 
@@ -64,22 +124,24 @@ const Checkout = () => {
     borderRadius: 10, padding: '12px 15px', color: C.cream, fontSize: 13, outline: 'none', boxSizing: 'border-box',
   });
 
+  // ── ORDER PLACED SCREEN ───────────────────────────────────────────────────
   if (placed) return (
     <div style={{ backgroundColor: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ textAlign: 'center', maxWidth: 460 }}>
         <div style={{ width: 72, height: 72, borderRadius: 18, border: `2px solid ${C.gold}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px' }}>
           <span style={{ color: C.gold, fontSize: 28 }}>✓</span>
         </div>
-        <h2 style={{ color: C.cream, fontWeight: 900, fontSize: 28, textTransform: 'uppercase', letterSpacing: '-0.02em', marginBottom: 12 }}>Order Placed!</h2>
+        <h2 style={{ color: C.cream, fontWeight: 900, fontSize: 28, textTransform: 'uppercase', letterSpacing: '-0.02em', marginBottom: 12 }}>Order Confirmed!</h2>
         <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.8, marginBottom: 10 }}>
-          Your order <strong style={{ color: C.cream }}>#57-{Math.floor(Math.random() * 9000) + 1000}</strong> has been confirmed.
+          Your order <strong style={{ color: C.cream }}>#{ORDER_ID}</strong> has been confirmed and payment verified.
         </p>
         <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.8, marginBottom: 32 }}>
           You'll receive a confirmation email at <strong style={{ color: C.cream }}>{form.email}</strong>. Your artisan will be in touch within 24 hours.
         </p>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+          {/* ✅ FIX: Track Order button now correctly links to order tracking */}
           <Link to="/order-tracking" style={{ backgroundColor: C.gold, color: '#000', padding: '12px 24px', borderRadius: 10, fontWeight: 900, fontSize: 13, textDecoration: 'none' }}>
-            Track Order
+            Track Order →
           </Link>
           <Link to="/shop" style={{ backgroundColor: 'transparent', color: C.cream, padding: '12px 24px', borderRadius: 10, fontWeight: 900, fontSize: 13, textDecoration: 'none', border: `1px solid ${C.border}` }}>
             Continue Shopping
@@ -99,8 +161,9 @@ const Checkout = () => {
             <div style={{ width: 28, height: 28, borderRadius: 6, backgroundColor: C.gold, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 10, color: '#000' }}>57</div>
             <span style={{ color: C.cream, fontWeight: 900, fontSize: 13 }}>57 ARTS & CUSTOMS</span>
           </Link>
+
           {/* Step progress */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
             {steps.map((s, i) => (
               <React.Fragment key={s}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -109,10 +172,11 @@ const Checkout = () => {
                   </div>
                   <span style={{ color: i === step ? C.cream : C.muted, fontSize: 12, fontWeight: i === step ? 900 : 400 }}>{s}</span>
                 </div>
-                {i < steps.length - 1 && <div style={{ width: 32, height: 1, backgroundColor: i < step ? C.gold : C.border, margin: '0 8px' }} />}
+                {i < steps.length - 1 && <div style={{ width: 28, height: 1, backgroundColor: i < step ? C.gold : C.border, margin: '0 8px' }} />}
               </React.Fragment>
             ))}
           </div>
+
           <Link to="/cart" style={{ color: C.muted, fontSize: 12, textDecoration: 'none' }}>← Back to Cart</Link>
         </div>
       </div>
@@ -168,13 +232,13 @@ const Checkout = () => {
             </div>
           )}
 
-          {/* STEP 1 — Payment */}
+          {/* STEP 1 — Payment method selection */}
           {step === 1 && (
             <div>
               <h2 style={{ color: C.cream, fontWeight: 900, fontSize: 20, textTransform: 'uppercase', marginBottom: 28 }}>Payment Method</h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
                 {paymentMethods.map(m => (
-                  <div key={m.id} onClick={() => setPayMethod(m.id)}
+                  <div key={m.id} onClick={() => { setPayMethod(m.id); setStkSent(false); setVerifyError(''); }}
                     style={{ backgroundColor: C.surface, border: `1px solid ${payMethod === m.id ? C.gold : C.border}`, borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer', transition: 'all 0.2s' }}>
                     <div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: C.faint, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{m.icon}</div>
                     <div style={{ flex: 1 }}>
@@ -188,35 +252,128 @@ const Checkout = () => {
                 ))}
               </div>
 
-              {/* M-Pesa input */}
+              {/* M-Pesa STK input */}
               {payMethod === 'mpesa' && (
                 <div style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 22 }}>
                   <p style={{ color: C.cream, fontWeight: 900, fontSize: 13, marginBottom: 6 }}>M-Pesa STK Push</p>
-                  <p style={{ color: C.muted, fontSize: 12, lineHeight: 1.7, marginBottom: 16 }}>Enter your Safaricom number and we'll send an STK push directly to your phone.</p>
+                  <p style={{ color: C.muted, fontSize: 12, lineHeight: 1.7, marginBottom: 16 }}>Enter your Safaricom number. We'll send an STK push to your phone — confirm payment there, then continue.</p>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <input type="tel" value={mpesaPhone} onChange={e => setMpesaPhone(e.target.value)} placeholder="+254 7XX XXX XXX"
                       style={{ flex: 1, backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 9, padding: '11px 14px', color: C.cream, fontSize: 13, outline: 'none' }}
                       onFocus={e => e.target.style.borderColor = C.bHov} onBlur={e => e.target.style.borderColor = C.border} />
-                    <button onClick={sendSTK} style={{ backgroundColor: C.gold, color: '#000', border: 'none', borderRadius: 9, padding: '11px 18px', fontWeight: 900, fontSize: 12, cursor: 'pointer' }}>
+                    <button onClick={sendSTK} disabled={!mpesaPhone.trim()}
+                      style={{ backgroundColor: mpesaPhone.trim() ? C.gold : C.faint, color: mpesaPhone.trim() ? '#000' : C.muted, border: 'none', borderRadius: 9, padding: '11px 18px', fontWeight: 900, fontSize: 12, cursor: mpesaPhone.trim() ? 'pointer' : 'not-allowed' }}>
                       Send STK
                     </button>
                   </div>
                   {stkSent && (
                     <div style={{ marginTop: 12, padding: '10px 14px', backgroundColor: 'rgba(76,175,80,0.1)', border: '1px solid rgba(76,175,80,0.3)', borderRadius: 8 }}>
-                      <p style={{ color: '#4caf50', fontSize: 12, fontWeight: 700 }}>✓ STK push sent to {mpesaPhone}. Check your phone and enter your PIN.</p>
+                      <p style={{ color: '#4caf50', fontSize: 12, fontWeight: 700 }}>✓ STK push sent to {mpesaPhone}. Enter your PIN on your phone, then click Continue.</p>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Card details */}
+              {payMethod === 'card' && (
+                <div style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 22 }}>
+                  <p style={{ color: C.cream, fontWeight: 900, fontSize: 13, marginBottom: 16 }}>Card Details</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <input placeholder="Cardholder Name" value={cardForm.holder} onChange={e => setCardForm({ ...cardForm, holder: e.target.value })}
+                      style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 9, padding: '11px 14px', color: C.cream, fontSize: 13, outline: 'none' }} />
+                    <input placeholder="Card Number (16 digits)" value={cardForm.number} onChange={e => setCardForm({ ...cardForm, number: e.target.value })} maxLength={19}
+                      style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 9, padding: '11px 14px', color: C.cream, fontSize: 13, outline: 'none' }} />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                      <input placeholder="MM / YY" value={cardForm.expiry} onChange={e => setCardForm({ ...cardForm, expiry: e.target.value })} maxLength={5}
+                        style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 9, padding: '11px 14px', color: C.cream, fontSize: 13, outline: 'none' }} />
+                      <input placeholder="CVV" value={cardForm.cvv} onChange={e => setCardForm({ ...cardForm, cvv: e.target.value })} maxLength={4} type="password"
+                        style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 9, padding: '11px 14px', color: C.cream, fontSize: 13, outline: 'none' }} />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* PayPal */}
+              {payMethod === 'paypal' && (
+                <div style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 22, textAlign: 'center' }}>
+                  <p style={{ color: C.muted, fontSize: 13, marginBottom: 14 }}>You'll be redirected to PayPal to complete payment securely.</p>
+                  <div style={{ backgroundColor: '#003087', borderRadius: 9, padding: '12px 24px', display: 'inline-block', color: '#fff', fontWeight: 900, fontSize: 13 }}>🅿 Continue with PayPal</div>
+                </div>
+              )}
+
+              {/* Bank Transfer */}
+              {payMethod === 'bank' && (
+                <div style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 22 }}>
+                  <p style={{ color: C.cream, fontWeight: 900, fontSize: 13, marginBottom: 12 }}>Bank Transfer Details</p>
+                  {[['Bank', 'Equity Bank Kenya'], ['Account Name', '57 Arts & Customs Ltd'], ['Account No.', '0123456789'], ['Branch', 'Nairobi CBD'], ['Reference', `ORDER-${ORDER_ID}`]].map(([label, val]) => (
+                    <div key={label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <span style={{ color: C.muted, fontSize: 12 }}>{label}</span>
+                      <span style={{ color: C.cream, fontWeight: 700, fontSize: 12 }}>{val}</span>
+                    </div>
+                  ))}
+                  <p style={{ color: C.muted, fontSize: 11, marginTop: 12, lineHeight: 1.7 }}>Transfer the exact amount and use the reference above. Click Continue once sent.</p>
+                </div>
+              )}
+
+              {verifyError && (
+                <div style={{ marginTop: 14, padding: '10px 14px', backgroundColor: 'rgba(224,92,92,0.1)', border: '1px solid rgba(224,92,92,0.3)', borderRadius: 8 }}>
+                  <p style={{ color: '#e05c5c', fontSize: 12 }}>{verifyError}</p>
                 </div>
               )}
             </div>
           )}
 
-          {/* STEP 2 — Review */}
+          {/* ✅ STEP 2 — NEW: Payment Verification */}
           {step === 2 && (
+            <div>
+              <h2 style={{ color: C.cream, fontWeight: 900, fontSize: 20, textTransform: 'uppercase', marginBottom: 8 }}>Verify Payment</h2>
+              <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.7, marginBottom: 28 }}>
+                {payMethod === 'mpesa' && `We sent an STK push to ${mpesaPhone}. Once you've entered your M-Pesa PIN, click the button below to verify.`}
+                {payMethod === 'card'  && 'Click below to verify your card payment.'}
+                {payMethod === 'paypal' && 'Once you\'ve completed PayPal payment, click below to verify.'}
+                {payMethod === 'bank' && 'Once you\'ve completed the bank transfer, click below to verify.'}
+              </p>
+
+              <div style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: 28, textAlign: 'center' }}>
+                <div style={{ fontSize: 48, marginBottom: 16 }}>
+                  {verified ? '✅' : payMethod === 'mpesa' ? '📱' : payMethod === 'card' ? '💳' : payMethod === 'paypal' ? '🅿' : '🏦'}
+                </div>
+
+                {!verified ? (
+                  <>
+                    <p style={{ color: C.cream, fontWeight: 900, fontSize: 15, marginBottom: 8 }}>
+                      {payMethod === 'mpesa' ? `Waiting for M-Pesa confirmation` : 'Confirm Payment'}
+                    </p>
+                    <p style={{ color: C.muted, fontSize: 12, marginBottom: 22, lineHeight: 1.7 }}>
+                      Amount: <strong style={{ color: C.gold }}>{fmt(total)}</strong>
+                      {payMethod === 'mpesa' && ` · Phone: ${mpesaPhone}`}
+                    </p>
+                    <button onClick={handleVerifyPayment} disabled={verifying}
+                      style={{ backgroundColor: verifying ? C.faint : C.gold, color: verifying ? C.muted : '#000', border: 'none', borderRadius: 10, padding: '14px 32px', fontWeight: 900, fontSize: 13, cursor: verifying ? 'not-allowed' : 'pointer', letterSpacing: '0.04em' }}>
+                      {verifying ? 'Verifying...' : 'I Have Paid — Verify Now'}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p style={{ color: '#4caf50', fontWeight: 900, fontSize: 15, marginBottom: 8 }}>Payment Verified!</p>
+                    <p style={{ color: C.muted, fontSize: 12, marginBottom: 22 }}>{fmt(total)} received. You can now review and place your order.</p>
+                  </>
+                )}
+
+                {verifyError && (
+                  <div style={{ marginTop: 14, padding: '10px 14px', backgroundColor: 'rgba(224,92,92,0.1)', border: '1px solid rgba(224,92,92,0.3)', borderRadius: 8, textAlign: 'left' }}>
+                    <p style={{ color: '#e05c5c', fontSize: 12 }}>{verifyError}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3 — Review */}
+          {step === 3 && (
             <div>
               <h2 style={{ color: C.cream, fontWeight: 900, fontSize: 20, textTransform: 'uppercase', marginBottom: 28 }}>Review Order</h2>
 
-              {/* Delivery summary */}
               <div style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 20, marginBottom: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                   <p style={{ color: C.cream, fontWeight: 900, fontSize: 13 }}>Delivery</p>
@@ -225,16 +382,14 @@ const Checkout = () => {
                 <p style={{ color: C.muted, fontSize: 12, lineHeight: 1.7 }}>{form.name} · {form.email}<br />{form.address}, {form.city}, {form.country}</p>
               </div>
 
-              {/* Payment summary */}
-              <div style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 20, marginBottom: 24 }}>
+              <div style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 20, marginBottom: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                   <p style={{ color: C.cream, fontWeight: 900, fontSize: 13 }}>Payment</p>
-                  <button onClick={() => setStep(1)} style={{ background: 'none', border: 'none', color: C.gold, fontSize: 12, cursor: 'pointer', fontWeight: 700 }}>Edit</button>
+                  <span style={{ color: '#4caf50', fontSize: 11, fontWeight: 700 }}>✓ Verified</span>
                 </div>
                 <p style={{ color: C.muted, fontSize: 12 }}>{paymentMethods.find(m => m.id === payMethod)?.label}</p>
               </div>
 
-              {/* Items */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {cartItems.map(item => (
                   <div key={item.id} style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: '14px 18px', display: 'flex', gap: 14, alignItems: 'center' }}>
@@ -253,12 +408,19 @@ const Checkout = () => {
           {/* Navigation buttons */}
           <div style={{ display: 'flex', gap: 10, marginTop: 28 }}>
             {step > 0 && (
-              <button onClick={() => setStep(s => s - 1)}
+              <button onClick={() => { setStep(s => s - 1); setVerifyError(''); }}
                 style={{ backgroundColor: 'transparent', border: `1px solid ${C.border}`, color: C.cream, padding: '13px 24px', borderRadius: 10, fontWeight: 900, fontSize: 13, cursor: 'pointer' }}>
                 ← Back
               </button>
             )}
-            {step < 2 ? (
+
+            {/* Step 2 (Verify): only show Continue once verified */}
+            {step === 2 ? (
+              <button onClick={() => verified && setStep(3)} disabled={!verified}
+                style={{ flex: 1, backgroundColor: verified ? C.cream : C.faint, color: verified ? '#000' : C.muted, border: 'none', borderRadius: 10, padding: '13px', fontWeight: 900, fontSize: 13, cursor: verified ? 'pointer' : 'not-allowed', letterSpacing: '0.04em' }}>
+                {verified ? 'Continue to Review →' : 'Verify Payment to Continue'}
+              </button>
+            ) : step < 3 ? (
               <button onClick={handleNext}
                 style={{ flex: 1, backgroundColor: C.cream, color: '#000', border: 'none', borderRadius: 10, padding: '13px', fontWeight: 900, fontSize: 13, cursor: 'pointer', letterSpacing: '0.04em' }}>
                 Continue to {steps[step + 1]} →
@@ -303,6 +465,15 @@ const Checkout = () => {
                 <span style={{ color: C.gold, fontWeight: 900, fontSize: 16 }}>{fmt(total)}</span>
               </div>
             </div>
+
+            {/* Payment status indicator in summary */}
+            {step >= 2 && (
+              <div style={{ marginTop: 14, padding: '10px 14px', backgroundColor: verified ? 'rgba(76,175,80,0.1)' : 'rgba(201,168,76,0.08)', border: `1px solid ${verified ? 'rgba(76,175,80,0.3)' : 'rgba(201,168,76,0.3)'}`, borderRadius: 8 }}>
+                <p style={{ color: verified ? '#4caf50' : C.gold, fontSize: 11, fontWeight: 700 }}>
+                  {verified ? '✓ Payment Verified' : '⏳ Awaiting payment verification'}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>

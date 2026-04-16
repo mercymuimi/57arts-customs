@@ -2,69 +2,103 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { DraftProvider } from './context/DraftContext';
+import { CartProvider } from './context/CartContext'; // ✅ NEW
+import ProtectedRoute from './components/ProtectedRoute';
 import Navbar from './components/layout/Navbar';
-import Home from './pages/Home';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Fashion from './pages/fashion';
-import Furniture from './pages/Furniture';
-import Beads from './pages/Beads';
-import CustomOrder from './pages/CustomOrder';
-import About from './pages/About';
-import Shop from './pages/Shop';
-import Gallery from './pages/Gallery';
-import SearchResults from './pages/SearchResults';
-import ProductDetail from './pages/ProductDetail';
-import Checkout from './pages/Checkout';
-import UserProfile from './pages/UserProfile';
-import VendorDashboard from './pages/VendorDashboard';
-import AdminDashboard from './pages/AdminDashboard';
-import OrderTracking from './pages/OrderTracking';
+
+// ── Pages ──────────────────────────────────────────────────────────────────────
+import Home              from './pages/Home';
+import Login             from './pages/Login';
+import Register          from './pages/Register';
+import Fashion           from './pages/fashion';
+import Furniture         from './pages/Furniture';
+import Beads             from './pages/Beads';
+import CustomOrder       from './pages/CustomOrder';
+import About             from './pages/About';
+import Shop              from './pages/Shop';
+import Gallery           from './pages/Gallery';
+import SearchResults     from './pages/SearchResults';
+import ProductDetail     from './pages/ProductDetail';
+import Checkout          from './pages/Checkout';
+import UserProfile       from './pages/UserProfile';
+import VendorDashboard   from './pages/VendorDashboard';
+import AdminDashboard    from './pages/AdminDashboard';
+import OrderTracking     from './pages/OrderTracking';
 import AffiliateDashboard from './pages/AffiliateDashboard';
-import Cart from './pages/Cart';
-import ArtisanChat from './pages/ArtisanChat';
-import Contact from './pages/Contact';
-import Drafts from './pages/Drafts';
-import VendorLanding from './pages/VendorLanding';
-import AffiliateLanding from './pages/AffiliateLanding';
-import Syndicate from './pages/Syndicate';
+import Cart              from './pages/Cart';
+import Contact           from './pages/Contact';
+import Drafts            from './pages/Drafts';
+import VendorLanding     from './pages/VendorLanding';
+import AffiliateLanding  from './pages/AffiliateLanding';
+import Syndicate         from './pages/Syndicate';
+import ArtisanChatPage   from './pages/ArtisanChatPage';
 
 function App() {
   return (
+    // ✅ CartProvider is INSIDE AuthProvider so useAuth() works inside CartContext
     <AuthProvider>
-      <DraftProvider>
-        <Router>
-          <Navbar />
-          <Routes>
-            <Route path="/"                    element={<Home />}               />
-            <Route path="/login"               element={<Login />}              />
-            <Route path="/register"            element={<Register />}           />
-            <Route path="/fashion"             element={<Fashion />}            />
-            <Route path="/furniture"           element={<Furniture />}          />
-            <Route path="/beads"               element={<Beads />}              />
-            <Route path="/custom-order"        element={<CustomOrder />}        />
-            <Route path="/about"               element={<About />}              />
-            <Route path="/shop"                element={<Shop />}               />
-            <Route path="/products"            element={<Shop />}               />
-            <Route path="/gallery"             element={<Gallery />}            />
-            <Route path="/search"              element={<SearchResults />}      />
-            <Route path="/product/:slug"       element={<ProductDetail />}      />
-            <Route path="/checkout"            element={<Checkout />}           />
-            <Route path="/profile"             element={<UserProfile />}        />
-            <Route path="/vendor/dashboard"    element={<VendorDashboard />}    />
-            <Route path="/admin/dashboard"     element={<AdminDashboard />}     />
-            <Route path="/order-tracking"      element={<OrderTracking />}      />
-            <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
-            <Route path="/cart"                element={<Cart />}               />
-            <Route path="/artisan-chat"        element={<ArtisanChat />}        />
-            <Route path="/contact"             element={<Contact />}            />
-            <Route path="/drafts"              element={<Drafts />}             />
-            <Route path="/vendor"              element={<VendorLanding />}      />
-            <Route path="/affiliate"           element={<AffiliateLanding />}   />
-            <Route path="/syndicate"           element={<Syndicate />}          />
-          </Routes>
-        </Router>
-      </DraftProvider>
+      <CartProvider>
+        <DraftProvider>
+          <Router>
+            <Navbar />
+            <Routes>
+
+              {/* ── PUBLIC ROUTES ── */}
+              <Route path="/"              element={<Home />}             />
+              <Route path="/login"         element={<Login />}            />
+              <Route path="/register"      element={<Register />}         />
+              <Route path="/fashion"       element={<Fashion />}          />
+              <Route path="/furniture"     element={<Furniture />}        />
+              <Route path="/beads"         element={<Beads />}            />
+              <Route path="/about"         element={<About />}            />
+              <Route path="/shop"          element={<Shop />}             />
+              <Route path="/products"      element={<Shop />}             />
+              <Route path="/gallery"       element={<Gallery />}          />
+              <Route path="/search"        element={<SearchResults />}    />
+              <Route path="/product/:slug" element={<ProductDetail />}    />
+              <Route path="/contact"       element={<Contact />}          />
+              <Route path="/vendor"        element={<VendorLanding />}    />
+              <Route path="/affiliate"     element={<AffiliateLanding />} />
+              <Route path="/syndicate"     element={<Syndicate />}        />
+              <Route path="/artisan-chat"  element={<ArtisanChatPage />}  />
+
+              {/* ── PROTECTED ROUTES ── */}
+              <Route path="/checkout" element={
+                <ProtectedRoute><Checkout /></ProtectedRoute>
+              } />
+              <Route path="/cart" element={
+                <ProtectedRoute><Cart /></ProtectedRoute>
+              } />
+              <Route path="/profile" element={
+                <ProtectedRoute><UserProfile /></ProtectedRoute>
+              } />
+              <Route path="/order-tracking" element={
+                <ProtectedRoute><OrderTracking /></ProtectedRoute>
+              } />
+              <Route path="/custom-order" element={
+                <ProtectedRoute><CustomOrder /></ProtectedRoute>
+              } />
+              <Route path="/drafts" element={
+                <ProtectedRoute><Drafts /></ProtectedRoute>
+              } />
+              <Route path="/affiliate/dashboard" element={
+                <ProtectedRoute><AffiliateDashboard /></ProtectedRoute>
+              } />
+
+              {/* ── VENDOR ONLY ── */}
+              <Route path="/vendor/dashboard" element={
+                <ProtectedRoute role="vendor"><VendorDashboard /></ProtectedRoute>
+              } />
+
+              {/* ── ADMIN ONLY ── */}
+              <Route path="/admin/dashboard" element={
+                <ProtectedRoute role="admin"><AdminDashboard /></ProtectedRoute>
+              } />
+
+            </Routes>
+          </Router>
+        </DraftProvider>
+      </CartProvider>
     </AuthProvider>
   );
 }

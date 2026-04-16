@@ -1,1092 +1,434 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
-// ── MOCK USER ─────────────────────────────────────────────
-const DEFAULT_USER = {
-  name: 'Alex Julian',
-  email: 'alex.julian@bespoke-arts.com',
-  phone: '+1 (555) 892-0192',
-  tier: 'VIP',
-  badge: 'Collector',
-  since: 'Since Oct 2023',
-  avatar: 'AJ',
-  address: {
-    street: '722 Luxury Lane, Suite 57',
-    city: 'Manhattan, NY 10001',
-    country: 'United States',
-  },
-  stats: { orders: 12, designs: 5, wishlist: 24, drafts: 3 },
-  orders: [
-    {
-      id: '#ART-9921',
-      name: 'Golden Horizon - Custom Acrylic',
-      date: 'Placed Oct 22, 2023',
-      price: '$4,250.00',
-      status: 'DELIVERED',
-      img: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=100',
-    },
-    {
-      id: '#ART-9844',
-      name: 'Bespoke Carbon Fiber Sculpture',
-      date: 'Placed Oct 15, 2023',
-      price: '$12,800.00',
-      status: 'IN TRANSIT',
-      img: 'https://images.unsplash.com/photo-1535585209827-a15fcdbc4c2d?w=100',
-    },
-  ],
-  savedDesigns: [
-    {
-      name: 'Obsidian Ring Design',
-      status: 'DRAFT · CART PENDING',
-      img: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=300',
-    },
-    {
-      name: 'Midnight GT Interior Concept',
-      status: 'AWAITING REVIEW',
-      img: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=300',
-    },
-  ],
-  wishlist: [
-    { name: 'Neural Tides #5',      price: '$1,200', img: 'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=200' },
-    { name: 'Heritage Chronograph', price: '$3,400', img: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200' },
-    { name: 'Carrara Flow #2',      price: '$890',   img: 'https://images.unsplash.com/photo-1535585209827-a15fcdbc4c2d?w=200' },
-  ],
+// ── DESIGN TOKENS ─────────────────────────────────────────────────────────────
+const C = {
+  bg: '#0a0a0a', surface: '#111111', border: '#1c1c1c', bHov: '#2e2e2e',
+  faint: '#242424', cream: '#f0ece4', muted: '#606060', dim: '#333333',
+  gold: '#c9a84c', green: '#4ade80', blue: '#60a5fa', red: '#f87171',
+};
+const s = {
+  eyebrow:  { color: C.gold, fontSize: 10, fontWeight: 900, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 8 },
+  btnGold:  { backgroundColor: C.gold, color: '#000', padding: '12px 22px', borderRadius: 10, fontWeight: 900, fontSize: 12, border: 'none', cursor: 'pointer', letterSpacing: '0.04em', width: '100%', textAlign: 'center', boxSizing: 'border-box' },
+  btnGhost: { backgroundColor: 'transparent', color: C.cream, padding: '12px 22px', borderRadius: 10, fontWeight: 900, fontSize: 12, border: `1px solid ${C.border}`, cursor: 'pointer', letterSpacing: '0.04em', width: '100%', textAlign: 'center', boxSizing: 'border-box' },
+  input:    { backgroundColor: C.faint, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 16px', color: C.cream, fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box' },
+  label:    { color: C.muted, fontSize: 10, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase', display: 'block', marginBottom: 7 },
+  card:     { backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 14 },
 };
 
-const statusColors = {
-  DELIVERED:    'bg-green-500',
-  'IN TRANSIT': 'bg-yellow-500',
-  PROCESSING:   'bg-blue-500',
-  CANCELLED:    'bg-red-500',
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+const getInitials = (name = '') =>
+  name.trim().split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?';
+
+const statusColor = {
+  DELIVERED: C.green, 'IN TRANSIT': C.gold, PROCESSING: C.blue, CANCELLED: C.red,
 };
 
-// ── PASSWORD STRENGTH ─────────────────────────────────────
+// ── PASSWORD STRENGTH ─────────────────────────────────────────────────────────
 const checkStrength = (pw) => {
   const rules = [
-    { label: 'At least 8 characters',         pass: pw.length >= 8                         },
-    { label: 'One uppercase letter (A-Z)',     pass: /[A-Z]/.test(pw)                       },
-    { label: 'One lowercase letter (a-z)',     pass: /[a-z]/.test(pw)                       },
-    { label: 'One number (0-9)',               pass: /[0-9]/.test(pw)                       },
-    { label: 'One special character (!@#$…)',  pass: /[!@#$%^&*(),.?":{}|<>]/.test(pw)     },
+    { label: 'At least 8 characters',        pass: pw.length >= 8 },
+    { label: 'One uppercase letter',          pass: /[A-Z]/.test(pw) },
+    { label: 'One lowercase letter',          pass: /[a-z]/.test(pw) },
+    { label: 'One number',                    pass: /[0-9]/.test(pw) },
+    { label: 'One special character (!@#$…)', pass: /[!@#$%^&*(),.?":{}|<>]/.test(pw) },
   ];
-  const score = rules.filter(r => r.pass).length;
-  return { rules, score };
+  return { rules, score: rules.filter(r => r.pass).length };
 };
-
 const strengthMeta = (score) => {
-  if (score <= 1) return { label: 'Very Weak',  bar: 'bg-red-500',    text: 'text-red-400'    };
-  if (score === 2) return { label: 'Weak',       bar: 'bg-orange-500', text: 'text-orange-400' };
-  if (score === 3) return { label: 'Fair',       bar: 'bg-yellow-500', text: 'text-yellow-400' };
-  if (score === 4) return { label: 'Strong',     bar: 'bg-blue-500',   text: 'text-blue-400'   };
-  return               { label: 'Very Strong', bar: 'bg-green-500',  text: 'text-green-400'  };
+  if (score <= 1) return { label: 'Very Weak',  bar: C.red };
+  if (score === 2) return { label: 'Weak',       bar: '#f97316' };
+  if (score === 3) return { label: 'Fair',       bar: C.gold };
+  if (score === 4) return { label: 'Strong',     bar: C.blue };
+  return               { label: 'Very Strong', bar: C.green };
 };
 
-// ── HELPERS ───────────────────────────────────────────────
-const getInitials = (name) =>
-  name.trim().split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+// ── MODAL ─────────────────────────────────────────────────────────────────────
+const Modal = ({ title, onClose, children }) => (
+  <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 24 }}>
+    <div style={{ ...s.card, width: '100%', maxWidth: 500, maxHeight: '90vh', overflowY: 'auto' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 24px', borderBottom: `1px solid ${C.border}` }}>
+        <h3 style={{ color: C.cream, fontWeight: 900, fontSize: 16, textTransform: 'uppercase' }}>{title}</h3>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.muted, cursor: 'pointer', fontSize: 18 }}>✕</button>
+      </div>
+      <div style={{ padding: 24 }}>{children}</div>
+    </div>
+  </div>
+);
 
-// ── COMPONENT ─────────────────────────────────────────────
+// ── COMPONENT ─────────────────────────────────────────────────────────────────
 const UserProfile = () => {
   const navigate = useNavigate();
 
-  // Auth
-  const [isLoggedIn, setIsLoggedIn]     = useState(false);
-  const [authMode, setAuthMode]         = useState('signin');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm]   = useState(false);
-  const [loading, setLoading]           = useState(false);
-  const [error, setError]               = useState('');
-  const [registered, setRegistered]     = useState(false);
-  const [countdown, setCountdown]       = useState(3);
+  // ✅ FIX: Use real AuthContext instead of local mock state
+  const { user, isLoggedIn, logout, updateUser } = useAuth();
 
-  // Forms
-  const [signinForm, setSigninForm] = useState({ email: '', password: '' });
-  const [signupForm, setSignupForm] = useState({
-    name: '', email: '', password: '', confirm: '', role: 'buyer',
-  });
+  // Edit modal state
+  const [editOpen, setEditOpen]       = useState(false);
+  const [editSection, setEditSection] = useState('contact');
+  const [editForm, setEditForm]       = useState({});
+  const [editSaved, setEditSaved]     = useState(false);
+  const [editError, setEditError]     = useState('');
 
-  // Logged-in user — starts null, set on login/register
-  const [user, setUser] = useState(null);
+  // Password change state
+  const [pwForm, setPwForm]   = useState({ current: '', newPw: '', confirm: '' });
+  const [showPw, setShowPw]   = useState({ current: false, new: false, confirm: false });
+  const [pwError, setPwError] = useState('');
+  const [pwSaved, setPwSaved] = useState(false);
 
-  // Profile tabs
   const [activeTab, setActiveTab] = useState('personal');
 
-  // Edit profile modal
-  const [editOpen, setEditOpen]   = useState(false);
-  const [editForm, setEditForm]   = useState({});
-  const [editSection, setEditSection] = useState('contact');
-  const [editSaved, setEditSaved] = useState(false);
+  const newPwStr  = checkStrength(pwForm.newPw);
+  const newPwMeta = strengthMeta(newPwStr.score);
 
-  // Change password inside edit modal
-  const [pwForm, setPwForm]             = useState({ current: '', newPw: '', confirm: '' });
-  const [showPwFields, setShowPwFields] = useState({ current: false, new: false, confirm: false });
-  const [pwError, setPwError]           = useState('');
-  const [pwSaved, setPwSaved]           = useState(false);
+  // ✅ FIX: If not logged in, redirect to login page (ProtectedRoute handles this,
+  // but just in case the page is accessed directly)
+  if (!isLoggedIn || !user) {
+    return (
+      <div style={{ backgroundColor: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <p style={{ color: C.muted, fontSize: 14, marginBottom: 20 }}>You need to be logged in to view your profile.</p>
+          <Link to="/login" style={{ ...s.btnGold, display: 'inline-block', textDecoration: 'none', width: 'auto', padding: '12px 28px' }}>
+            Sign In →
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
-  // Password strength for signup
-  const strength = checkStrength(signupForm.password);
-  const sl       = strengthMeta(strength.score);
+  // ── Derive display values from real user data ──────────────────────────────
+  const initials  = getInitials(user.name);
+  const userBadge = user.role === 'vendor' ? 'Vendor' : user.role === 'admin' ? 'Admin' : 'Buyer';
+  const since     = user.createdAt
+    ? `Since ${new Date(user.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`
+    : 'Member';
 
-  // New password strength for edit
-  const newPwStrength = checkStrength(pwForm.newPw);
-  const newPwMeta     = strengthMeta(newPwStrength.score);
+  // Mock stats / orders / designs — replace with real API calls later
+  const stats        = user.stats        || { orders: 0, designs: 0, wishlist: 0, drafts: 0 };
+  const orders       = user.orders       || [];
+  const savedDesigns = user.savedDesigns || [];
+  const wishlist     = user.wishlist     || [];
 
-  // Countdown after registration
-  useEffect(() => {
-    if (!registered) return;
-    if (countdown === 0) { setIsLoggedIn(true); setRegistered(false); return; }
-    const t = setTimeout(() => setCountdown(c => c - 1), 1000);
-    return () => clearTimeout(t);
-  }, [registered, countdown]);
-
-  // Open edit modal — populate with current user data
+  // ── Edit modal handlers ────────────────────────────────────────────────────
   const openEdit = () => {
     setEditForm({
-      name:    user.name,
-      email:   user.email,
-      phone:   user.phone    || '',
+      name:    user.name    || '',
+      email:   user.email   || '',
+      phone:   user.phone   || '',
       street:  user.address?.street  || '',
       city:    user.address?.city    || '',
       country: user.address?.country || '',
     });
     setPwForm({ current: '', newPw: '', confirm: '' });
-    setPwError('');
-    setPwSaved(false);
-    setEditSaved(false);
-    setEditSection('contact');
-    setEditOpen(true);
+    setPwError(''); setPwSaved(false); setEditSaved(false);
+    setEditSection('contact'); setEditOpen(true);
   };
 
   const saveEdit = () => {
-    if (!editForm.name.trim()) return;
-    setUser(prev => ({
-      ...prev,
+    if (!editForm.name.trim()) { setEditError('Name is required.'); return; }
+    setEditError('');
+    // ✅ updateUser persists changes to AuthContext + localStorage
+    updateUser({
       name:    editForm.name,
       email:   editForm.email,
       phone:   editForm.phone,
-      avatar:  getInitials(editForm.name),
-      address: {
-        street:  editForm.street,
-        city:    editForm.city,
-        country: editForm.country,
-      },
-    }));
+      address: { street: editForm.street, city: editForm.city, country: editForm.country },
+    });
     setEditSaved(true);
     setTimeout(() => { setEditSaved(false); setEditOpen(false); }, 1500);
   };
 
   const savePassword = () => {
     setPwError('');
-    if (!pwForm.current)             { setPwError('Enter your current password.'); return; }
-    if (newPwStrength.score < 3)     { setPwError('New password is too weak.'); return; }
-    if (pwForm.newPw !== pwForm.confirm) { setPwError('New passwords do not match.'); return; }
+    if (!pwForm.current)           { setPwError('Enter your current password.'); return; }
+    if (newPwStr.score < 3)        { setPwError('New password is too weak.'); return; }
+    if (pwForm.newPw !== pwForm.confirm) { setPwError('Passwords do not match.'); return; }
+    // In production: call PATCH /api/auth/change-password
     setPwSaved(true);
     setTimeout(() => { setPwSaved(false); setPwForm({ current: '', newPw: '', confirm: '' }); }, 2000);
   };
 
-  // ── VALIDATION ────────────────────────────────────────────
-  const validateSignIn = () => {
-    if (!signinForm.email.trim())                 return 'Email is required.';
-    if (!/\S+@\S+\.\S+/.test(signinForm.email))  return 'Enter a valid email address.';
-    if (!signinForm.password)                     return 'Password is required.';
-    return null;
-  };
-
-  const validateSignUp = () => {
-    if (!signupForm.name.trim())                  return 'Full name is required.';
-    if (!signupForm.email.trim())                 return 'Email is required.';
-    if (!/\S+@\S+\.\S+/.test(signupForm.email))  return 'Enter a valid email address.';
-    if (strength.score < 5)                       return `Password needs: ${strength.rules.filter(r => !r.pass).map(r => r.label).join(', ')}.`;
-    if (signupForm.password !== signupForm.confirm) return 'Passwords do not match.';
-    return null;
-  };
-
-  // ── HANDLERS ─────────────────────────────────────────────
-  const handleSignIn = (e) => {
-    e.preventDefault();
-    const err = validateSignIn();
-    if (err) { setError(err); return; }
-    setError(''); setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      // Sign in → load mock profile (real backend will return actual user)
-      setUser(DEFAULT_USER);
-      setIsLoggedIn(true);
-    }, 1000);
-  };
-
-  const handleSignUp = (e) => {
-    e.preventDefault();
-    const err = validateSignUp();
-    if (err) { setError(err); return; }
-    setError(''); setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      // Create new user from signup form
-      setUser({
-        name:    signupForm.name,
-        email:   signupForm.email,
-        phone:   '',
-        tier:    'Member',
-        badge:   signupForm.role === 'vendor' ? 'Vendor' : 'Buyer',
-        since:   `Since ${new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`,
-        avatar:  getInitials(signupForm.name),
-        role:    signupForm.role,
-        address: { street: '', city: '', country: '' },
-        stats:   { orders: 0, designs: 0, wishlist: 0, drafts: 0 },
-        orders:       [],
-        savedDesigns: [],
-        wishlist:     [],
-      });
-      setRegistered(true);
-      setCountdown(3);
-    }, 1200);
-  };
-
   const handleLogout = () => {
-    setIsLoggedIn(false);
-    setUser(null);
-    setSigninForm({ email: '', password: '' });
-    setSignupForm({ name: '', email: '', password: '', confirm: '', role: 'buyer' });
-    setActiveTab('personal');
-    setError('');
+    logout();
+    navigate('/');
   };
 
-  // ── REGISTRATION SUCCESS ──────────────────────────────────
-  if (registered && user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center px-8"
-        style={{ backgroundColor: '#1a1500' }}>
-        <div className="max-w-md w-full text-center">
-          <div className="w-20 h-20 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl">
-            ✦
-          </div>
-          <h1 className="text-white font-black text-3xl uppercase mb-2">
-            Welcome to the Collective!
-          </h1>
-          <p className="text-gray-400 text-sm mb-2 leading-relaxed">
-            Your account has been created successfully.
-          </p>
-          <p className="text-gray-500 text-xs mb-8">
-            A verification email has been sent to{' '}
-            <span className="text-yellow-400 font-black">{user.email}</span>.
-          </p>
+  const profileTabs = [
+    { key: 'personal', label: 'Personal Info' },
+    { key: 'orders',   label: 'Orders'        },
+    { key: 'designs',  label: 'Saved Designs' },
+    { key: 'wishlist', label: 'Wishlist'       },
+  ];
 
-          {/* Account summary */}
-          <div className="rounded-2xl border border-gray-800 p-6 mb-6 text-left"
-            style={{ backgroundColor: '#1a1a00' }}>
-            <p className="text-gray-500 text-xs font-black uppercase tracking-widest mb-4">
-              Account Summary
-            </p>
-            <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-800">
-              <div className="w-12 h-12 rounded-xl bg-yellow-400 flex items-center justify-center font-black text-black text-sm">
-                {user.avatar}
-              </div>
-              <div>
-                <p className="text-white font-black">{user.name}</p>
-                <p className="text-gray-500 text-xs">{user.email}</p>
-              </div>
-            </div>
-            <div className="space-y-2">
-              {[
-                { label: 'Account type', value: user.role === 'vendor' ? '🏪 Vendor' : '🛍 Buyer' },
-                { label: 'Member since', value: user.since },
-                { label: 'Tier',         value: user.tier  },
-              ].map(r => (
-                <div key={r.label} className="flex justify-between border-b border-gray-800 pb-2 last:border-0">
-                  <span className="text-gray-500 text-xs">{r.label}</span>
-                  <span className="text-white font-black text-xs">{r.value}</span>
+  return (
+    <div style={{ backgroundColor: C.bg, color: C.cream, minHeight: '100vh' }}>
+
+      {/* ANNOUNCEMENT BAR */}
+      <div style={{ backgroundColor: C.gold, color: '#000', fontSize: 11, fontWeight: 900, textAlign: 'center', padding: '7px 16px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+        57 Arts & Customs · Your Profile · Nairobi, Kenya
+      </div>
+
+      {/* EDIT MODAL */}
+      {editOpen && (
+        <Modal title="Edit Profile" onClose={() => setEditOpen(false)}>
+          <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}`, marginBottom: 22 }}>
+            {[['contact','Contact'], ['address','Address'], ['password','Password']].map(([key, label]) => (
+              <button key={key} onClick={() => setEditSection(key)}
+                style={{ flex: 1, padding: '10px', fontWeight: 900, fontSize: 11, textTransform: 'uppercase', background: 'none', border: 'none', borderBottom: `2px solid ${editSection === key ? C.gold : 'transparent'}`, color: editSection === key ? C.gold : C.muted, cursor: 'pointer', marginBottom: -1 }}>
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {editSection === 'contact' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+              {editError && <div style={{ backgroundColor: 'rgba(248,113,113,0.1)', border: `1px solid rgba(248,113,113,0.4)`, color: C.red, fontSize: 12, padding: '10px 14px', borderRadius: 9 }}>{editError}</div>}
+              {[['Full Name', 'name', 'text', ''], ['Email Address', 'email', 'email', ''], ['Phone Number', 'phone', 'text', '+254 7XX XXX XXX']].map(([label, field, type, ph]) => (
+                <div key={field}>
+                  <label style={s.label}>{label}</label>
+                  <input type={type} value={editForm[field] || ''} onChange={e => setEditForm({ ...editForm, [field]: e.target.value })}
+                    placeholder={ph} style={s.input}
+                    onFocus={e => e.target.style.borderColor = C.bHov}
+                    onBlur={e => e.target.style.borderColor = C.border} />
                 </div>
               ))}
-            </div>
-          </div>
-
-          {/* Vendor note */}
-          {user.role === 'vendor' && (
-            <div className="rounded-2xl border border-yellow-900 p-4 mb-6 text-left"
-              style={{ backgroundColor: '#2a2000' }}>
-              <p className="text-yellow-400 font-black text-xs mb-1">🏪 Vendor Account</p>
-              <p className="text-gray-400 text-xs leading-relaxed">
-                Your vendor application is under review. We'll email you within
-                48 hours once approved to start listing products.
-              </p>
+              <button onClick={saveEdit} style={{ ...s.btnGold, marginTop: 4 }}>
+                {editSaved ? '✓ Saved!' : 'Save Contact Details'}
+              </button>
             </div>
           )}
 
-          {/* Countdown */}
-          <div className="flex items-center justify-center gap-2 text-gray-500 text-sm mb-4">
-            <div className="w-8 h-8 rounded-full border-2 border-yellow-400 flex items-center justify-center font-black text-yellow-400 text-sm">
-              {countdown}
-            </div>
-            <span>Redirecting to your profile...</span>
-          </div>
-
-          <button
-            onClick={() => { setIsLoggedIn(true); setRegistered(false); }}
-            className="w-full bg-yellow-400 text-black py-3 rounded-xl font-black text-sm hover:bg-yellow-500 transition"
-          >
-            Go to My Profile Now →
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // ── AUTH PAGE ─────────────────────────────────────────────
-  if (!isLoggedIn) {
-    return (
-      <div className="min-h-screen flex" style={{ backgroundColor: '#1a1500' }}>
-
-        {/* LEFT PANEL */}
-        <div className="hidden lg:flex flex-col justify-between w-1/2 p-12 relative overflow-hidden"
-          style={{ backgroundColor: '#1a1a00' }}>
-          <div className="absolute inset-0 opacity-10 pointer-events-none"
-            style={{ backgroundImage: 'radial-gradient(circle at 30% 70%, #FFD700, transparent 60%)' }} />
-          <Link to="/" className="flex items-center gap-2 relative z-10">
-            <span className="bg-yellow-400 text-black w-9 h-9 rounded-lg flex items-center justify-center font-black text-sm">57</span>
-            <span className="text-white font-black text-sm">57 ARTS & CUSTOMS</span>
-          </Link>
-          <div className="relative z-10">
-            <h1 className="text-6xl font-black uppercase leading-none mb-4">
-              CRAFT YOUR<br /><span className="text-yellow-400">IDENTITY.</span>
-            </h1>
-            <p className="text-gray-400 text-sm leading-relaxed max-w-sm mb-8">
-              Premium custom art and lifestyle design for the digital age.
-              Join the elite collective of creators and collectors.
-            </p>
-            <div className="flex items-center gap-3">
-              <div className="flex -space-x-2">
-                {['#FFD700','#FF6B6B','#4ECDC4','#45B7D1'].map((color, i) => (
-                  <div key={i}
-                    className="w-9 h-9 rounded-full border-2 border-gray-900 flex items-center justify-center text-xs font-black text-black"
-                    style={{ backgroundColor: color }}>
-                    {['AJ','MK','OT','RS'][i]}
-                  </div>
-                ))}
-              </div>
+          {editSection === 'address' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+              {[['Street Address', 'street', 'text', '123 Artisan Way'], ['City & Postcode', 'city', 'text', 'Nairobi, 00100']].map(([label, field, type, ph]) => (
+                <div key={field}>
+                  <label style={s.label}>{label}</label>
+                  <input type={type} value={editForm[field] || ''} onChange={e => setEditForm({ ...editForm, [field]: e.target.value })}
+                    placeholder={ph} style={s.input}
+                    onFocus={e => e.target.style.borderColor = C.bHov}
+                    onBlur={e => e.target.style.borderColor = C.border} />
+                </div>
+              ))}
               <div>
-                <p className="text-white font-black text-sm">15K+ MEMBERS</p>
-                <p className="text-gray-500 text-xs">ACTIVE CREATORS</p>
-              </div>
-            </div>
-          </div>
-          <p className="text-gray-700 text-xs relative z-10">© 2024 57 ARTS & CUSTOMS. ALL RIGHTS RESERVED.</p>
-        </div>
-
-        {/* RIGHT PANEL */}
-        <div className="flex-1 flex items-center justify-center px-8 py-12"
-          style={{ backgroundColor: '#1a1500' }}>
-          <div className="w-full max-w-md">
-
-            <Link to="/" className="flex items-center gap-2 mb-8 lg:hidden">
-              <span className="bg-yellow-400 text-black w-9 h-9 rounded-lg flex items-center justify-center font-black text-sm">57</span>
-              <span className="text-white font-black text-sm">57 ARTS & CUSTOMS</span>
-            </Link>
-
-            {/* Tab switcher */}
-            <div className="flex rounded-xl p-1 mb-8 border border-gray-800"
-              style={{ backgroundColor: '#1a1a00' }}>
-              {['signin','signup'].map(mode => (
-                <button key={mode}
-                  onClick={() => { setAuthMode(mode); setError(''); }}
-                  className={`flex-1 py-2.5 rounded-lg font-black text-xs uppercase tracking-widest transition ${
-                    authMode === mode ? 'bg-yellow-400 text-black' : 'text-gray-500 hover:text-white'
-                  }`}>
-                  {mode === 'signin' ? 'Sign In' : 'Sign Up'}
-                </button>
-              ))}
-            </div>
-
-            {/* Error */}
-            {error && (
-              <div className="bg-red-500 bg-opacity-20 border border-red-500 text-red-400 text-xs px-4 py-3 rounded-xl mb-5 leading-relaxed">
-                {error}
-              </div>
-            )}
-
-            {/* ── SIGN IN ── */}
-            {authMode === 'signin' && (
-              <form onSubmit={handleSignIn} noValidate>
-                <h2 className="text-white font-black text-3xl uppercase mb-1">Welcome Back</h2>
-                <p className="text-gray-500 text-sm mb-8">Enter your credentials to access your studio.</p>
-                <div className="space-y-5">
-                  <div>
-                    <label className="text-gray-500 text-xs font-black uppercase tracking-widest block mb-2">
-                      Email Address
-                    </label>
-                    <input type="email" value={signinForm.email}
-                      onChange={e => { setSigninForm({ ...signinForm, email: e.target.value }); setError(''); }}
-                      placeholder="name@example.com"
-                      className="w-full px-4 py-3.5 rounded-xl text-white text-sm outline-none border border-gray-800 focus:border-yellow-400 transition placeholder-gray-700"
-                      style={{ backgroundColor: '#1a1a00' }} />
-                  </div>
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <label className="text-gray-500 text-xs font-black uppercase tracking-widest">Password</label>
-                      <button type="button" className="text-yellow-400 text-xs font-black hover:underline">
-                        Forgot Password?
-                      </button>
-                    </div>
-                    <div className="relative">
-                      <input type={showPassword ? 'text' : 'password'} value={signinForm.password}
-                        onChange={e => { setSigninForm({ ...signinForm, password: e.target.value }); setError(''); }}
-                        placeholder="••••••••••"
-                        className="w-full px-4 py-3.5 rounded-xl text-white text-sm outline-none border border-gray-800 focus:border-yellow-400 transition placeholder-gray-700 pr-16"
-                        style={{ backgroundColor: '#1a1a00' }} />
-                      <button type="button" onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600 hover:text-yellow-400 text-xs font-black transition">
-                        {showPassword ? 'HIDE' : 'SHOW'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                <button type="submit" disabled={loading}
-                  className="w-full mt-7 bg-yellow-400 text-black py-4 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-yellow-500 transition disabled:opacity-60">
-                  {loading ? 'Authenticating...' : 'AUTHENTICATE'}
-                </button>
-                <div className="flex items-center gap-3 my-6">
-                  <div className="flex-1 h-px bg-gray-800" />
-                  <span className="text-gray-600 text-xs uppercase tracking-widest">or connect with</span>
-                  <div className="flex-1 h-px bg-gray-800" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  {[{ name: 'Google', icon: '🌐' }, { name: 'Apple', icon: '🍎' }].map(p => (
-                    <button key={p.name} type="button"
-                      className="flex items-center justify-center gap-2 border border-gray-800 text-gray-400 py-3.5 rounded-xl text-sm font-black hover:border-yellow-400 hover:text-yellow-400 transition"
-                      style={{ backgroundColor: '#1a1a00' }}>
-                      {p.icon} {p.name.toUpperCase()}
-                    </button>
+                <label style={s.label}>Country</label>
+                <select value={editForm.country || ''} onChange={e => setEditForm({ ...editForm, country: e.target.value })}
+                  style={{ ...s.input, cursor: 'pointer' }}>
+                  <option value="">Select country...</option>
+                  {['Kenya','Nigeria','Ghana','South Africa','Uganda','Tanzania','United Kingdom','United States','Canada'].map(c => (
+                    <option key={c}>{c}</option>
                   ))}
-                </div>
-                <p className="text-center text-gray-600 text-xs mt-6">
-                  By proceeding, you agree to our{' '}
-                  <span className="text-yellow-400 cursor-pointer hover:underline">Terms of Service</span>
-                  {' '}and{' '}
-                  <span className="text-yellow-400 cursor-pointer hover:underline">Privacy Policy</span>
-                </p>
-              </form>
-            )}
-
-            {/* ── SIGN UP ── */}
-            {authMode === 'signup' && (
-              <form onSubmit={handleSignUp} noValidate>
-                <h2 className="text-white font-black text-3xl uppercase mb-1">Join The Collective</h2>
-                <p className="text-gray-500 text-sm mb-6">Create your 57 Arts & Customs account.</p>
-                <div className="space-y-4">
-
-                  {/* Name */}
-                  <div>
-                    <label className="text-gray-500 text-xs font-black uppercase tracking-widest block mb-2">Full Name</label>
-                    <input type="text" value={signupForm.name}
-                      onChange={e => { setSignupForm({ ...signupForm, name: e.target.value }); setError(''); }}
-                      placeholder="Your full name"
-                      className="w-full px-4 py-3.5 rounded-xl text-white text-sm outline-none border border-gray-800 focus:border-yellow-400 transition placeholder-gray-700"
-                      style={{ backgroundColor: '#1a1a00' }} />
-                  </div>
-
-                  {/* Email */}
-                  <div>
-                    <label className="text-gray-500 text-xs font-black uppercase tracking-widest block mb-2">Email Address</label>
-                    <input type="email" value={signupForm.email}
-                      onChange={e => { setSignupForm({ ...signupForm, email: e.target.value }); setError(''); }}
-                      placeholder="name@example.com"
-                      className="w-full px-4 py-3.5 rounded-xl text-white text-sm outline-none border border-gray-800 focus:border-yellow-400 transition placeholder-gray-700"
-                      style={{ backgroundColor: '#1a1a00' }} />
-                  </div>
-
-                  {/* Role */}
-                  <div>
-                    <label className="text-gray-500 text-xs font-black uppercase tracking-widest block mb-2">I Am A...</label>
-                    <div className="grid grid-cols-2 gap-3">
-                      {[
-                        { value: 'buyer',  label: '🛍 Buyer',  desc: 'Shop & order'  },
-                        { value: 'vendor', label: '🏪 Vendor', desc: 'Sell my craft' },
-                      ].map(role => (
-                        <button key={role.value} type="button"
-                          onClick={() => setSignupForm({ ...signupForm, role: role.value })}
-                          className={`p-3 rounded-xl border-2 text-left transition ${
-                            signupForm.role === role.value
-                              ? 'border-yellow-400 bg-yellow-400 bg-opacity-10'
-                              : 'border-gray-800 hover:border-gray-600'
-                          }`}
-                          style={{ backgroundColor: '#1a1a00' }}>
-                          <p className="text-white text-sm font-black">{role.label}</p>
-                          <p className="text-gray-500 text-xs">{role.desc}</p>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Password */}
-                  <div>
-                    <label className="text-gray-500 text-xs font-black uppercase tracking-widest block mb-2">Password</label>
-                    <div className="relative">
-                      <input type={showPassword ? 'text' : 'password'} value={signupForm.password}
-                        onChange={e => { setSignupForm({ ...signupForm, password: e.target.value }); setError(''); }}
-                        placeholder="Create a strong password"
-                        className="w-full px-4 py-3.5 rounded-xl text-white text-sm outline-none border border-gray-800 focus:border-yellow-400 transition placeholder-gray-700 pr-16"
-                        style={{ backgroundColor: '#1a1a00' }} />
-                      <button type="button" onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600 hover:text-yellow-400 text-xs font-black transition">
-                        {showPassword ? 'HIDE' : 'SHOW'}
-                      </button>
-                    </div>
-
-                    {/* Strength meter */}
-                    {signupForm.password && (
-                      <div className="mt-3">
-                        <div className="flex gap-1 mb-2">
-                          {[1,2,3,4,5].map(i => (
-                            <div key={i} className={`flex-1 h-1.5 rounded-full transition-all duration-300 ${
-                              i <= strength.score ? sl.bar : 'bg-gray-800'
-                            }`} />
-                          ))}
-                        </div>
-                        <div className="flex justify-between mb-2">
-                          <span className={`text-xs font-black ${sl.text}`}>{sl.label}</span>
-                          <span className="text-gray-600 text-xs">{strength.score}/5 met</span>
-                        </div>
-                        <div className="space-y-1">
-                          {strength.rules.map(r => (
-                            <div key={r.label} className="flex items-center gap-2">
-                              <span className={`text-xs flex-shrink-0 ${r.pass ? 'text-green-400' : 'text-gray-700'}`}>
-                                {r.pass ? '✓' : '○'}
-                              </span>
-                              <span className={`text-xs ${r.pass ? 'text-gray-400' : 'text-gray-700'}`}>
-                                {r.label}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Confirm password */}
-                  <div>
-                    <label className="text-gray-500 text-xs font-black uppercase tracking-widest block mb-2">Confirm Password</label>
-                    <div className="relative">
-                      <input type={showConfirm ? 'text' : 'password'} value={signupForm.confirm}
-                        onChange={e => { setSignupForm({ ...signupForm, confirm: e.target.value }); setError(''); }}
-                        placeholder="Repeat your password"
-                        className={`w-full px-4 py-3.5 rounded-xl text-white text-sm outline-none border transition placeholder-gray-700 pr-16 ${
-                          signupForm.confirm && signupForm.password !== signupForm.confirm
-                            ? 'border-red-500'
-                            : signupForm.confirm && signupForm.password === signupForm.confirm
-                            ? 'border-green-500'
-                            : 'border-gray-800 focus:border-yellow-400'
-                        }`}
-                        style={{ backgroundColor: '#1a1a00' }} />
-                      <button type="button" onClick={() => setShowConfirm(!showConfirm)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600 hover:text-yellow-400 text-xs font-black transition">
-                        {showConfirm ? 'HIDE' : 'SHOW'}
-                      </button>
-                    </div>
-                    {signupForm.confirm && signupForm.password !== signupForm.confirm && (
-                      <p className="text-red-400 text-xs mt-1">Passwords do not match</p>
-                    )}
-                    {signupForm.confirm && signupForm.password === signupForm.confirm && (
-                      <p className="text-green-400 text-xs mt-1">✓ Passwords match</p>
-                    )}
-                  </div>
-                </div>
-
-                <button type="submit" disabled={loading}
-                  className="w-full mt-6 bg-yellow-400 text-black py-4 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-yellow-500 transition disabled:opacity-60">
-                  {loading ? 'Creating Account...' : 'CREATE ACCOUNT'}
-                </button>
-                <p className="text-center text-gray-600 text-xs mt-4">
-                  By proceeding, you agree to our{' '}
-                  <span className="text-yellow-400 cursor-pointer hover:underline">Terms of Service</span>
-                  {' '}and{' '}
-                  <span className="text-yellow-400 cursor-pointer hover:underline">Privacy Policy</span>
-                </p>
-              </form>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── PROFILE (logged in) ───────────────────────────────────
-  return (
-    <div className="min-h-screen text-white" style={{ backgroundColor: '#1a1500' }}>
-
-      {/* ── EDIT PROFILE MODAL ───────────────────────────── */}
-      {editOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 px-4 py-8 overflow-y-auto">
-          <div className="rounded-2xl border border-gray-800 w-full max-w-lg"
-            style={{ backgroundColor: '#1a1a00' }}>
-
-            {/* Modal header */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-800">
-              <h3 className="text-white font-black text-lg uppercase">Edit Profile</h3>
-              <button onClick={() => setEditOpen(false)}
-                className="text-gray-500 hover:text-white transition text-xl">✕</button>
+                </select>
+              </div>
+              <button onClick={saveEdit} style={{ ...s.btnGold, marginTop: 4 }}>
+                {editSaved ? '✓ Saved!' : 'Save Address'}
+              </button>
             </div>
+          )}
 
-            {/* Section tabs */}
-            <div className="flex border-b border-gray-800">
-              {[
-                { key: 'contact',  label: 'Contact'  },
-                { key: 'address',  label: 'Address'  },
-                { key: 'password', label: 'Password' },
-              ].map(s => (
-                <button key={s.key} onClick={() => setEditSection(s.key)}
-                  className={`flex-1 py-3.5 font-black text-xs uppercase tracking-widest border-b-2 -mb-px transition ${
-                    editSection === s.key
-                      ? 'text-yellow-400 border-yellow-400'
-                      : 'text-gray-600 border-transparent hover:text-white'
-                  }`}>
-                  {s.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="p-6">
-
-              {/* Contact section */}
-              {editSection === 'contact' && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-gray-500 text-xs font-black uppercase tracking-widest block mb-2">Full Name</label>
-                    <input type="text" value={editForm.name}
-                      onChange={e => setEditForm({ ...editForm, name: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl text-white text-sm outline-none border border-gray-700 focus:border-yellow-400 transition"
-                      style={{ backgroundColor: '#2a2000' }} />
+          {editSection === 'password' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+              {pwError && <div style={{ backgroundColor: 'rgba(248,113,113,0.1)', border: `1px solid rgba(248,113,113,0.4)`, color: C.red, fontSize: 12, padding: '10px 14px', borderRadius: 9 }}>{pwError}</div>}
+              {[['Current Password', 'current'], ['New Password', 'newPw'], ['Confirm New Password', 'confirm']].map(([label, field]) => (
+                <div key={field}>
+                  <label style={s.label}>{label}</label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type={showPw[field === 'newPw' ? 'new' : field] ? 'text' : 'password'}
+                      value={pwForm[field]}
+                      onChange={e => { setPwForm({ ...pwForm, [field]: e.target.value }); setPwError(''); }}
+                      placeholder="••••••••••"
+                      style={{ ...s.input, paddingRight: 60 }}
+                      onFocus={e => e.target.style.borderColor = C.bHov}
+                      onBlur={e => e.target.style.borderColor = C.border} />
+                    <button type="button"
+                      onClick={() => setShowPw(p => ({ ...p, [field === 'newPw' ? 'new' : field]: !p[field === 'newPw' ? 'new' : field] }))}
+                      style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: C.muted, fontSize: 10, fontWeight: 900, cursor: 'pointer' }}>
+                      {showPw[field === 'newPw' ? 'new' : field] ? 'HIDE' : 'SHOW'}
+                    </button>
                   </div>
-                  <div>
-                    <label className="text-gray-500 text-xs font-black uppercase tracking-widest block mb-2">Email Address</label>
-                    <input type="email" value={editForm.email}
-                      onChange={e => setEditForm({ ...editForm, email: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl text-white text-sm outline-none border border-gray-700 focus:border-yellow-400 transition"
-                      style={{ backgroundColor: '#2a2000' }} />
-                  </div>
-                  <div>
-                    <label className="text-gray-500 text-xs font-black uppercase tracking-widest block mb-2">Phone Number</label>
-                    <input type="text" value={editForm.phone}
-                      onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
-                      placeholder="+254 7XX XXX XXX"
-                      className="w-full px-4 py-3 rounded-xl text-white text-sm outline-none border border-gray-700 focus:border-yellow-400 transition placeholder-gray-700"
-                      style={{ backgroundColor: '#2a2000' }} />
-                  </div>
-                  <button onClick={saveEdit}
-                    className="w-full bg-yellow-400 text-black py-3 rounded-xl font-black text-sm hover:bg-yellow-500 transition mt-2">
-                    {editSaved ? '✓ Saved!' : 'Save Contact Details'}
-                  </button>
-                </div>
-              )}
-
-              {/* Address section */}
-              {editSection === 'address' && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-gray-500 text-xs font-black uppercase tracking-widest block mb-2">Street Address</label>
-                    <input type="text" value={editForm.street}
-                      onChange={e => setEditForm({ ...editForm, street: e.target.value })}
-                      placeholder="123 Artisan Way"
-                      className="w-full px-4 py-3 rounded-xl text-white text-sm outline-none border border-gray-700 focus:border-yellow-400 transition placeholder-gray-700"
-                      style={{ backgroundColor: '#2a2000' }} />
-                  </div>
-                  <div>
-                    <label className="text-gray-500 text-xs font-black uppercase tracking-widest block mb-2">City & Postcode</label>
-                    <input type="text" value={editForm.city}
-                      onChange={e => setEditForm({ ...editForm, city: e.target.value })}
-                      placeholder="Nairobi, 00100"
-                      className="w-full px-4 py-3 rounded-xl text-white text-sm outline-none border border-gray-700 focus:border-yellow-400 transition placeholder-gray-700"
-                      style={{ backgroundColor: '#2a2000' }} />
-                  </div>
-                  <div>
-                    <label className="text-gray-500 text-xs font-black uppercase tracking-widest block mb-2">Country</label>
-                    <select value={editForm.country}
-                      onChange={e => setEditForm({ ...editForm, country: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl text-white text-sm outline-none border border-gray-700 focus:border-yellow-400 transition"
-                      style={{ backgroundColor: '#2a2000' }}>
-                      <option value="">Select country...</option>
-                      {['Kenya','Nigeria','Ghana','South Africa','Uganda','Tanzania',
-                        'Ethiopia','Rwanda','United Kingdom','United States',
-                        'Canada','Germany','France','Netherlands','Australia'].map(c => (
-                        <option key={c}>{c}</option>
+                  {field === 'newPw' && pwForm.newPw && (
+                    <div style={{ marginTop: 6, display: 'flex', gap: 3 }}>
+                      {[1,2,3,4,5].map(i => (
+                        <div key={i} style={{ flex: 1, height: 4, borderRadius: 100, backgroundColor: i <= newPwStr.score ? newPwMeta.bar : C.border }} />
                       ))}
-                    </select>
-                  </div>
-                  <button onClick={saveEdit}
-                    className="w-full bg-yellow-400 text-black py-3 rounded-xl font-black text-sm hover:bg-yellow-500 transition mt-2">
-                    {editSaved ? '✓ Saved!' : 'Save Address'}
-                  </button>
-                </div>
-              )}
-
-              {/* Password section */}
-              {editSection === 'password' && (
-                <div className="space-y-4">
-                  {pwError && (
-                    <div className="bg-red-500 bg-opacity-20 border border-red-500 text-red-400 text-xs px-4 py-3 rounded-xl">
-                      {pwError}
                     </div>
                   )}
-
-                  {/* Current password */}
-                  <div>
-                    <label className="text-gray-500 text-xs font-black uppercase tracking-widest block mb-2">
-                      Current Password
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showPwFields.current ? 'text' : 'password'}
-                        value={pwForm.current}
-                        onChange={e => { setPwForm({ ...pwForm, current: e.target.value }); setPwError(''); }}
-                        placeholder="••••••••••"
-                        className="w-full px-4 py-3 rounded-xl text-white text-sm outline-none border border-gray-700 focus:border-yellow-400 transition placeholder-gray-700 pr-16"
-                        style={{ backgroundColor: '#2a2000' }} />
-                      <button type="button"
-                        onClick={() => setShowPwFields(p => ({ ...p, current: !p.current }))}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600 hover:text-yellow-400 text-xs font-black transition">
-                        {showPwFields.current ? 'HIDE' : 'SHOW'}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* New password */}
-                  <div>
-                    <label className="text-gray-500 text-xs font-black uppercase tracking-widest block mb-2">
-                      New Password
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showPwFields.new ? 'text' : 'password'}
-                        value={pwForm.newPw}
-                        onChange={e => { setPwForm({ ...pwForm, newPw: e.target.value }); setPwError(''); }}
-                        placeholder="Create a new strong password"
-                        className="w-full px-4 py-3 rounded-xl text-white text-sm outline-none border border-gray-700 focus:border-yellow-400 transition placeholder-gray-700 pr-16"
-                        style={{ backgroundColor: '#2a2000' }} />
-                      <button type="button"
-                        onClick={() => setShowPwFields(p => ({ ...p, new: !p.new }))}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600 hover:text-yellow-400 text-xs font-black transition">
-                        {showPwFields.new ? 'HIDE' : 'SHOW'}
-                      </button>
-                    </div>
-
-                    {/* New pw strength */}
-                    {pwForm.newPw && (
-                      <div className="mt-2">
-                        <div className="flex gap-1 mb-1.5">
-                          {[1,2,3,4,5].map(i => (
-                            <div key={i} className={`flex-1 h-1.5 rounded-full transition-all duration-300 ${
-                              i <= newPwStrength.score ? newPwMeta.bar : 'bg-gray-800'
-                            }`} />
-                          ))}
-                        </div>
-                        <span className={`text-xs font-black ${newPwMeta.text}`}>
-                          {newPwMeta.label}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Confirm new password */}
-                  <div>
-                    <label className="text-gray-500 text-xs font-black uppercase tracking-widest block mb-2">
-                      Confirm New Password
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showPwFields.confirm ? 'text' : 'password'}
-                        value={pwForm.confirm}
-                        onChange={e => { setPwForm({ ...pwForm, confirm: e.target.value }); setPwError(''); }}
-                        placeholder="Repeat new password"
-                        className={`w-full px-4 py-3 rounded-xl text-white text-sm outline-none border transition placeholder-gray-700 pr-16 ${
-                          pwForm.confirm && pwForm.newPw !== pwForm.confirm
-                            ? 'border-red-500'
-                            : pwForm.confirm && pwForm.newPw === pwForm.confirm
-                            ? 'border-green-500'
-                            : 'border-gray-700 focus:border-yellow-400'
-                        }`}
-                        style={{ backgroundColor: '#2a2000' }} />
-                      <button type="button"
-                        onClick={() => setShowPwFields(p => ({ ...p, confirm: !p.confirm }))}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600 hover:text-yellow-400 text-xs font-black transition">
-                        {showPwFields.confirm ? 'HIDE' : 'SHOW'}
-                      </button>
-                    </div>
-                    {pwForm.confirm && pwForm.newPw !== pwForm.confirm && (
-                      <p className="text-red-400 text-xs mt-1">Passwords do not match</p>
-                    )}
-                    {pwForm.confirm && pwForm.newPw === pwForm.confirm && (
-                      <p className="text-green-400 text-xs mt-1">✓ Passwords match</p>
-                    )}
-                  </div>
-
-                  <button onClick={savePassword}
-                    className="w-full bg-yellow-400 text-black py-3 rounded-xl font-black text-sm hover:bg-yellow-500 transition mt-2">
-                    {pwSaved ? '✓ Password Updated!' : 'Update Password'}
-                  </button>
                 </div>
-              )}
+              ))}
+              <button onClick={savePassword} style={{ ...s.btnGold, marginTop: 4 }}>
+                {pwSaved ? '✓ Password Updated!' : 'Update Password'}
+              </button>
             </div>
-          </div>
-        </div>
+          )}
+        </Modal>
       )}
 
       {/* HEADER */}
-      <div style={{ backgroundColor: '#1a1a00' }} className="border-b border-gray-800">
-        <div className="max-w-5xl mx-auto px-8 py-6 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <div className="w-14 h-14 rounded-2xl bg-yellow-400 flex items-center justify-center font-black text-black text-lg">
-                {user.avatar}
-              </div>
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-gray-900" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 mb-0.5">
-                <h1 className="text-white font-black text-lg">{user.name}</h1>
-                <span className="bg-yellow-400 text-black text-xs font-black px-2 py-0.5 rounded-full">{user.tier}</span>
-                <span className="border border-yellow-700 text-yellow-600 text-xs font-black px-2 py-0.5 rounded-full">{user.badge}</span>
-              </div>
-              <p className="text-gray-500 text-xs">{user.email} · {user.since}</p>
+      <div style={{ backgroundColor: C.surface, borderBottom: `1px solid ${C.border}` }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 48px', height: 58, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <Link to="/" style={{ color: C.muted, fontSize: 11, fontWeight: 900, textDecoration: 'none' }}>← Home</Link>
+            <span style={{ color: C.border }}>|</span>
+            <div style={{ display: 'flex', gap: 6, fontSize: 11, color: C.muted }}>
+              <Link to="/" style={{ color: C.muted, textDecoration: 'none' }}>Home</Link>
+              <span>›</span>
+              <span style={{ color: C.gold }}>My Profile</span>
             </div>
           </div>
-          <div className="flex gap-2">
-            <button onClick={openEdit}
-              className="border border-gray-700 text-gray-300 px-4 py-2 rounded-xl font-black text-xs hover:border-yellow-400 hover:text-yellow-400 transition">
-              Edit Profile
-            </button>
-            <button onClick={handleLogout}
-              className="border border-red-800 text-red-400 px-4 py-2 rounded-xl font-black text-xs hover:bg-red-500 hover:bg-opacity-20 transition">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Link to="/shop" style={{ color: C.muted, fontSize: 11, fontWeight: 900, textDecoration: 'none' }}>Browse Shop</Link>
+            <button onClick={handleLogout} style={{ ...s.btnGhost, width: 'auto', padding: '7px 16px', fontSize: 11 }}>
               Sign Out
             </button>
           </div>
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-8 py-8">
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 48px 80px' }}>
 
-        {/* STATS */}
-        <div className="grid grid-cols-4 gap-4 mb-8">
-          {[
-            { value: user.stats.orders,   label: 'Total Orders'   },
-            { value: user.stats.designs,  label: 'Active Designs' },
-            { value: user.stats.wishlist, label: 'Wishlist Items'  },
-            { value: user.stats.drafts,   label: 'Draft Requests'  },
-          ].map(stat => (
-            <div key={stat.label} className="rounded-2xl p-5 border border-gray-800 text-center"
-              style={{ backgroundColor: '#1a1a00' }}>
-              <p className="text-yellow-400 font-black text-3xl">{stat.value}</p>
-              <p className="text-gray-600 text-xs uppercase tracking-widest mt-1">{stat.label}</p>
+        {/* Profile card */}
+        <div style={{ backgroundColor: C.faint, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden', marginBottom: 28 }}>
+          <div style={{ height: 3, backgroundColor: C.gold }} />
+          <div style={{ padding: '28px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+              {/* ✅ Avatar shows real user's initials */}
+              <div style={{ width: 64, height: 64, borderRadius: 14, backgroundColor: C.gold, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 22, color: '#000', flexShrink: 0 }}>
+                {initials}
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                  {/* ✅ Shows real logged-in user's name */}
+                  <h1 style={{ color: C.cream, fontWeight: 900, fontSize: 22 }}>{user.name}</h1>
+                  <span style={{ backgroundColor: C.gold, color: '#000', fontSize: 10, fontWeight: 900, padding: '3px 10px', borderRadius: 100, letterSpacing: '0.08em' }}>{userBadge}</span>
+                </div>
+                <p style={{ color: C.muted, fontSize: 12 }}>{user.email} · {since}</p>
+              </div>
             </div>
-          ))}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+              {[['Orders', stats.orders], ['Designs', stats.designs], ['Wishlist', stats.wishlist], ['Drafts', stats.drafts]].map(([label, val]) => (
+                <div key={label} style={{ textAlign: 'center' }}>
+                  <p style={{ color: C.gold, fontWeight: 900, fontSize: 22, lineHeight: 1 }}>{val}</p>
+                  <p style={{ color: C.muted, fontSize: 11, marginTop: 3 }}>{label}</p>
+                </div>
+              ))}
+            </div>
+            <button onClick={openEdit} style={{ ...s.btnGhost, width: 'auto', padding: '10px 20px', fontSize: 11 }}>
+              Edit Profile
+            </button>
+          </div>
         </div>
 
-        {/* TABS */}
-        <div className="flex gap-1 border-b border-gray-800 mb-6">
-          {[
-            { key: 'personal', label: 'Personal Info'  },
-            { key: 'orders',   label: 'Order History'  },
-            { key: 'designs',  label: 'Saved Designs'  },
-            { key: 'wishlist', label: 'Wishlist'        },
-          ].map(tab => (
+        {/* Tabs */}
+        <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}`, marginBottom: 28 }}>
+          {profileTabs.map(tab => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-              className={`px-5 py-3 font-black text-xs uppercase tracking-widest transition border-b-2 -mb-px ${
-                activeTab === tab.key
-                  ? 'text-yellow-400 border-yellow-400'
-                  : 'text-gray-600 border-transparent hover:text-white'
-              }`}>
+              style={{ padding: '12px 20px', fontWeight: 900, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', background: 'none', border: 'none', borderBottom: `2px solid ${activeTab === tab.key ? C.gold : 'transparent'}`, color: activeTab === tab.key ? C.gold : C.muted, cursor: 'pointer', marginBottom: -1 }}>
               {tab.label}
             </button>
           ))}
         </div>
 
-        {/* PERSONAL INFO */}
+        {/* Personal Info */}
         {activeTab === 'personal' && (
-          <div className="grid grid-cols-2 gap-5">
-            <div className="rounded-2xl p-6 border border-gray-800" style={{ backgroundColor: '#1a1a00' }}>
-              <p className="text-gray-600 text-xs font-black uppercase tracking-widest mb-5 flex items-center gap-2">
-                <span>👤</span> Contact Details
-              </p>
-              <div className="space-y-4">
-                {[
-                  { label: 'Full Name',     value: user.name              },
-                  { label: 'Email Address', value: user.email             },
-                  { label: 'Phone Number',  value: user.phone || '—'      },
-                  { label: 'Account Type',  value: user.badge             },
-                ].map(f => (
-                  <div key={f.label}>
-                    <p className="text-gray-700 text-xs uppercase tracking-widest mb-1">{f.label}</p>
-                    <p className="text-white text-sm">{f.value}</p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            {[
+              { title: 'Contact Details', items: [['Full Name', user.name], ['Email Address', user.email], ['Phone', user.phone || '—']] },
+              { title: 'Shipping Address', items: [['Street', user.address?.street || '—'], ['City', user.address?.city || '—'], ['Country', user.address?.country || '—']] },
+            ].map(section => (
+              <div key={section.title} style={{ ...s.card, padding: 24 }}>
+                <p style={s.eyebrow}>{section.title}</p>
+                {section.items.map(([label, value]) => (
+                  <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: `1px solid ${C.border}` }}>
+                    <span style={{ color: C.muted, fontSize: 12 }}>{label}</span>
+                    <span style={{ color: C.cream, fontWeight: 900, fontSize: 12, textAlign: 'right', maxWidth: '60%' }}>{value}</span>
                   </div>
                 ))}
+                <button onClick={openEdit} style={{ ...s.btnGhost, marginTop: 16, fontSize: 11, padding: '9px' }}>Edit →</button>
               </div>
-              <button onClick={openEdit}
-                className="mt-5 text-yellow-400 text-xs font-black hover:underline">
-                Edit Contact Details →
-              </button>
-            </div>
-            <div className="rounded-2xl p-6 border border-gray-800" style={{ backgroundColor: '#1a1a00' }}>
-              <p className="text-gray-600 text-xs font-black uppercase tracking-widest mb-5 flex items-center gap-2">
-                <span>📍</span> Shipping Address
-              </p>
-              {user.address?.street ? (
-                <div className="space-y-1 mb-5">
-                  <p className="text-white text-sm">{user.address.street}</p>
-                  <p className="text-gray-400 text-sm">{user.address.city}</p>
-                  <p className="text-gray-400 text-sm">{user.address.country}</p>
-                </div>
-              ) : (
-                <p className="text-gray-600 text-sm mb-5 italic">No address added yet.</p>
-              )}
-              <button onClick={() => { openEdit(); setEditSection('address'); }}
-                className="text-yellow-400 text-xs font-black hover:underline">
-                {user.address?.street ? 'Change Address →' : 'Add Address →'}
-              </button>
-            </div>
+            ))}
           </div>
         )}
 
-        {/* ORDER HISTORY */}
+        {/* Orders */}
         {activeTab === 'orders' && (
-          <div className="space-y-3">
-            {user.orders.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-gray-700 p-16 text-center"
-                style={{ backgroundColor: '#1a1a00' }}>
-                <p className="text-gray-500 text-sm mb-4">No orders yet.</p>
-                <Link to="/shop"
-                  className="bg-yellow-400 text-black px-5 py-2.5 rounded-xl font-black text-sm hover:bg-yellow-500 transition">
-                  Start Shopping →
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {orders.length === 0 ? (
+              <div style={{ ...s.card, padding: 48, textAlign: 'center', border: `2px dashed ${C.border}` }}>
+                <p style={{ fontSize: 36, marginBottom: 12 }}>◻</p>
+                <p style={{ color: C.cream, fontWeight: 900, fontSize: 15, marginBottom: 8 }}>No orders yet</p>
+                <p style={{ color: C.muted, fontSize: 12, marginBottom: 20 }}>Start shopping to see your orders here.</p>
+                <Link to="/shop" style={{ ...s.btnGold, display: 'inline-block', width: 'auto', padding: '11px 22px', textDecoration: 'none' }}>
+                  Browse Shop →
                 </Link>
               </div>
-            ) : user.orders.map(order => (
-              <div key={order.id}
-                className="rounded-2xl p-4 border border-gray-800 flex items-center gap-4"
-                style={{ backgroundColor: '#1a1a00' }}>
-                <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0">
-                  <img src={order.img} alt="" className="w-full h-full object-cover" />
+            ) : orders.map(order => (
+              <div key={order.id} style={{ ...s.card, display: 'flex', alignItems: 'center', gap: 16, padding: '18px 20px' }}>
+                {order.img && <img src={order.img} alt={order.name} style={{ width: 60, height: 60, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />}
+                <div style={{ flex: 1 }}>
+                  <p style={{ color: C.cream, fontWeight: 900, fontSize: 14, marginBottom: 3 }}>{order.name}</p>
+                  <p style={{ color: C.muted, fontSize: 12 }}>{order.id} · {order.date}</p>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className={`${statusColors[order.status] || 'bg-gray-500'} text-white text-xs font-black px-2 py-0.5 rounded-full`}>
-                      {order.status}
-                    </span>
-                    <span className="text-gray-600 text-xs">{order.id}</span>
-                  </div>
-                  <p className="text-white font-black text-sm truncate">{order.name}</p>
-                  <p className="text-gray-600 text-xs">{order.date}</p>
+                <p style={{ color: C.gold, fontWeight: 900, fontSize: 14 }}>{order.price}</p>
+                <span style={{ color: statusColor[order.status] || C.muted, fontSize: 10, fontWeight: 900, padding: '4px 12px', borderRadius: 100, border: `1px solid ${statusColor[order.status] || C.border}` }}>
+                  {order.status}
+                </span>
+                <Link to="/order-tracking" style={{ ...s.btnGhost, width: 'auto', padding: '7px 14px', fontSize: 10, textDecoration: 'none' }}>
+                  Track →
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Saved Designs */}
+        {activeTab === 'designs' && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+            {savedDesigns.length === 0 ? (
+              <div style={{ ...s.card, padding: 40, textAlign: 'center', gridColumn: '1 / -1', border: `2px dashed ${C.border}` }}>
+                <p style={{ color: C.muted, fontSize: 13, marginBottom: 14 }}>No saved designs yet.</p>
+                <Link to="/custom-order" style={{ ...s.btnGold, display: 'inline-block', width: 'auto', padding: '10px 20px', textDecoration: 'none' }}>
+                  Start a Design →
+                </Link>
+              </div>
+            ) : savedDesigns.map(design => (
+              <div key={design.name} style={{ ...s.card, overflow: 'hidden', cursor: 'pointer' }} onClick={() => navigate('/custom-order')}>
+                <div style={{ height: 160, overflow: 'hidden' }}>
+                  <img src={design.img} alt={design.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-yellow-400 font-black">{order.price}</p>
-                  <div className="flex gap-2 mt-1.5">
-                    <button onClick={() => navigate('/order-tracking')}
-                      className="text-xs border border-gray-700 text-gray-400 px-3 py-1 rounded-lg hover:border-yellow-400 hover:text-yellow-400 transition font-black">
-                      Track
-                    </button>
-                    <button className="text-xs bg-yellow-400 text-black px-3 py-1 rounded-lg hover:bg-yellow-500 transition font-black">
-                      Details
-                    </button>
-                  </div>
+                <div style={{ padding: '14px 16px' }}>
+                  <p style={{ color: C.cream, fontWeight: 900, fontSize: 13, marginBottom: 5 }}>{design.name}</p>
+                  <p style={{ color: C.gold, fontSize: 10, fontWeight: 900, letterSpacing: '0.1em' }}>{design.status}</p>
                 </div>
               </div>
             ))}
           </div>
         )}
 
-        {/* SAVED DESIGNS */}
-        {activeTab === 'designs' && (
-          <div>
-            <div className="flex justify-between items-center mb-5">
-              <p className="text-gray-500 text-sm">Your saved custom design requests</p>
-              <Link to="/custom-order"
-                className="bg-yellow-400 text-black px-4 py-2 rounded-xl font-black text-xs hover:bg-yellow-500 transition">
-                + New Request
-              </Link>
-            </div>
-            {user.savedDesigns.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-gray-700 p-16 text-center"
-                style={{ backgroundColor: '#1a1a00' }}>
-                <p className="text-gray-500 text-sm mb-4">No saved designs yet.</p>
-                <Link to="/custom-order"
-                  className="bg-yellow-400 text-black px-5 py-2.5 rounded-xl font-black text-sm hover:bg-yellow-500 transition">
-                  Start a Custom Order →
-                </Link>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-4">
-                {user.savedDesigns.map(design => (
-                  <div key={design.name}
-                    className="rounded-2xl overflow-hidden border border-gray-800 group cursor-pointer"
-                    style={{ backgroundColor: '#1a1a00' }}>
-                    <div className="h-40 overflow-hidden">
-                      <img src={design.img} alt={design.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
-                    </div>
-                    <div className="p-4">
-                      <p className="text-white font-black text-sm">{design.name}</p>
-                      <p className="text-yellow-600 text-xs mt-1 uppercase tracking-wide">{design.status}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* WISHLIST */}
+        {/* Wishlist */}
         {activeTab === 'wishlist' && (
-          <div>
-            {user.wishlist.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-gray-700 p-16 text-center"
-                style={{ backgroundColor: '#1a1a00' }}>
-                <p className="text-gray-500 text-sm mb-4">Your wishlist is empty.</p>
-                <Link to="/shop"
-                  className="bg-yellow-400 text-black px-5 py-2.5 rounded-xl font-black text-sm hover:bg-yellow-500 transition">
-                  Browse Products →
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+            {wishlist.length === 0 ? (
+              <div style={{ ...s.card, padding: 40, textAlign: 'center', gridColumn: '1 / -1', border: `2px dashed ${C.border}` }}>
+                <p style={{ color: C.muted, fontSize: 13, marginBottom: 14 }}>Your wishlist is empty.</p>
+                <Link to="/shop" style={{ ...s.btnGold, display: 'inline-block', width: 'auto', padding: '10px 20px', textDecoration: 'none' }}>
+                  Browse Shop →
                 </Link>
               </div>
-            ) : (
-              <div className="grid grid-cols-3 gap-4">
-                {user.wishlist.map(item => (
-                  <div key={item.name}
-                    className="rounded-2xl overflow-hidden border border-gray-800 group cursor-pointer"
-                    style={{ backgroundColor: '#1a1a00' }}>
-                    <div className="h-44 overflow-hidden relative">
-                      <img src={item.img} alt={item.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
-                      <button className="absolute top-3 right-3 bg-black bg-opacity-50 rounded-full w-8 h-8 flex items-center justify-center text-red-400 hover:bg-opacity-80 transition">
-                        ♥
-                      </button>
-                    </div>
-                    <div className="p-4">
-                      <p className="text-white font-black text-sm">{item.name}</p>
-                      <div className="flex items-center justify-between mt-2">
-                        <p className="text-yellow-400 font-black">{item.price}</p>
-                        <button className="bg-yellow-400 text-black text-xs font-black px-3 py-1 rounded-lg hover:bg-yellow-500 transition">
-                          Add to Cart
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+            ) : wishlist.map(item => (
+              <div key={item.name} style={{ ...s.card, overflow: 'hidden', cursor: 'pointer' }} onClick={() => navigate('/shop')}>
+                <div style={{ height: 180, overflow: 'hidden' }}>
+                  <img src={item.img} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+                <div style={{ padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <p style={{ color: C.cream, fontWeight: 900, fontSize: 13 }}>{item.name}</p>
+                  <p style={{ color: C.gold, fontWeight: 900, fontSize: 13 }}>{item.price}</p>
+                </div>
               </div>
-            )}
+            ))}
           </div>
         )}
       </div>
-
-      {/* FOOTER */}
-      <footer style={{ backgroundColor: '#0d0d00' }} className="border-t border-yellow-900 px-8 py-8 mt-12">
-        <div className="max-w-5xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <span className="bg-yellow-400 text-black w-6 h-6 rounded flex items-center justify-center text-xs font-black">57</span>
-            <span className="text-white font-black text-sm">57 ARTS & CUSTOMS</span>
-          </div>
-          <div className="flex gap-6 text-xs text-gray-500">
-            <Link to="/shop"         className="hover:text-yellow-400 transition">Shop</Link>
-            <Link to="/custom-order" className="hover:text-yellow-400 transition">Custom Orders</Link>
-            <Link to="/about"        className="hover:text-yellow-400 transition">About</Link>
-          </div>
-          <p className="text-gray-700 text-xs">© 2024 57 Arts & Customs.</p>
-        </div>
-      </footer>
     </div>
   );
 };
