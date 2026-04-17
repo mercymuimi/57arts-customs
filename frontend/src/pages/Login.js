@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import { authAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const C = {
@@ -23,9 +23,10 @@ const Login = () => {
     setLoading(true);
     setError('');
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/login', form);
-      login(res.data.user, res.data.token);
-      navigate('/');
+      // ✅ Use authAPI not raw axios
+      const res = await authAPI.login(form);
+      // ✅ Pass navigate so role-based redirect works
+      login(res.data.user, res.data.token, navigate);
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid email or password');
     }
@@ -37,7 +38,6 @@ const Login = () => {
 
       {/* LEFT — brand panel */}
       <div style={{ width: '45%', backgroundColor: C.surface, borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '48px', position: 'relative', overflow: 'hidden' }}>
-        {/* Background image */}
         <img src="https://images.unsplash.com/photo-1509631179647-0177331693ae?w=800" alt=""
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.08 }} />
         <div style={{ position: 'relative', zIndex: 1 }}>
@@ -83,7 +83,6 @@ const Login = () => {
           )}
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {/* Email */}
             <div>
               <label style={{ color: C.muted, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Email Address</label>
               <input type="email" name="email" value={form.email} onChange={handleChange} required placeholder="you@example.com"
@@ -92,7 +91,6 @@ const Login = () => {
                 onBlur={e => e.target.style.borderColor = C.border} />
             </div>
 
-            {/* Password */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                 <label style={{ color: C.muted, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Password</label>
@@ -110,25 +108,22 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Submit */}
             <button type="submit" disabled={loading}
-              style={{ backgroundColor: loading ? C.faint : C.cream, color: '#000', border: 'none', borderRadius: 10, padding: '14px', fontWeight: 900, fontSize: 13, cursor: loading ? 'not-allowed' : 'pointer', letterSpacing: '0.04em', marginTop: 8, transition: 'all 0.2s' }}>
+              style={{ backgroundColor: loading ? C.faint : C.cream, color: '#000', border: 'none', borderRadius: 10, padding: '14px', fontWeight: 900, fontSize: 13, cursor: loading ? 'not-allowed' : 'pointer', letterSpacing: '0.04em', marginTop: 8 }}>
               {loading ? 'Signing in...' : 'Sign In →'}
             </button>
           </form>
 
-          {/* Divider */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '24px 0' }}>
             <div style={{ flex: 1, height: 1, backgroundColor: C.border }} />
             <span style={{ color: C.muted, fontSize: 11 }}>or continue with</span>
             <div style={{ flex: 1, height: 1, backgroundColor: C.border }} />
           </div>
 
-          {/* Social logins */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             {['Google', 'Facebook'].map(provider => (
               <button key={provider}
-                style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px', color: C.cream, fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'border-color 0.2s', letterSpacing: '0.02em' }}
+                style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px', color: C.cream, fontSize: 12, fontWeight: 700, cursor: 'pointer', letterSpacing: '0.02em' }}
                 onMouseEnter={e => e.currentTarget.style.borderColor = C.bHov}
                 onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
                 {provider}

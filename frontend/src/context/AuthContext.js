@@ -3,10 +3,17 @@ import { authAPI } from '../services/api';
 
 const AuthContext = createContext(null);
 
-// ✅ Single source of truth for storage keys
 export const STORAGE_KEYS = {
   token: '57arts_token',
   user:  '57arts_user',
+};
+
+// ✅ Where each role lands after login
+const ROLE_REDIRECTS = {
+  admin:     '/admin',
+  vendor:    '/vendor/dashboard',
+  affiliate: '/affiliate/dashboard',
+  buyer:     '/',
 };
 
 export const AuthProvider = ({ children }) => {
@@ -14,7 +21,7 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(null);
   const [ready, setReady] = useState(false);
 
-  // ── Rehydrate from localStorage on first load ─────────────────────────────
+  // Rehydrate from localStorage on first load
   useEffect(() => {
     try {
       const storedToken = localStorage.getItem(STORAGE_KEYS.token);
@@ -27,35 +34,45 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem(STORAGE_KEYS.token);
       localStorage.removeItem(STORAGE_KEYS.user);
     } finally {
-      setReady(true);
+      setReady(true); // ✅ always set ready so app doesn't hang
     }
   }, []);
 
-  // ── Login ─────────────────────────────────────────────────────────────────
-  const login = (userData, authToken) => {
+  // Login — stores credentials and redirects by role
+  const login = (userData, authToken, navigate) => {
     setUser(userData);
     setToken(authToken);
     localStorage.setItem(STORAGE_KEYS.token, authToken);
     localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(userData));
+
+    // ✅ Role-based redirect if navigate function provided
+    if (navigate) {
+      const redirect = ROLE_REDIRECTS[userData.role] || '/';
+      navigate(redirect);
+    }
   };
 
-  // ── Logout ────────────────────────────────────────────────────────────────
-  const logout = () => {
+  // Logout — clears everything
+  const logout = (navigate) => {
     setUser(null);
     setToken(null);
     localStorage.removeItem(STORAGE_KEYS.token);
     localStorage.removeItem(STORAGE_KEYS.user);
-    window.location.href = '/login';
+    if (navigate) {
+      navigate('/login');
+    } else {
+      window.location.href = '/login';
+    }
   };
 
-  // ── Update user data (e.g. after profile edit) ────────────────────────────
+  // Update user locally (after profile edit)
   const updateUser = (updates) => {
     const updated = { ...user, ...updates };
     setUser(updated);
     localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(updated));
   };
 
-  // ── Refresh user from server (call after role changes) ───────────────────
+  // Refresh user from server (after role change e.g. buyer becomes vendor)
   const refreshUser = async () => {
     try {
       const { data } = await authAPI.getMe();
@@ -68,11 +85,29 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const isLoggedIn   = !!user && !!token;
-  const isVendor     = user?.role === 'vendor';
-  const isAffiliate  = user?.role === 'affiliate';
-  const isAdmin      = user?.role === 'admin';
-  const isBuyer      = user?.role === 'buyer';
+  const isLoggedIn  = !!user && !!token;
+  const isVendor    = user?.role === 'vendor';
+  const isAffiliate = user?.role === 'affiliate';
+  const isAdmin     = user?.role === 'admin';
+  const isBuyer     = user?.role === 'buyer';
+
+  // ✅ Don't render children until localStorage is checked
+  // This prevents flash of "logged out" state on page refresh
+  if (!ready) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        backgroundColor: '#0a0a0a',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+        <div style={{ color: '#c9a84c', fontSize: 13, fontWeight: 700, letterSpacing: '0.1em' }}>
+          LOADING...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <AuthContext.Provider value={{

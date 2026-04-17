@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useCart } from '../../context/CartContext';
 
 const allSuggestions = [
   { label: 'Distressed Artisanal Denim', category: 'Fashion', slug: 'distressed-artisanal-denim' },
@@ -35,14 +36,15 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // All hooks must come before any conditional return
-  const [searchQuery, setSearchQuery]       = useState('');
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [searchFocused, setSearchFocused]   = useState(false);
+  // ✅ FIX: pull live cart count from context instead of hardcoding
+  const { itemCount: cartCount } = useCart();
 
-  const cartCount = 3;
+  const [searchQuery, setSearchQuery]           = useState('');
+  const [showSuggestions, setShowSuggestions]   = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [showMobileMenu, setShowMobileMenu]     = useState(false);
+  const [searchFocused, setSearchFocused]       = useState(false);
+
   const searchRef = useRef(null);
   const inputRef  = useRef(null);
 
@@ -61,10 +63,9 @@ const Navbar = () => {
     setShowMobileMenu(false);
   }, [location]);
 
-  // Hide main navbar on the fashion page — it has its own navigation
-  if (HIDDEN_NAV_ROUTES.some(route => location.pathname.startsWith(route))) {
-    return null;
-  }
+  // ✅ FIX: early return AFTER all hooks to avoid "hook called conditionally" error
+  const isHidden = HIDDEN_NAV_ROUTES.some(route => location.pathname.startsWith(route));
+  if (isHidden) return null;
 
   const filtered = searchQuery.trim().length > 0
     ? allSuggestions.filter(s =>
@@ -132,13 +133,13 @@ const Navbar = () => {
           </span>
         </Link>
 
-        {/* ── NAV LINKS ── */}
-        <div className="hidden xl:flex items-center gap-0.5 flex-1 justify-center">
+        {/* ── NAV LINKS (visible at lg = 1024px+) ── */}
+        <div className="hidden lg:flex items-center gap-0.5 flex-1 justify-center">
           {navLinks.map(link => (
             <Link
               key={link.path}
               to={link.path}
-              className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wide transition whitespace-nowrap ${
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-black uppercase tracking-wide transition whitespace-nowrap ${
                 isActive(link.path)
                   ? 'text-yellow-400 border-b-2 border-yellow-400'
                   : 'text-gray-400 hover:text-white'
@@ -278,10 +279,10 @@ const Navbar = () => {
             </svg>
           </Link>
 
-          {/* Mobile toggle */}
+          {/* Mobile/tablet toggle (hidden at lg+) */}
           <button
             onClick={() => setShowMobileMenu(!showMobileMenu)}
-            className="xl:hidden flex items-center justify-center w-9 h-9 rounded-xl border border-gray-700 hover:border-yellow-400 transition"
+            className="lg:hidden flex items-center justify-center w-9 h-9 rounded-xl border border-gray-700 hover:border-yellow-400 transition"
             style={{ backgroundColor: '#2a2000' }}
           >
             <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -294,10 +295,10 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* ── MOBILE MENU ── */}
+      {/* ── MOBILE MENU (hidden at lg+) ── */}
       {showMobileMenu && (
         <div
-          className="xl:hidden border-t border-gray-800 px-6 py-4"
+          className="lg:hidden border-t border-gray-800 px-6 py-4"
           style={{ backgroundColor: '#1a1a00' }}
         >
           <div className="grid grid-cols-2 gap-2 mb-4">

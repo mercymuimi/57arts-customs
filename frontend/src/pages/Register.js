@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import { authAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const C = {
@@ -8,10 +8,6 @@ const C = {
   faint: '#242424', cream: '#f0ece4', muted: '#606060', gold: '#c9a84c',
 };
 
-// ✅ FIX: Moved inputStyle OUTSIDE the component so it's never recreated on render.
-// Previously it was inside the component body as a function — React would create a
-// new function reference every render, causing the input to lose focus / go inactive
-// after each keystroke because the style object reference changed.
 const inputStyle = (borderColor) => ({
   width: '100%',
   backgroundColor: C.surface,
@@ -30,12 +26,10 @@ const Register = () => {
   const [loading, setLoading]   = useState(false);
   const [showPw, setShowPw]     = useState(false);
   const [apiError, setApiError] = useState('');
-  // ✅ FIX: Track focused field separately so border logic doesn't fight React's re-render
   const [focused, setFocused]   = useState('');
   const { login }               = useAuth();
   const navigate                = useNavigate();
 
-  // ✅ FIX: useCallback so handleChange is stable across renders
   const handleChange = useCallback(e => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
@@ -43,10 +37,10 @@ const Register = () => {
 
   const validate = () => {
     const e = {};
-    if (!form.name.trim()) e.name = 'Required';
-    if (!form.email.trim()) e.email = 'Required';
+    if (!form.name.trim())   e.name = 'Required';
+    if (!form.email.trim())  e.email = 'Required';
     else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = 'Invalid email';
-    if (!form.password) e.password = 'Required';
+    if (!form.password)      e.password = 'Required';
     else if (form.password.length < 8) e.password = 'Min 8 characters';
     if (form.password !== form.confirm) e.confirm = 'Passwords do not match';
     setErrors(e);
@@ -59,21 +53,24 @@ const Register = () => {
     setLoading(true);
     setApiError('');
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/register', {
-        name: form.name, email: form.email, password: form.password, role: form.role,
+      // ✅ Use authAPI not raw axios
+      const res = await authAPI.register({
+        name: form.name,
+        email: form.email,
+        password: form.password,
+        role: form.role, // 'buyer' or 'vendor' — matches schema enum exactly
       });
-      login(res.data.user, res.data.token);
-      navigate('/');
+      // ✅ Pass navigate for role-based redirect
+      login(res.data.user, res.data.token, navigate);
     } catch (err) {
       setApiError(err.response?.data?.message || 'Registration failed. Please try again.');
     }
     setLoading(false);
   };
 
-  // ✅ FIX: Border color derived from state, not from direct DOM mutation in onFocus/onBlur
   const getBorderColor = (field) => {
-    if (focused === field) return C.bHov;
-    if (errors[field]) return 'rgba(224,92,92,0.5)';
+    if (focused === field)  return C.bHov;
+    if (errors[field])      return 'rgba(224,92,92,0.5)';
     return C.border;
   };
 
@@ -100,12 +97,7 @@ const Register = () => {
           </p>
         </div>
         <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {[
-            'Access 2,400+ artisan products',
-            'Commission fully custom pieces',
-            'Track orders in real time',
-            'AI-powered recommendations',
-          ].map(perk => (
+          {['Access 2,400+ artisan products', 'Commission fully custom pieces', 'Track orders in real time', 'AI-powered recommendations'].map(perk => (
             <div key={perk} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ color: C.gold, fontSize: 12, fontWeight: 900 }}>—</span>
               <span style={{ color: C.muted, fontSize: 12 }}>{perk}</span>
@@ -127,9 +119,12 @@ const Register = () => {
           <div style={{ marginBottom: 24 }}>
             <p style={{ color: C.muted, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>I am joining as</p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              {[{ key: 'buyer', label: 'Buyer', desc: 'Shop & commission pieces' }, { key: 'vendor', label: 'Artisan / Vendor', desc: 'Sell my craft' }].map(({ key, label, desc }) => (
+              {[
+                { key: 'buyer',     label: 'Buyer',           desc: 'Shop & commission pieces' },
+                { key: 'vendor',    label: 'Artisan / Vendor', desc: 'Sell my craft' },
+              ].map(({ key, label, desc }) => (
                 <button key={key} type="button" onClick={() => setForm(prev => ({ ...prev, role: key }))}
-                  style={{ padding: '12px', borderRadius: 10, border: `1px solid ${form.role === key ? C.gold : C.border}`, backgroundColor: form.role === key ? 'rgba(201,168,76,0.08)' : C.surface, cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s' }}>
+                  style={{ padding: '12px', borderRadius: 10, border: `1px solid ${form.role === key ? C.gold : C.border}`, backgroundColor: form.role === key ? 'rgba(201,168,76,0.08)' : C.surface, cursor: 'pointer', textAlign: 'left' }}>
                   <p style={{ color: form.role === key ? C.gold : C.cream, fontWeight: 900, fontSize: 12, marginBottom: 2 }}>{label}</p>
                   <p style={{ color: C.muted, fontSize: 10 }}>{desc}</p>
                 </button>
@@ -144,56 +139,31 @@ const Register = () => {
           )}
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-
-            {/* ✅ Full Name — now stays active while typing across spaces */}
             <div>
               <label style={{ color: C.muted, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Full Name</label>
-              <input
-                type="text"
-                name="name"
-                value={form.name}
-                onChange={handleChange}
-                placeholder="Your full name"
-                autoComplete="name"
+              <input type="text" name="name" value={form.name} onChange={handleChange}
+                placeholder="Your full name" autoComplete="name"
                 style={inputStyle(getBorderColor('name'))}
-                onFocus={() => setFocused('name')}
-                onBlur={() => setFocused('')}
-              />
+                onFocus={() => setFocused('name')} onBlur={() => setFocused('')} />
               {errors.name && <p style={{ color: '#e05c5c', fontSize: 11, marginTop: 4 }}>{errors.name}</p>}
             </div>
 
-            {/* Email */}
             <div>
               <label style={{ color: C.muted, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Email Address</label>
-              <input
-                type="email"
-                name="email"
-                value={form.email}
-                onChange={handleChange}
-                placeholder="you@example.com"
-                autoComplete="email"
+              <input type="email" name="email" value={form.email} onChange={handleChange}
+                placeholder="you@example.com" autoComplete="email"
                 style={inputStyle(getBorderColor('email'))}
-                onFocus={() => setFocused('email')}
-                onBlur={() => setFocused('')}
-              />
+                onFocus={() => setFocused('email')} onBlur={() => setFocused('')} />
               {errors.email && <p style={{ color: '#e05c5c', fontSize: 11, marginTop: 4 }}>{errors.email}</p>}
             </div>
 
-            {/* Password */}
             <div>
               <label style={{ color: C.muted, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Password</label>
               <div style={{ position: 'relative' }}>
-                <input
-                  type={showPw ? 'text' : 'password'}
-                  name="password"
-                  value={form.password}
-                  onChange={handleChange}
-                  placeholder="Min 8 characters"
-                  autoComplete="new-password"
+                <input type={showPw ? 'text' : 'password'} name="password" value={form.password} onChange={handleChange}
+                  placeholder="Min 8 characters" autoComplete="new-password"
                   style={{ ...inputStyle(getBorderColor('password')), paddingRight: 52 }}
-                  onFocus={() => setFocused('password')}
-                  onBlur={() => setFocused('')}
-                />
+                  onFocus={() => setFocused('password')} onBlur={() => setFocused('')} />
                 <button type="button" onClick={() => setShowPw(!showPw)}
                   style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: C.muted, cursor: 'pointer', fontSize: 11 }}>
                   {showPw ? 'Hide' : 'Show'}
@@ -202,26 +172,17 @@ const Register = () => {
               {errors.password && <p style={{ color: '#e05c5c', fontSize: 11, marginTop: 4 }}>{errors.password}</p>}
             </div>
 
-            {/* Confirm password */}
             <div>
               <label style={{ color: C.muted, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Confirm Password</label>
-              <input
-                type="password"
-                name="confirm"
-                value={form.confirm}
-                onChange={handleChange}
-                placeholder="Repeat password"
-                autoComplete="new-password"
+              <input type="password" name="confirm" value={form.confirm} onChange={handleChange}
+                placeholder="Repeat password" autoComplete="new-password"
                 style={inputStyle(getBorderColor('confirm'))}
-                onFocus={() => setFocused('confirm')}
-                onBlur={() => setFocused('')}
-              />
+                onFocus={() => setFocused('confirm')} onBlur={() => setFocused('')} />
               {errors.confirm && <p style={{ color: '#e05c5c', fontSize: 11, marginTop: 4 }}>{errors.confirm}</p>}
             </div>
 
-            {/* Submit */}
             <button type="submit" disabled={loading}
-              style={{ backgroundColor: loading ? C.faint : C.gold, color: '#000', border: 'none', borderRadius: 10, padding: '14px', fontWeight: 900, fontSize: 13, cursor: loading ? 'not-allowed' : 'pointer', letterSpacing: '0.04em', marginTop: 8, transition: 'all 0.2s' }}>
+              style={{ backgroundColor: loading ? C.faint : C.gold, color: '#000', border: 'none', borderRadius: 10, padding: '14px', fontWeight: 900, fontSize: 13, cursor: loading ? 'not-allowed' : 'pointer', letterSpacing: '0.04em', marginTop: 8 }}>
               {loading ? 'Creating account...' : 'Create Account →'}
             </button>
           </form>

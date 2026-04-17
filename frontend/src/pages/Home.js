@@ -6,17 +6,49 @@ import { useCart } from '../context/CartContext';
 // ─── Static Data ──────────────────────────────────────────────────────────────
 
 const featuredProducts = [
-  { name: 'Obsidian Throne v.2',   label: 'Featured Custom', price: 'KSH 12,000', category: 'Furniture', slug: 'obsidian-throne-v2',         img: 'https://images.unsplash.com/photo-1592078615290-033ee584e267?w=800' },
-  { name: 'Midnight Denim Jacket', label: 'Limited Drop',    price: 'KSH 1,500',  category: 'Fashion',   slug: 'midnight-denim-jacket',       img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=800' },
-  { name: 'Gold Pulse Beads',      label: 'Heritage Craft',  price: 'KSH 2,500',  category: 'Beads',     slug: 'gold-pulse-beads',            img: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800' },
-  { name: 'Monarch Carry-all',     label: 'Bespoke Only',    price: 'KSH 2,000',  category: 'Fashion',   slug: 'monarch-carry-all',           img: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=800' },
+  {
+    id: 'obsidian-throne-v2',
+    name: 'Obsidian Throne v.2',
+    label: 'Featured Custom',
+    price: 12000,
+    category: 'Furniture',
+    slug: 'obsidian-throne-v2',
+    img: 'https://images.unsplash.com/photo-1592078615290-033ee584e267?w=800',
+  },
+  {
+    id: 'midnight-denim-jacket',
+    name: 'Midnight Denim Jacket',
+    label: 'Limited Drop',
+    price: 1500,
+    category: 'Fashion',
+    slug: 'midnight-denim-jacket',
+    img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=800',
+  },
+  {
+    id: 'gold-pulse-beads',
+    name: 'Gold Pulse Beads',
+    label: 'Heritage Craft',
+    price: 2500,
+    category: 'Beads',
+    slug: 'gold-pulse-beads',
+    img: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800',
+  },
+  {
+    id: 'monarch-carry-all',
+    name: 'Monarch Carry-all',
+    label: 'Bespoke Only',
+    price: 2000,
+    category: 'Fashion',
+    slug: 'monarch-carry-all',
+    img: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=800',
+  },
 ];
 
 const trending = [
-  { name: 'Distressed Denim Trouser',    price: 'KSH 3,000',  category: 'Fashion',   tag: 'Hot',     slug: 'distressed-denim-trouser',     img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=500' },
-  { name: 'Vanguard Teak Chair',         price: 'KSH 12,000', category: 'Furniture', tag: 'Custom',  slug: 'vanguard-teak-chair',           img: 'https://images.unsplash.com/photo-1592078615290-033ee584e267?w=500' },
-  { name: 'Gold-Infused Obsidian Beads', price: 'KSH 2,500',  category: 'Beads',     tag: 'New',     slug: 'gold-infused-obsidian-beads',   img: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=500' },
-  { name: 'Midnight Velvet Blazer',      price: 'KSH 2,000',  category: 'Fashion',   tag: 'Limited', slug: 'midnight-velvet-blazer',        img: 'https://images.unsplash.com/photo-1551537482-f2075a1d41f2?w=500' },
+  { id: 'distressed-denim-trouser',    name: 'Distressed Denim Trouser',    price: 'KSH 3,000',  category: 'Fashion',   tag: 'Hot',     slug: 'distressed-denim-trouser',     img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=500' },
+  { id: 'vanguard-teak-chair',         name: 'Vanguard Teak Chair',         price: 'KSH 12,000', category: 'Furniture', tag: 'Custom',  slug: 'vanguard-teak-chair',           img: 'https://images.unsplash.com/photo-1592078615290-033ee584e267?w=500' },
+  { id: 'gold-infused-obsidian-beads', name: 'Gold-Infused Obsidian Beads', price: 'KSH 2,500',  category: 'Beads',     tag: 'New',     slug: 'gold-infused-obsidian-beads',   img: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=500' },
+  { id: 'midnight-velvet-blazer',      name: 'Midnight Velvet Blazer',      price: 'KSH 2,000',  category: 'Fashion',   tag: 'Limited', slug: 'midnight-velvet-blazer',        img: 'https://images.unsplash.com/photo-1551537482-f2075a1d41f2?w=500' },
 ];
 
 const categories = [
@@ -64,6 +96,25 @@ const s = {
   card:       { backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 16 },
 };
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+// ✅ FIX 1: Normalize product so CartContext always receives a consistent shape
+// - ensures `id` is always set (used for deduplication in CartContext)
+// - parses string prices like "KSH 3,000" into numbers
+// - resolves image from multiple possible field names
+const normalizeProduct = (product) => {
+  const rawPrice = typeof product.price === 'string'
+    ? Number(product.price.replace(/[^0-9.]/g, ''))
+    : product.price;
+
+  return {
+    ...product,
+    id:    product.id || product._id || product.slug,
+    price: rawPrice,
+    img:   product.images?.[0] || product.image || product.img || '',
+  };
+};
+
 // ─── AI Recommendation Cache ──────────────────────────────────────────────────
 
 const recCache = new Map();
@@ -88,6 +139,16 @@ const STRATEGY_LABELS = {
   popularity_based:        'Trending on 57 Arts',
 };
 
+// ✅ FIX 3: fallback images for AI rec cards when API returns no image
+const FALLBACK_IMAGES = [
+  'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=500',
+  'https://images.unsplash.com/photo-1592078615290-033ee584e267?w=500',
+  'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=500',
+  'https://images.unsplash.com/photo-1542272604-787c3835535d?w=500',
+  'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=500',
+  'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=500',
+];
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 const SkeletonCard = () => (
@@ -101,8 +162,13 @@ const SkeletonCard = () => (
   </div>
 );
 
-const RecCard = ({ item, isWishlisted, onToggleWish, onView, onCart }) => {
+const RecCard = ({ item, isWishlisted, onToggleWish, onView, onCart, alreadyInCart }) => {
   const [hov, setHov] = useState(false);
+
+  // ✅ FIX 3: resolve image with fallback chain
+  const imgSrc = item.images?.[0] || item.image || item.img
+    || FALLBACK_IMAGES[Math.abs((item.name || '').length) % FALLBACK_IMAGES.length];
+
   return (
     <div
       onClick={onView}
@@ -119,7 +185,10 @@ const RecCard = ({ item, isWishlisted, onToggleWish, onView, onCart }) => {
     >
       <div style={{ height: 200, position: 'relative', overflow: 'hidden' }}>
         <img
-          src={item.img} alt={item.name} loading="lazy"
+          src={imgSrc}
+          alt={item.name}
+          loading="lazy"
+          onError={e => { e.target.onerror = null; e.target.src = FALLBACK_IMAGES[0]; }}
           style={{ width: '100%', height: '100%', objectFit: 'cover', transform: hov ? 'scale(1.06)' : 'scale(1)', transition: 'transform 0.5s ease' }}
         />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 55%)' }} />
@@ -140,13 +209,21 @@ const RecCard = ({ item, isWishlisted, onToggleWish, onView, onCart }) => {
         <p style={{ color: C.muted, fontSize: 11, fontStyle: 'italic', marginBottom: 12, lineHeight: 1.4 }}>{item.reason}</p>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <p style={{ color: C.gold, fontWeight: 900, fontSize: 15 }}>KSH {item.price?.toLocaleString() || item.price}</p>
+          {/* ✅ FIX 2: shows "In Cart" when already added, prevents re-adding */}
           <button
-            onClick={e => { e.stopPropagation(); onCart(item); }}
-            style={{ backgroundColor: C.faint, border: `1px solid ${C.border}`, color: C.cream, fontSize: 10, fontWeight: 900, padding: '6px 12px', borderRadius: 7, cursor: 'pointer', letterSpacing: '0.04em', transition: 'background 0.15s' }}
-            onMouseEnter={e => e.currentTarget.style.backgroundColor = C.bHov}
-            onMouseLeave={e => e.currentTarget.style.backgroundColor = C.faint}
+            onClick={e => { e.stopPropagation(); if (!alreadyInCart) onCart(item); }}
+            style={{
+              backgroundColor: alreadyInCart ? '#1a3d28' : C.faint,
+              border: `1px solid ${alreadyInCart ? '#2d6b46' : C.border}`,
+              color: alreadyInCart ? '#5cc98a' : C.cream,
+              fontSize: 10, fontWeight: 900, padding: '6px 12px', borderRadius: 7,
+              cursor: alreadyInCart ? 'default' : 'pointer',
+              letterSpacing: '0.04em', transition: 'background 0.15s',
+            }}
+            onMouseEnter={e => { if (!alreadyInCart) e.currentTarget.style.backgroundColor = C.bHov; }}
+            onMouseLeave={e => { if (!alreadyInCart) e.currentTarget.style.backgroundColor = C.faint; }}
           >
-            + Cart
+            {alreadyInCart ? '✓ In Cart' : '+ Cart'}
           </button>
         </div>
       </div>
@@ -158,29 +235,28 @@ const RecCard = ({ item, isWishlisted, onToggleWish, onView, onCart }) => {
 
 const Home = () => {
   const navigate = useNavigate();
-  const { addToCart } = useCart();
+  const { addToCart, isInCart } = useCart(); // ✅ FIX 2: pull isInCart for dedup checks
 
   // Hero carousel
-  const [current, setCurrent]     = useState(0);
-  const [fading, setFading]       = useState(false);
+  const [current, setCurrent] = useState(0);
+  const [fading, setFading]   = useState(false);
 
   // UI state
-  const [wishlist, setWishlist]   = useState([]);
-  const [cartAdded, setCartAdded] = useState(false);
-  const [activeTesti, setActiveTesti] = useState(0);
-  const [email, setEmail]         = useState('');
-  const [subscribed, setSubscribed] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [wishlist, setWishlist]           = useState([]);
+  const [heroCartAdded, setHeroCartAdded] = useState({}); // ✅ per-product flash state
+  const [activeTesti, setActiveTesti]     = useState(0);
+  const [email, setEmail]                 = useState('');
+  const [subscribed, setSubscribed]       = useState(false);
+  const [searchQuery, setSearchQuery]     = useState('');
 
   // AI recommendations state
-  const [allRecs, setAllRecs]           = useState([]);
-  const [aiLoading, setAiLoading]       = useState(true);
-  const [aiError, setAiError]           = useState(false);
-  const [aiStrategy, setAiStrategy]     = useState('');
+  const [allRecs, setAllRecs]               = useState([]);
+  const [aiLoading, setAiLoading]           = useState(true);
+  const [aiError, setAiError]               = useState(false);
+  const [aiStrategy, setAiStrategy]         = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
-  const [currentPage, setCurrentPage]   = useState(1);
+  const [currentPage, setCurrentPage]       = useState(1);
 
-  // Pagination
   const totalPages = Math.ceil(allRecs.length / ITEMS_PER_PAGE);
   const pageRecs   = allRecs.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
@@ -199,7 +275,7 @@ const Home = () => {
     return () => clearInterval(t);
   }, []);
 
-  // ── Fetch AI recommendations (uses api.js service) ──
+  // ── Fetch AI recommendations ──
   const fetchRecs = useCallback(async (category) => {
     const cacheKey = `home:${category}`;
     const cached = getCached(cacheKey);
@@ -217,8 +293,6 @@ const Home = () => {
     try {
       const params = { n: 12 };
       if (category !== 'All') params.category = category;
-
-      // ✅ Using aiAPI from services/api.js — clean and consistent
       const res = await aiAPI.getRecommendations(params);
       setCached(cacheKey, res.data);
       setAllRecs(res.data.recommendations || []);
@@ -237,32 +311,43 @@ const Home = () => {
     fetchRecs(activeCategory);
   }, [activeCategory, fetchRecs]);
 
-  // ── Record user interaction with AI (view, cart) ──
   const recordInteraction = (productId, action) => {
-    // ✅ Using aiAPI from services/api.js
     aiAPI.recordInteraction({ user_id: 'guest', product_id: productId, action }).catch(() => {});
   };
 
   // ── Helpers ──
   const goTo       = (i) => { setFading(true); setTimeout(() => { setCurrent(i); setFading(false); }, 350); };
   const toggleWish = (slug) => setWishlist(p => p.includes(slug) ? p.filter(x => x !== slug) : [...p, slug]);
-  const addCart    = (product) => { 
-    if (product) {
-      addToCart(product, 1);
-      recordInteraction(product.id || product.slug, 'cart');
-    }
-    setCartAdded(true); 
-    setTimeout(() => setCartAdded(false), 2000); 
+
+  // ✅ FIX 1 + FIX 2: normalize product, check for duplicate, then add
+  const addHeroToCart = (product) => {
+    const normalized = normalizeProduct(product);
+    if (isInCart(normalized.id)) return; // already in cart — do nothing
+    addToCart(normalized, 1);
+    recordInteraction(normalized.id, 'cart');
+    setHeroCartAdded(prev => ({ ...prev, [normalized.id]: true }));
+    setTimeout(() => setHeroCartAdded(prev => ({ ...prev, [normalized.id]: false })), 2000);
   };
-  const doSearch   = (e) => { e.preventDefault(); if (searchQuery.trim()) navigate(`/search?q=${encodeURIComponent(searchQuery)}`); };
+
+  // ✅ FIX 1 + FIX 2: same for recommendation cards
+  const addRecToCart = (product) => {
+    const normalized = normalizeProduct(product);
+    if (isInCart(normalized.id)) return;
+    addToCart(normalized, 1);
+    recordInteraction(normalized.id || normalized.slug, 'cart');
+  };
+
+  const doSearch    = (e) => { e.preventDefault(); if (searchQuery.trim()) navigate(`/search?q=${encodeURIComponent(searchQuery)}`); };
   const doSubscribe = (e) => { e.preventDefault(); if (email) setSubscribed(true); };
-  const goToPage   = (page) => {
+  const goToPage    = (page) => {
     if (page < 1 || page > totalPages) return;
     setCurrentPage(page);
     document.getElementById('ai-recommendations-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  const fp = featuredProducts[current];
+  const fp          = featuredProducts[current];
+  const heroInCart  = isInCart(fp.id);
+  const heroJustAdded = heroCartAdded[fp.id];
 
   return (
     <div style={{ backgroundColor: C.bg, color: C.cream, minHeight: '100vh' }}>
@@ -323,7 +408,8 @@ const Home = () => {
                 style={{ height: 310, position: 'relative', overflow: 'hidden', cursor: 'pointer', borderRadius: '16px 16px 0 0' }}
                 onClick={() => navigate(`/product/${fp.slug}`)}
               >
-                <img src={fp.img} alt={fp.name} loading="eager" style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.7s ease' }}
+                <img src={fp.img} alt={fp.name} loading="eager"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.7s ease' }}
                   onMouseEnter={e => e.target.style.transform = 'scale(1.04)'}
                   onMouseLeave={e => e.target.style.transform = 'scale(1)'} />
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 55%)' }} />
@@ -349,13 +435,30 @@ const Home = () => {
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <p style={{ color: C.muted, fontSize: 10, marginBottom: 2 }}>Starting at</p>
-                    <p style={{ color: C.gold, fontWeight: 900, fontSize: 18 }}>{fp.price}</p>
+                    <p style={{ color: C.gold, fontWeight: 900, fontSize: 18 }}>KSH {fp.price.toLocaleString()}</p>
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => navigate(`/product/${fp.slug}`)} style={{ flex: 1, padding: 11, borderRadius: 9, border: `1px solid ${C.border}`, backgroundColor: 'transparent', color: C.cream, fontWeight: 900, fontSize: 12, cursor: 'pointer' }}>View Details</button>
-                  <button onClick={addCart} style={{ flex: 1, padding: 11, borderRadius: 9, border: 'none', backgroundColor: cartAdded ? '#1a3d28' : C.cream, color: cartAdded ? '#5cc98a' : '#000', fontWeight: 900, fontSize: 12, cursor: 'pointer', transition: 'all 0.25s' }}>
-                    {cartAdded ? '✓ Added' : 'Add to Cart'}
+                  <button
+                    onClick={() => navigate(`/product/${fp.slug}`)}
+                    style={{ flex: 1, padding: 11, borderRadius: 9, border: `1px solid ${C.border}`, backgroundColor: 'transparent', color: C.cream, fontWeight: 900, fontSize: 12, cursor: 'pointer' }}
+                  >
+                    View Details
+                  </button>
+                  {/* ✅ FIX 1+2: hero cart button — prevents re-add, shows correct state */}
+                  <button
+                    onClick={() => addHeroToCart(fp)}
+                    disabled={heroInCart}
+                    style={{
+                      flex: 1, padding: 11, borderRadius: 9, border: 'none',
+                      backgroundColor: heroInCart ? '#1a3d28' : heroJustAdded ? '#1a3d28' : C.cream,
+                      color: (heroInCart || heroJustAdded) ? '#5cc98a' : '#000',
+                      fontWeight: 900, fontSize: 12,
+                      cursor: heroInCart ? 'default' : 'pointer',
+                      transition: 'all 0.25s',
+                    }}
+                  >
+                    {heroInCart ? '✓ In Cart' : heroJustAdded ? '✓ Added' : 'Add to Cart'}
                   </button>
                 </div>
               </div>
@@ -399,7 +502,8 @@ const Home = () => {
                   onMouseEnter={e => e.currentTarget.style.borderColor = C.bHov}
                   onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
                 >
-                  <img src={p.img} alt={p.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }}
+                  <img src={p.img} alt={p.name} loading="lazy"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }}
                     onMouseEnter={e => e.target.style.transform = 'scale(1.05)'}
                     onMouseLeave={e => e.target.style.transform = 'scale(1)'} />
                   <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.6), transparent 55%)' }} />
@@ -473,16 +577,20 @@ const Home = () => {
                 </p>
               </div>
             ) : pageRecs.length > 0 ? (
-              pageRecs.map((item, i) => (
-                <RecCard
-                  key={`${item.id}-${i}`}
-                  item={item}
-                  isWishlisted={wishlist.includes(item.slug)}
-                  onToggleWish={() => toggleWish(item.slug)}
-                  onView={() => { recordInteraction(item.id, 'view'); navigate(`/product/${item.slug}`); }}
-                  onCart={addCart}
-                />
-              ))
+              pageRecs.map((item, i) => {
+                const normalized = normalizeProduct(item);
+                return (
+                  <RecCard
+                    key={`${normalized.id}-${i}`}
+                    item={normalized}
+                    isWishlisted={wishlist.includes(normalized.slug)}
+                    onToggleWish={() => toggleWish(normalized.slug)}
+                    onView={() => { recordInteraction(normalized.id, 'view'); navigate(`/product/${normalized.slug}`); }}
+                    onCart={addRecToCart}
+                    alreadyInCart={isInCart(normalized.id)}
+                  />
+                );
+              })
             ) : (
               <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '48px 0', color: C.muted }}>
                 <p style={{ fontSize: 13 }}>No recommendations found for this category.</p>
