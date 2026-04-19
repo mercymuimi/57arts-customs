@@ -9,18 +9,18 @@ const orderItemSchema = new mongoose.Schema({
   vendor: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Vendor',
-    required: true,
+    required: false, // ✅ optional — seeded products have no vendor
   },
-  name: { type: String, required: true },
-  image: { type: String },
+  name:     { type: String, required: true },
+  image:    { type: String },
   category: { type: String },
   quantity: { type: Number, required: true, min: 1 },
-  price: { type: Number, required: true },
+  price:    { type: Number, required: true },
   customization: {
-    color: { type: String },
-    size: { type: String },
+    color:    { type: String },
+    size:     { type: String },
     material: { type: String },
-    notes: { type: String },
+    notes:    { type: String },
   },
 });
 
@@ -38,18 +38,18 @@ const orderSchema = new mongoose.Schema(
     items: [orderItemSchema],
 
     shippingAddress: {
-      fullName: { type: String, required: true },
-      phone: { type: String, required: true },
-      street: { type: String, required: true },
-      city: { type: String, required: true },
-      county: { type: String },
-      country: { type: String, default: 'Kenya' },
+      fullName:   { type: String, required: true },
+      phone:      { type: String, required: true },
+      street:     { type: String, required: true },
+      city:       { type: String, required: true },
+      county:     { type: String },
+      country:    { type: String, default: 'Kenya' },
       postalCode: { type: String },
     },
 
     paymentMethod: {
       type: String,
-      enum: ['mpesa', 'card', 'paypal', 'cash_on_delivery'],
+      enum: ['mpesa', 'card', 'paypal', 'bank', 'cash_on_delivery'],
       required: true,
     },
     paymentStatus: {
@@ -59,9 +59,9 @@ const orderSchema = new mongoose.Schema(
     },
     mpesaTransactionId: { type: String },
 
-    itemsPrice: { type: Number, required: true },
-    shippingPrice: { type: Number, default: 0 },
-    totalPrice: { type: Number, required: true },
+    itemsPrice:   { type: Number, required: true },
+    shippingPrice:{ type: Number, default: 0 },
+    totalPrice:   { type: Number, required: true },
 
     orderStatus: {
       type: String,
@@ -69,22 +69,21 @@ const orderSchema = new mongoose.Schema(
       default: 'pending',
     },
 
+    notes: { type: String },
+
     // Affiliate tracking
-    affiliateCode: { type: String },
-    affiliate: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Affiliate',
-    },
+    affiliateCode:       { type: String },
+    affiliate:           { type: mongoose.Schema.Types.ObjectId, ref: 'Affiliate' },
     affiliateCommission: { type: Number, default: 0 },
 
-    deliveredAt: { type: Date },
-    cancelledAt: { type: Date },
+    deliveredAt:  { type: Date },
+    cancelledAt:  { type: Date },
     cancelReason: { type: String },
   },
   { timestamps: true }
 );
 
-// Auto-generate order number before saving
+// Auto-generate order number
 orderSchema.pre('save', async function (next) {
   if (!this.orderNumber) {
     const count = await mongoose.model('Order').countDocuments();
@@ -93,10 +92,8 @@ orderSchema.pre('save', async function (next) {
   next();
 });
 
-// Virtual: total items count
 orderSchema.virtual('totalItems').get(function () {
   return this.items.reduce((sum, item) => sum + item.quantity, 0);
 });
 
-const Order = mongoose.model('Order', orderSchema);
-module.exports = Order;
+module.exports = mongoose.model('Order', orderSchema);

@@ -1,17 +1,21 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
-// Helper to generate token
-const generateToken = (user) =>
-  jwt.sign(
+// Generate JWT
+const generateToken = (user) => {
+  return jwt.sign(
     { id: user._id, role: user.role },
     process.env.JWT_SECRET,
     { expiresIn: '7d' }
   );
+};
 
-// REGISTER
+// ================= REGISTER =================
 exports.register = async (req, res) => {
   try {
+    console.log('📩 REGISTER BODY:', req.body);
+
     const { name, email, password, role } = req.body;
 
     if (!name || !email || !password) {
@@ -26,12 +30,8 @@ exports.register = async (req, res) => {
     const allowedRoles = ['buyer', 'vendor', 'affiliate'];
     const assignedRole = allowedRoles.includes(role) ? role : 'buyer';
 
-    const user = await User.create({
-      name,
-      email,
-      password,
-      role: assignedRole
-    });
+    const user = new User({ name, email, password, role: assignedRole });
+    await user.save();
 
     const token = generateToken(user);
 
@@ -39,22 +39,24 @@ exports.register = async (req, res) => {
       message: 'Registration successful',
       token,
       user: {
-        id: user._id,
-        name: user.name,
+        id:    user._id,
+        name:  user.name,
         email: user.email,
-        role: user.role
-      }
+        role:  user.role,
+      },
     });
 
   } catch (error) {
-    console.error('REGISTER ERROR:', error.message);
+    console.error('❌ REGISTER ERROR:', error.message);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
-// LOGIN
+// ================= LOGIN =================
 exports.login = async (req, res) => {
   try {
+    console.log('🔐 LOGIN BODY:', req.body);
+
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -67,7 +69,7 @@ exports.login = async (req, res) => {
     }
 
     if (!user.isActive) {
-      return res.status(403).json({ message: 'Account is deactivated. Contact support.' });
+      return res.status(403).json({ message: 'Account is deactivated' });
     }
 
     const isMatch = await user.matchPassword(password);
@@ -77,46 +79,85 @@ exports.login = async (req, res) => {
 
     const token = generateToken(user);
 
-    res.status(200).json({
+    res.json({
       message: 'Login successful',
       token,
       user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role
-      }
+        id:        user._id,
+        name:      user.name,
+        email:     user.email,
+        role:      user.role,
+        phone:     user.phone,
+        address:   user.address,
+        createdAt: user.createdAt,
+      },
     });
 
   } catch (error) {
+    console.error('❌ LOGIN ERROR:', error.message);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
-// GET PROFILE
+// ================= GET PROFILE =================
 exports.getProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('-password');
-    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
     res.json({ success: true, user });
+
   } catch (error) {
+    console.error('❌ GET PROFILE ERROR:', error.message);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
-// UPDATE PROFILE
+// ================= UPDATE PROFILE =================
 exports.updateProfile = async (req, res) => {
   try {
-    const { name, phone, address, profileImage } = req.body;
+    const { name, phone, address, profileImage, currentPassword, newPassword } = req.body;
 
-    const user = await User.findByIdAndUpdate(
-      req.user.id,
-      { name, phone, address, profileImage },
-      { new: true, runValidators: true }
-    ).select('-password');
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
 
-    res.json({ success: true, message: 'Profile updated', user });
+    // ✅ Handle password change if requested
+    if (currentPassword && newPassword) {
+      const isMatch = await user.matchPassword(currentPassword);
+      if (!isMatch) {
+        return res.status(400).json({ message: 'Current password is incorrect' });
+      }
+      // The pre-save hook will hash the new password
+      user.password = newPassword;
+    }
+
+    // ✅ Update fields only if provided
+    if (name)         user.name         = name;
+    if (phone)        user.phone        = phone;
+    if (address)      user.address      = address;
+    if (profileImage) user.profileImage = profileImage;
+
+    await user.save(); // ✅ triggers pre-save hook for password hashing
+
+    res.json({
+      success: true,
+      message: 'Profile updated',
+      user: {
+        id:        user._id,
+        name:      user.name,
+        email:     user.email,
+        role:      user.role,
+        phone:     user.phone,
+        address:   user.address,
+        createdAt: user.createdAt,
+      },
+    });
+
   } catch (error) {
+    console.error('❌ UPDATE PROFILE ERROR:', error.message);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };

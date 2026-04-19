@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { authAPI } from '../services/api';
 
 // ── DESIGN TOKENS ─────────────────────────────────────────────────────────────
 const C = {
@@ -60,8 +61,6 @@ const Modal = ({ title, onClose, children }) => (
 // ── COMPONENT ─────────────────────────────────────────────────────────────────
 const UserProfile = () => {
   const navigate = useNavigate();
-
-  // ✅ FIX: Use real AuthContext instead of local mock state
   const { user, isLoggedIn, logout, updateUser } = useAuth();
 
   // Edit modal state
@@ -70,20 +69,20 @@ const UserProfile = () => {
   const [editForm, setEditForm]       = useState({});
   const [editSaved, setEditSaved]     = useState(false);
   const [editError, setEditError]     = useState('');
+  const [editLoading, setEditLoading] = useState(false);
 
   // Password change state
   const [pwForm, setPwForm]   = useState({ current: '', newPw: '', confirm: '' });
   const [showPw, setShowPw]   = useState({ current: false, new: false, confirm: false });
   const [pwError, setPwError] = useState('');
   const [pwSaved, setPwSaved] = useState(false);
+  const [pwLoading, setPwLoading] = useState(false);
 
   const [activeTab, setActiveTab] = useState('personal');
 
   const newPwStr  = checkStrength(pwForm.newPw);
   const newPwMeta = strengthMeta(newPwStr.score);
 
-  // ✅ FIX: If not logged in, redirect to login page (ProtectedRoute handles this,
-  // but just in case the page is accessed directly)
   if (!isLoggedIn || !user) {
     return (
       <div style={{ backgroundColor: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -97,14 +96,12 @@ const UserProfile = () => {
     );
   }
 
-  // ── Derive display values from real user data ──────────────────────────────
   const initials  = getInitials(user.name);
   const userBadge = user.role === 'vendor' ? 'Vendor' : user.role === 'admin' ? 'Admin' : 'Buyer';
   const since     = user.createdAt
     ? `Since ${new Date(user.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`
     : 'Member';
 
-  // Mock stats / orders / designs — replace with real API calls later
   const stats        = user.stats        || { orders: 0, designs: 0, wishlist: 0, drafts: 0 };
   const orders       = user.orders       || [];
   const savedDesigns = user.savedDesigns || [];
@@ -113,40 +110,70 @@ const UserProfile = () => {
   // ── Edit modal handlers ────────────────────────────────────────────────────
   const openEdit = () => {
     setEditForm({
-      name:    user.name    || '',
-      email:   user.email   || '',
-      phone:   user.phone   || '',
+      name:    user.name             || '',
+      email:   user.email            || '',
+      phone:   user.phone            || '',
       street:  user.address?.street  || '',
       city:    user.address?.city    || '',
       country: user.address?.country || '',
     });
     setPwForm({ current: '', newPw: '', confirm: '' });
-    setPwError(''); setPwSaved(false); setEditSaved(false);
+    setPwError(''); setPwSaved(false); setEditSaved(false); setEditError('');
     setEditSection('contact'); setEditOpen(true);
   };
 
-  const saveEdit = () => {
+  // ✅ FIXED: saves to database via API, then updates local context
+  const saveEdit = async () => {
     if (!editForm.name.trim()) { setEditError('Name is required.'); return; }
     setEditError('');
-    // ✅ updateUser persists changes to AuthContext + localStorage
-    updateUser({
-      name:    editForm.name,
-      email:   editForm.email,
-      phone:   editForm.phone,
-      address: { street: editForm.street, city: editForm.city, country: editForm.country },
-    });
-    setEditSaved(true);
-    setTimeout(() => { setEditSaved(false); setEditOpen(false); }, 1500);
+    setEditLoading(true);
+
+    try {
+      const payload = {
+        name:    editForm.name.trim(),
+        phone:   editForm.phone.trim(),
+        address: {
+          street:  editForm.street.trim(),
+          city:    editForm.city.trim(),
+          country: editForm.country,
+        },
+      };
+
+      await authAPI.updateProfile(payload); // ✅ saves to MongoDB
+      updateUser(payload);                  // ✅ updates localStorage + context
+
+      setEditSaved(true);
+      setTimeout(() => { setEditSaved(false); setEditOpen(false); }, 1500);
+    } catch (err) {
+      setEditError(err.response?.data?.message || 'Failed to save. Please try again.');
+    } finally {
+      setEditLoading(false);
+    }
   };
 
-  const savePassword = () => {
+  // ✅ FIXED: saves new password to database via API
+  const savePassword = async () => {
     setPwError('');
-    if (!pwForm.current)           { setPwError('Enter your current password.'); return; }
-    if (newPwStr.score < 3)        { setPwError('New password is too weak.'); return; }
-    if (pwForm.newPw !== pwForm.confirm) { setPwError('Passwords do not match.'); return; }
-    // In production: call PATCH /api/auth/change-password
-    setPwSaved(true);
-    setTimeout(() => { setPwSaved(false); setPwForm({ current: '', newPw: '', confirm: '' }); }, 2000);
+    if (!pwForm.current)                     { setPwError('Enter your current password.'); return; }
+    if (newPwStr.score < 3)                  { setPwError('New password is too weak.'); return; }
+    if (pwForm.newPw !== pwForm.confirm)     { setPwError('Passwords do not match.'); return; }
+
+    setPwLoading(true);
+    try {
+      await authAPI.updateProfile({
+        currentPassword: pwForm.current,
+        newPassword:     pwForm.newPw,
+      });
+      setPwSaved(true);
+      setTimeout(() => {
+        setPwSaved(false);
+        setPwForm({ current: '', newPw: '', confirm: '' });
+      }, 2000);
+    } catch (err) {
+      setPwError(err.response?.data?.message || 'Failed to update password. Check your current password.');
+    } finally {
+      setPwLoading(false);
+    }
   };
 
   const handleLogout = () => {
@@ -183,8 +210,12 @@ const UserProfile = () => {
 
           {editSection === 'contact' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
-              {editError && <div style={{ backgroundColor: 'rgba(248,113,113,0.1)', border: `1px solid rgba(248,113,113,0.4)`, color: C.red, fontSize: 12, padding: '10px 14px', borderRadius: 9 }}>{editError}</div>}
-              {[['Full Name', 'name', 'text', ''], ['Email Address', 'email', 'email', ''], ['Phone Number', 'phone', 'text', '+254 7XX XXX XXX']].map(([label, field, type, ph]) => (
+              {editError && (
+                <div style={{ backgroundColor: 'rgba(248,113,113,0.1)', border: `1px solid rgba(248,113,113,0.4)`, color: C.red, fontSize: 12, padding: '10px 14px', borderRadius: 9 }}>
+                  {editError}
+                </div>
+              )}
+              {[['Full Name', 'name', 'text', ''], ['Phone Number', 'phone', 'text', '+254 7XX XXX XXX']].map(([label, field, type, ph]) => (
                 <div key={field}>
                   <label style={s.label}>{label}</label>
                   <input type={type} value={editForm[field] || ''} onChange={e => setEditForm({ ...editForm, [field]: e.target.value })}
@@ -193,14 +224,27 @@ const UserProfile = () => {
                     onBlur={e => e.target.style.borderColor = C.border} />
                 </div>
               ))}
-              <button onClick={saveEdit} style={{ ...s.btnGold, marginTop: 4 }}>
-                {editSaved ? '✓ Saved!' : 'Save Contact Details'}
+              {/* Email is read-only — changing email needs extra verification */}
+              <div>
+                <label style={s.label}>Email Address</label>
+                <input type="email" value={editForm.email || ''} readOnly
+                  style={{ ...s.input, opacity: 0.5, cursor: 'not-allowed' }} />
+                <p style={{ color: C.muted, fontSize: 10, marginTop: 5 }}>Email cannot be changed here. Contact support.</p>
+              </div>
+              <button onClick={saveEdit} disabled={editLoading}
+                style={{ ...s.btnGold, marginTop: 4, opacity: editLoading ? 0.6 : 1 }}>
+                {editLoading ? 'Saving…' : editSaved ? '✓ Saved!' : 'Save Contact Details'}
               </button>
             </div>
           )}
 
           {editSection === 'address' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+              {editError && (
+                <div style={{ backgroundColor: 'rgba(248,113,113,0.1)', border: `1px solid rgba(248,113,113,0.4)`, color: C.red, fontSize: 12, padding: '10px 14px', borderRadius: 9 }}>
+                  {editError}
+                </div>
+              )}
               {[['Street Address', 'street', 'text', '123 Artisan Way'], ['City & Postcode', 'city', 'text', 'Nairobi, 00100']].map(([label, field, type, ph]) => (
                 <div key={field}>
                   <label style={s.label}>{label}</label>
@@ -220,15 +264,20 @@ const UserProfile = () => {
                   ))}
                 </select>
               </div>
-              <button onClick={saveEdit} style={{ ...s.btnGold, marginTop: 4 }}>
-                {editSaved ? '✓ Saved!' : 'Save Address'}
+              <button onClick={saveEdit} disabled={editLoading}
+                style={{ ...s.btnGold, marginTop: 4, opacity: editLoading ? 0.6 : 1 }}>
+                {editLoading ? 'Saving…' : editSaved ? '✓ Saved!' : 'Save Address'}
               </button>
             </div>
           )}
 
           {editSection === 'password' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
-              {pwError && <div style={{ backgroundColor: 'rgba(248,113,113,0.1)', border: `1px solid rgba(248,113,113,0.4)`, color: C.red, fontSize: 12, padding: '10px 14px', borderRadius: 9 }}>{pwError}</div>}
+              {pwError && (
+                <div style={{ backgroundColor: 'rgba(248,113,113,0.1)', border: `1px solid rgba(248,113,113,0.4)`, color: C.red, fontSize: 12, padding: '10px 14px', borderRadius: 9 }}>
+                  {pwError}
+                </div>
+              )}
               {[['Current Password', 'current'], ['New Password', 'newPw'], ['Confirm New Password', 'confirm']].map(([label, field]) => (
                 <div key={field}>
                   <label style={s.label}>{label}</label>
@@ -256,8 +305,9 @@ const UserProfile = () => {
                   )}
                 </div>
               ))}
-              <button onClick={savePassword} style={{ ...s.btnGold, marginTop: 4 }}>
-                {pwSaved ? '✓ Password Updated!' : 'Update Password'}
+              <button onClick={savePassword} disabled={pwLoading}
+                style={{ ...s.btnGold, marginTop: 4, opacity: pwLoading ? 0.6 : 1 }}>
+                {pwLoading ? 'Updating…' : pwSaved ? '✓ Password Updated!' : 'Update Password'}
               </button>
             </div>
           )}
@@ -292,13 +342,11 @@ const UserProfile = () => {
           <div style={{ height: 3, backgroundColor: C.gold }} />
           <div style={{ padding: '28px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-              {/* ✅ Avatar shows real user's initials */}
               <div style={{ width: 64, height: 64, borderRadius: 14, backgroundColor: C.gold, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 22, color: '#000', flexShrink: 0 }}>
                 {initials}
               </div>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                  {/* ✅ Shows real logged-in user's name */}
                   <h1 style={{ color: C.cream, fontWeight: 900, fontSize: 22 }}>{user.name}</h1>
                   <span style={{ backgroundColor: C.gold, color: '#000', fontSize: 10, fontWeight: 900, padding: '3px 10px', borderRadius: 100, letterSpacing: '0.08em' }}>{userBadge}</span>
                 </div>
