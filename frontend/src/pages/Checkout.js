@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { orderAPI } from '../services/api';
@@ -12,6 +12,9 @@ const C = {
 
 const fmt = n => `KSH ${Number(n).toLocaleString()}`;
 
+// ✅ FIX: shared shipping rule — identical to Cart.js so totals always match
+const calcShipping = (subtotal) => subtotal > 50000 ? 0 : 500;
+
 const paymentMethods = [
   { id: 'mpesa',  label: 'M-Pesa',           desc: 'Pay via Safaricom M-Pesa STK push', icon: '📱' },
   { id: 'card',   label: 'Visa / Mastercard', desc: 'Credit or debit card',              icon: '💳' },
@@ -21,11 +24,9 @@ const paymentMethods = [
 
 const steps = ['Delivery', 'Payment', 'Verify', 'Review'];
 
-/** Returns true if str looks like a valid MongoDB ObjectId (24 hex chars) */
 const isValidObjectId = (str) => /^[a-f\d]{24}$/i.test(String(str ?? ''));
 
 const Checkout = () => {
-  const navigate = useNavigate();
   const { items, subtotal, clearCart } = useCart();
   const { user } = useAuth();
 
@@ -60,8 +61,8 @@ const Checkout = () => {
 
   const [cardForm, setCardForm] = useState({ number: '', expiry: '', cvv: '', holder: '' });
 
-  //const shipping = subtotal > 50000 ? 0 : 500;
-  const shipping = 0;
+  // ✅ FIX: shipping now uses same calcShipping as Cart.js
+  const shipping = calcShipping(subtotal);
   const total    = subtotal + shipping;
 
   useEffect(() => {
@@ -171,7 +172,6 @@ const Checkout = () => {
       return;
     }
 
-    // ✅ GUARD: validate all cart items have a real MongoDB ObjectId before sending
     const invalidItems = items.filter(item => !isValidObjectId(item.id));
     if (invalidItems.length > 0) {
       const names = invalidItems.map(i => i.name).join(', ');
@@ -188,13 +188,12 @@ const Checkout = () => {
     try {
       const { data } = await orderAPI.create({
         items: items.map(item => ({
-          product:  item.id,          // ✅ always a valid ObjectId (guarded above)
+          product:  item.id,
           name:     item.name,
           image:    item.img,
           category: item.category,
           quantity: item.qty,
           price:    item.price,
-          // ✅ only include vendor if it's a valid ObjectId
           ...(isValidObjectId(item.vendorId) ? { vendor: item.vendorId } : {}),
         })),
         shippingAddress: {
@@ -235,7 +234,7 @@ const Checkout = () => {
     fontSize: 13, outline: 'none', boxSizing: 'border-box',
   });
 
-  // ── ORDER PLACED ─────────────────────────────────────────────────────────────
+  // ── ORDER PLACED ──────────────────────────────────────────────────────────────
   if (placed && placedOrder) return (
     <div style={{ backgroundColor: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ textAlign: 'center', maxWidth: 460 }}>
@@ -544,7 +543,7 @@ const Checkout = () => {
           </div>
         </div>
 
-        {/* RIGHT — summary */}
+        {/* RIGHT — Order summary */}
         <div>
           <div style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: 24, position: 'sticky', top: 24 }}>
             <h3 style={{ color: C.cream, fontWeight: 900, fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 18 }}>Order Summary</h3>
@@ -568,8 +567,13 @@ const Checkout = () => {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: C.muted, fontSize: 12 }}>Shipping</span>
-                <span style={{ color: shipping === 0 ? '#4caf50' : C.cream, fontWeight: 700, fontSize: 12 }}>{shipping === 0 ? 'Free' : fmt(shipping)}</span>
+                <span style={{ color: shipping === 0 ? '#4caf50' : C.cream, fontWeight: 700, fontSize: 12 }}>
+                  {shipping === 0 ? 'Free' : fmt(shipping)}
+                </span>
               </div>
+              {shipping > 0 && (
+                <p style={{ color: C.muted, fontSize: 11 }}>Free shipping on orders over KSH 50,000</p>
+              )}
               <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 10, marginTop: 4, display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: C.cream, fontWeight: 900, fontSize: 14 }}>Total</span>
                 <span style={{ color: C.gold, fontWeight: 900, fontSize: 16 }}>{fmt(total)}</span>

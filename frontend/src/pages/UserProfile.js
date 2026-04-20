@@ -72,22 +72,20 @@ const UserProfile = () => {
   const [editError, setEditError]     = useState('');
   const [editLoading, setEditLoading] = useState(false);
 
-  const [pwForm, setPwForm]     = useState({ current: '', newPw: '', confirm: '' });
-  const [showPw, setShowPw]     = useState({ current: false, new: false, confirm: false });
-  const [pwError, setPwError]   = useState('');
-  const [pwSaved, setPwSaved]   = useState(false);
+  const [pwForm, setPwForm]       = useState({ current: '', newPw: '', confirm: '' });
+  const [showPw, setShowPw]       = useState({ current: false, new: false, confirm: false });
+  const [pwError, setPwError]     = useState('');
+  const [pwSaved, setPwSaved]     = useState(false);
   const [pwLoading, setPwLoading] = useState(false);
 
   const [activeTab, setActiveTab] = useState('personal');
 
-  // ✅ Real orders from API
-  const [orders, setOrders]         = useState([]);
+  const [orders, setOrders]               = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
 
   const newPwStr  = checkStrength(pwForm.newPw);
   const newPwMeta = strengthMeta(newPwStr.score);
 
-  // Fetch orders when orders tab is active
   useEffect(() => {
     if (activeTab === 'orders' && isLoggedIn) {
       setOrdersLoading(true);
@@ -115,8 +113,10 @@ const UserProfile = () => {
     ? `Since ${new Date(user.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`
     : 'Member';
 
-  const savedDesigns = user.savedDesigns || [];
-  const wishlist     = user.wishlist     || [];
+  // ✅ FIX: removed unused savedDesigns and wishlist variables.
+  // The designs/wishlist tabs currently show empty-state placeholders and
+  // don't render these arrays, so computing them caused lint warnings.
+  // Re-add them here when those tabs are fully implemented.
 
   const openEdit = () => {
     setEditForm({
@@ -331,7 +331,7 @@ const UserProfile = () => {
         {activeTab === 'personal' && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             {[
-              { title: 'Contact Details', items: [['Full Name', user.name], ['Email Address', user.email], ['Phone', user.phone || '—']] },
+              { title: 'Contact Details',  items: [['Full Name', user.name], ['Email Address', user.email], ['Phone', user.phone || '—']] },
               { title: 'Shipping Address', items: [['Street', user.address?.street || '—'], ['City', user.address?.city || '—'], ['Country', user.address?.country || '—']] },
             ].map(section => (
               <div key={section.title} style={{ ...s.card, padding: 24 }}>
@@ -348,7 +348,7 @@ const UserProfile = () => {
           </div>
         )}
 
-        {/* ✅ REAL Orders Tab */}
+        {/* Orders Tab */}
         {activeTab === 'orders' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {ordersLoading ? (

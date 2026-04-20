@@ -9,10 +9,15 @@ const C = {
 
 const fmt = n => `KSH ${n.toLocaleString()}`;
 
+// ✅ Shared shipping rule — keep this in sync with Checkout.js
+const calcShipping = (subtotal) => subtotal > 50000 ? 0 : 500;
+
+// ✅ Image fallback used in render (safety net in case older cart entries lack img)
+const FALLBACK_IMG = 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=500';
+const resolveImg = (item) => item.img || item.images?.[0] || item.image || FALLBACK_IMG;
+
 const Cart = () => {
   const navigate = useNavigate();
-
-  // ✅ FIX: added addToCart to the destructure
   const { items, updateQty, removeItem, addToCart, subtotal } = useCart();
 
   const [saved, setSaved]                 = useState([]);
@@ -25,7 +30,6 @@ const Cart = () => {
     if (item) { setSaved(p => [...p, item]); removeItem(id); }
   };
 
-  // ✅ FIX: actually adds the item back to cart instead of silently dropping it
   const moveToCart = item => {
     setSaved(p => p.filter(i => i.id !== item.id));
     addToCart(item, 1);
@@ -37,7 +41,8 @@ const Cart = () => {
   };
 
   const discount = couponApplied ? Math.round(subtotal * 0.1) : 0;
-  const shipping  = subtotal > 50000 ? 0 : 500;
+  // ✅ FIX: use shared calcShipping so Cart and Checkout always match
+  const shipping  = calcShipping(subtotal - discount);
   const total     = subtotal - discount + shipping;
 
   return (
@@ -85,9 +90,16 @@ const Cart = () => {
                 <div key={item.id} style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: 20, display: 'flex', gap: 16, transition: 'border-color 0.2s' }}
                   onMouseEnter={e => e.currentTarget.style.borderColor = C.bHov}
                   onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
-                  <div style={{ width: 88, height: 88, borderRadius: 10, overflow: 'hidden', flexShrink: 0, border: `1px solid ${C.border}`, cursor: 'pointer' }}
+                  <div
+                    style={{ width: 88, height: 88, borderRadius: 10, overflow: 'hidden', flexShrink: 0, border: `1px solid ${C.border}`, cursor: 'pointer', backgroundColor: C.faint }}
                     onClick={() => navigate(`/product/${item.slug}`)}>
-                    <img src={item.img} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    {/* ✅ FIX: resolveImg handles any product shape so image always shows */}
+                    <img
+                      src={resolveImg(item)}
+                      alt={item.name}
+                      onError={e => { e.target.onerror = null; e.target.src = FALLBACK_IMG; }}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
@@ -133,8 +145,13 @@ const Cart = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                 {saved.map(item => (
                   <div key={item.id} style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16, display: 'flex', gap: 14, alignItems: 'center' }}>
-                    <div style={{ width: 56, height: 56, borderRadius: 8, overflow: 'hidden', flexShrink: 0 }}>
-                      <img src={item.img} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <div style={{ width: 56, height: 56, borderRadius: 8, overflow: 'hidden', flexShrink: 0, backgroundColor: C.faint }}>
+                      <img
+                        src={resolveImg(item)}
+                        alt={item.name}
+                        onError={e => { e.target.onerror = null; e.target.src = FALLBACK_IMG; }}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
                     </div>
                     <div style={{ flex: 1 }}>
                       <p style={{ color: C.cream, fontWeight: 800, fontSize: 13 }}>{item.name}</p>
@@ -182,9 +199,13 @@ const Cart = () => {
                   )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                     <span style={{ color: C.muted, fontSize: 13 }}>Shipping</span>
-                    <span style={{ color: shipping === 0 ? '#4caf50' : C.cream, fontWeight: 700, fontSize: 13 }}>{shipping === 0 ? 'Free' : fmt(shipping)}</span>
+                    <span style={{ color: shipping === 0 ? '#4caf50' : C.cream, fontWeight: 700, fontSize: 13 }}>
+                      {shipping === 0 ? 'Free' : fmt(shipping)}
+                    </span>
                   </div>
-                  {shipping > 0 && <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>Free shipping over KSH 50,000</p>}
+                  {shipping > 0 && (
+                    <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>Free shipping on orders over KSH 50,000</p>
+                  )}
                 </div>
 
                 <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16, marginBottom: 24 }}>
@@ -199,18 +220,27 @@ const Cart = () => {
             {/* Coupon */}
             <div style={{ marginBottom: 20 }}>
               <div style={{ display: 'flex', gap: 8 }}>
-                <input type="text" value={coupon} onChange={e => setCoupon(e.target.value)} placeholder="Coupon code"
+                <input
+                  type="text"
+                  value={coupon}
+                  onChange={e => setCoupon(e.target.value)}
+                  placeholder="Coupon code"
                   style={{ flex: 1, backgroundColor: C.bg, border: `1px solid ${couponError ? 'rgba(224,92,92,0.4)' : C.border}`, borderRadius: 8, padding: '10px 12px', color: C.cream, fontSize: 12, outline: 'none' }}
                   onFocus={e => e.target.style.borderColor = C.bHov}
-                  onBlur={e => e.target.style.borderColor = couponError ? 'rgba(224,92,92,0.4)' : C.border} />
+                  onBlur={e => e.target.style.borderColor = couponError ? 'rgba(224,92,92,0.4)' : C.border}
+                />
                 <button onClick={applyCoupon}
-                  style={{ backgroundColor: C.faint, border: `1px solid ${C.border}`, color: C.cream, padding: '10px 16px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Apply</button>
+                  style={{ backgroundColor: C.faint, border: `1px solid ${C.border}`, color: C.cream, padding: '10px 16px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                  Apply
+                </button>
               </div>
-              {couponError && <p style={{ color: '#e05c5c', fontSize: 11, marginTop: 4 }}>{couponError}</p>}
+              {couponError  && <p style={{ color: '#e05c5c', fontSize: 11, marginTop: 4 }}>{couponError}</p>}
               {couponApplied && <p style={{ color: '#4caf50', fontSize: 11, marginTop: 4 }}>10% discount applied!</p>}
             </div>
 
-            <button onClick={() => navigate('/checkout')} disabled={items.length === 0}
+            <button
+              onClick={() => navigate('/checkout')}
+              disabled={items.length === 0}
               style={{ width: '100%', backgroundColor: items.length === 0 ? C.faint : C.gold, color: items.length === 0 ? C.muted : '#000', border: 'none', borderRadius: 10, padding: '15px', fontWeight: 900, fontSize: 14, cursor: items.length === 0 ? 'not-allowed' : 'pointer', letterSpacing: '0.04em', marginBottom: 10 }}>
               {items.length === 0 ? 'Cart is Empty' : 'Proceed to Checkout →'}
             </button>

@@ -21,14 +21,26 @@ const writeCart = (key, items) => {
   } catch {}
 };
 
+/**
+ * Resolves the best available image from any product shape:
+ * - MongoDB products:          product.images[0]
+ * - Static/featured products:  product.img
+ * - AI recommendation items:   product.image  (sometimes returned by AI API)
+ * - Already-normalised items:  product.img    (set by normalizeProduct in Home.js)
+ */
+const resolveImg = (product) =>
+  product.images?.[0] ||
+  product.img        ||
+  product.image      ||
+  '';
+
 export const CartProvider = ({ children }) => {
   const { user } = useAuth();
 
-  // ✅ Initialize directly from localStorage — no useEffect needed for loading
-  const [items, setItems] = useState(() => readCart(getKey(user)));
+  const [items, setItems]           = useState(() => readCart(getKey(user)));
   const [storageKey, setStorageKey] = useState(() => getKey(user));
 
-  // ✅ When user logs in/out, switch to their cart immediately
+  // Switch cart when user logs in / out
   useEffect(() => {
     const newKey = getKey(user);
     if (newKey !== storageKey) {
@@ -37,7 +49,7 @@ export const CartProvider = ({ children }) => {
     }
   }, [user]);
 
-  // ✅ Persist on every change
+  // Persist on every change
   useEffect(() => {
     writeCart(storageKey, items);
   }, [items, storageKey]);
@@ -53,10 +65,12 @@ export const CartProvider = ({ children }) => {
         id,
         name:     product.name,
         price:    product.price,
-        img:      product.images?.[0] || product.img || '',
+        // ✅ FIX: resolveImg checks all possible image fields in priority order
+        // so items added from homepage, product detail, or AI recs all get an image
+        img:      resolveImg(product),
         category: product.category,
         slug:     product.slug,
-        desc:     product.description || '',
+        desc:     product.description || product.desc || '',
         qty,
       }];
     });

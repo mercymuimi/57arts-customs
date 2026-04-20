@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { orderAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -193,20 +193,16 @@ const OrderTracking = () => {
   const navigate = useNavigate();
   const { isLoggedIn } = useAuth();
 
-  const [order, setOrder]       = useState(null);
-  const [orders, setOrders]     = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState('');
-  const [activeTab, setActiveTab] = useState('timeline');
-  const [modal, setModal]       = useState(null);
-  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [order, setOrder]           = useState(null);
+  const [orders, setOrders]         = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState('');
+  const [activeTab, setActiveTab]   = useState('timeline');
+  const [modal, setModal]           = useState(null);
+  // ✅ FIX: removed unused selectedOrder / setSelectedOrder state
 
-  useEffect(() => {
-    if (!isLoggedIn) { navigate('/login'); return; }
-    fetchData();
-  }, [id, isLoggedIn]);
-
-  const fetchData = async () => {
+  // ✅ FIX: wrapped in useCallback so it can be safely listed as a useEffect dependency
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       if (id) {
@@ -217,12 +213,18 @@ const OrderTracking = () => {
         setOrders(data.orders || []);
         if (data.orders?.length > 0) setOrder(data.orders[0]);
       }
-    } catch (err) {
+    } catch {
       setError('Failed to load orders.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  // ✅ FIX: fetchData and navigate are now properly listed as dependencies
+  useEffect(() => {
+    if (!isLoggedIn) { navigate('/login'); return; }
+    fetchData();
+  }, [id, isLoggedIn, fetchData, navigate]);
 
   const getStepIndex = (status) => STATUS_STEPS.indexOf(status);
 
@@ -232,9 +234,13 @@ const OrderTracking = () => {
     STATUS_STEPS.forEach((s, i) => {
       if (i <= stepsDone) {
         events.unshift({
-          icon: STATUS_ICONS[s],
+          icon:  STATUS_ICONS[s],
           title: STATUS_LABELS[s],
-          desc: s === 'pending' ? 'Payment received.' : s === 'confirmed' ? 'Artisan accepted the commission.' : s === 'processing' ? 'Your piece is being handcrafted.' : s === 'shipped' ? 'On its way to you.' : 'Delivered successfully.',
+          desc:  s === 'pending'    ? 'Payment received.'
+               : s === 'confirmed'  ? 'Artisan accepted the commission.'
+               : s === 'processing' ? 'Your piece is being handcrafted.'
+               : s === 'shipped'    ? 'On its way to you.'
+               :                     'Delivered successfully.',
           time: new Date(o.createdAt).toLocaleDateString(),
           done: true,
         });
@@ -256,7 +262,6 @@ const OrderTracking = () => {
     </div>
   );
 
-  // ── No orders yet ──
   if (!order && orders.length === 0) return (
     <div style={{ backgroundColor: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
       <p style={{ fontSize: 48 }}>◻</p>
@@ -266,8 +271,8 @@ const OrderTracking = () => {
     </div>
   );
 
-  const timeline = order ? buildTimeline(order) : [];
-  const stepIndex = order ? getStepIndex(order.orderStatus) : 0;
+  const timeline   = order ? buildTimeline(order) : [];
+  const stepIndex  = order ? getStepIndex(order.orderStatus) : 0;
 
   return (
     <div style={{ backgroundColor: C.bg, color: C.cream, minHeight: '100vh' }}>
@@ -293,7 +298,7 @@ const OrderTracking = () => {
 
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 48px 80px', display: 'grid', gridTemplateColumns: orders.length > 1 ? '220px 1fr' : '1fr', gap: 28 }}>
 
-        {/* ORDER LIST SIDEBAR (if multiple orders) */}
+        {/* ORDER LIST SIDEBAR */}
         {orders.length > 1 && (
           <div>
             <p style={{ color: C.muted, fontSize: 10, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 14 }}>Your Orders</p>
@@ -331,7 +336,11 @@ const OrderTracking = () => {
               </div>
               <div style={{ textAlign: 'right' }}>
                 <p style={{ color: C.muted, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Delivery Est.</p>
-                <p style={{ color: C.gold, fontWeight: 900, fontSize: 16 }}>{order.deliveredAt ? new Date(order.deliveredAt).toLocaleDateString() : `${order.items?.[0]?.deliveryTime || '5-7 Business Days'}`}</p>
+                <p style={{ color: C.gold, fontWeight: 900, fontSize: 16 }}>
+                  {order.deliveredAt
+                    ? new Date(order.deliveredAt).toLocaleDateString()
+                    : `${order.items?.[0]?.deliveryTime || '5-7 Business Days'}`}
+                </p>
               </div>
             </div>
 
@@ -340,7 +349,6 @@ const OrderTracking = () => {
               <div style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: '24px 28px', marginBottom: 20 }}>
                 <p style={{ color: C.gold, fontSize: 10, fontWeight: 900, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 6 }}>Current Status</p>
                 <h2 style={{ color: C.cream, fontWeight: 900, fontSize: 22, marginBottom: 24 }}>{STATUS_LABELS[order.orderStatus]}</h2>
-
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                   {STATUS_STEPS.map((s, i) => (
                     <React.Fragment key={s}>
@@ -413,13 +421,13 @@ const OrderTracking = () => {
                         ))}
                       </div>
                       {[
-                        ['Order Number', `#${order.orderNumber}`],
+                        ['Order Number',   `#${order.orderNumber}`],
                         ['Payment Method', order.paymentMethod?.toUpperCase()],
                         ['Payment Status', order.paymentStatus?.toUpperCase()],
-                        ['Date Placed', new Date(order.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })],
-                        ['Items Total', fmt(order.itemsPrice)],
-                        ['Shipping', order.shippingPrice === 0 ? 'Free' : fmt(order.shippingPrice)],
-                        ['Total', fmt(order.totalPrice)],
+                        ['Date Placed',    new Date(order.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })],
+                        ['Items Total',    fmt(order.itemsPrice)],
+                        ['Shipping',       order.shippingPrice === 0 ? 'Free' : fmt(order.shippingPrice)],
+                        ['Total',          fmt(order.totalPrice)],
                       ].map(([label, value]) => (
                         <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: `1px solid ${C.border}` }}>
                           <span style={{ color: C.muted, fontSize: 12 }}>{label}</span>
@@ -460,8 +468,6 @@ const OrderTracking = () => {
 
               {/* RIGHT PANEL */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-                {/* Assistance */}
                 <div style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, overflow: 'hidden' }}>
                   <div style={{ padding: '16px 18px', borderBottom: `1px solid ${C.border}` }}>
                     <p style={{ color: C.cream, fontWeight: 900, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Need Help?</p>
@@ -478,7 +484,6 @@ const OrderTracking = () => {
                   </div>
                 </div>
 
-                {/* Order Actions */}
                 <div style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: 16 }}>
                   <p style={{ color: C.muted, fontSize: 10, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>Order Actions</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
