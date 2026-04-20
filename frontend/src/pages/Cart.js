@@ -10,7 +10,7 @@ const C = {
 const fmt = n => `KSH ${n.toLocaleString()}`;
 
 // ✅ Shared shipping rule — keep this in sync with Checkout.js
-const calcShipping = (subtotal) => subtotal > 50000 ? 0 : 500;
+const calcShipping = (subtotal) => subtotal < 500 ? 0 : 500; // TODO: revert to 50000 before production
 
 // ✅ Image fallback used in render (safety net in case older cart entries lack img)
 const FALLBACK_IMG = 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=500';
@@ -204,7 +204,7 @@ const Cart = () => {
                     </span>
                   </div>
                   {shipping > 0 && (
-                    <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>Free shipping on orders over KSH 50,000</p>
+                    <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>Free shipping on orders under KSH 500</p>
                   )}
                 </div>
 

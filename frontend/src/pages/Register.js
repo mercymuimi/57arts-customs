@@ -16,19 +16,20 @@ const inputStyle = (borderColor) => ({
 });
 
 const Register = () => {
-  const [step, setStep]           = useState('register'); // 'register' | 'verify'
-  const [form, setForm]           = useState({ name: '', email: '', password: '', confirm: '', role: 'buyer' });
-  const [otp, setOtp]             = useState(['', '', '', '', '', '']);
-  const [pendingEmail, setPendingEmail] = useState('');
-  const [errors, setErrors]       = useState({});
-  const [loading, setLoading]     = useState(false);
-  const [resending, setResending] = useState(false);
+  const [step, setStep]                   = useState('register'); // 'register' | 'verify'
+  const [form, setForm]                   = useState({ name: '', email: '', password: '', confirm: '', role: 'buyer' });
+  const [otp, setOtp]                     = useState(['', '', '', '', '', '']);
+  const [pendingEmail, setPendingEmail]   = useState('');
+  const [devOtp, setDevOtp]               = useState(''); // ✅ shown in dev when email can't be delivered
+  const [errors, setErrors]               = useState({});
+  const [loading, setLoading]             = useState(false);
+  const [resending, setResending]         = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
-  const [showPw, setShowPw]       = useState(false);
-  const [apiError, setApiError]   = useState('');
-  const [focused, setFocused]     = useState('');
-  const { login }                 = useAuth();
-  const navigate                  = useNavigate();
+  const [showPw, setShowPw]               = useState(false);
+  const [apiError, setApiError]           = useState('');
+  const [focused, setFocused]             = useState('');
+  const { login }                         = useAuth();
+  const navigate                          = useNavigate();
 
   const handleChange = useCallback(e => {
     const { name, value } = e.target;
@@ -52,8 +53,13 @@ const Register = () => {
     if (!validate()) return;
     setLoading(true); setApiError('');
     try {
-      await authAPI.register({ name: form.name, email: form.email, password: form.password, role: form.role });
+      const res = await authAPI.register({
+        name: form.name, email: form.email,
+        password: form.password, role: form.role,
+      });
       setPendingEmail(form.email);
+      // ✅ if backend returns devOtp (dev mode fallback), show it in the UI
+      if (res.data.devOtp) setDevOtp(res.data.devOtp);
       setStep('verify');
     } catch (err) {
       setApiError(err.response?.data?.message || 'Registration failed. Please try again.');
@@ -103,11 +109,12 @@ const Register = () => {
 
   const handleResend = async () => {
     if (resendCooldown > 0) return;
-    setResending(true); setApiError('');
+    setResending(true); setApiError(''); setDevOtp('');
     try {
-      await authAPI.resendOTP({ email: pendingEmail });
+      const res = await authAPI.resendOTP({ email: pendingEmail });
       setOtp(['', '', '', '', '', '']);
-      // 60 second cooldown
+      // ✅ update devOtp if returned again
+      if (res.data.devOtp) setDevOtp(res.data.devOtp);
       setResendCooldown(60);
       const timer = setInterval(() => {
         setResendCooldown(c => { if (c <= 1) { clearInterval(timer); return 0; } return c - 1; });
@@ -128,7 +135,7 @@ const Register = () => {
   if (step === 'verify') return (
     <div style={{ backgroundColor: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <div style={{ width: '100%', maxWidth: 420, textAlign: 'center' }}>
-        {/* Icon */}
+
         <div style={{ width: 72, height: 72, borderRadius: '50%', backgroundColor: 'rgba(201,168,76,0.1)', border: `2px solid ${C.gold}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', fontSize: 28 }}>
           ✉️
         </div>
@@ -137,7 +144,29 @@ const Register = () => {
         <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.8, marginBottom: 8 }}>
           We sent a 6-digit verification code to
         </p>
-        <p style={{ color: C.gold, fontWeight: 900, fontSize: 14, marginBottom: 32 }}>{pendingEmail}</p>
+        <p style={{ color: C.gold, fontWeight: 900, fontSize: 14, marginBottom: 24 }}>{pendingEmail}</p>
+
+        {/* ✅ DEV MODE banner — shows OTP when email can't be delivered */}
+        {devOtp && (
+          <div style={{
+            backgroundColor: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.4)',
+            borderRadius: 10, padding: '14px 16px', marginBottom: 20, textAlign: 'left',
+          }}>
+            <p style={{ color: '#f97316', fontSize: 11, fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
+              ⚡ Dev Mode — Email not delivered
+            </p>
+            <p style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>
+              Resend can only send to your verified account email.<br />
+              Your OTP is shown here for testing:
+            </p>
+            <p style={{ color: '#f97316', fontSize: 32, fontWeight: 900, letterSpacing: '0.3em', textAlign: 'center' }}>
+              {devOtp}
+            </p>
+            <p style={{ color: C.muted, fontSize: 11, textAlign: 'center', marginTop: 6 }}>
+              Add <code style={{ color: C.cream }}>RESEND_TEST_EMAIL=muimimercy651@gmail.com</code> to your <code style={{ color: C.cream }}>.env</code> to receive emails at your own inbox instead.
+            </p>
+          </div>
+        )}
 
         {/* OTP boxes */}
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 24 }}>
@@ -182,7 +211,7 @@ const Register = () => {
           </button>
         </p>
 
-        <button onClick={() => { setStep('register'); setOtp(['','','','','','']); setApiError(''); }}
+        <button onClick={() => { setStep('register'); setOtp(['','','','','','']); setApiError(''); setDevOtp(''); }}
           style={{ marginTop: 16, background: 'none', border: 'none', color: C.muted, fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}>
           ← Use a different email
         </button>

@@ -4,6 +4,9 @@ const { Resend } = require('resend');
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+// ── In development, fall back to logging the OTP if email fails ──────────────
+const IS_DEV = process.env.NODE_ENV !== 'production';
+
 // Generate JWT
 const generateToken = (user) => {
   return jwt.sign(
@@ -17,11 +20,20 @@ const generateToken = (user) => {
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 // Send verification email
+// NOTE: onboarding@resend.dev can ONLY send to your verified Resend account email.
+// To send to ANY email you must verify a custom domain at resend.com/domains.
+// Until then, set RESEND_TEST_EMAIL in .env to your verified email and all
+// verification emails will be re-routed there during development.
 const sendVerificationEmail = async (email, name, otp) => {
+  // ── DEV REROUTE: if a test email is set, send there instead ─────────────
+  const toEmail = (IS_DEV && process.env.RESEND_TEST_EMAIL)
+    ? process.env.RESEND_TEST_EMAIL
+    : email;
+
   try {
     await resend.emails.send({
       from: 'onboarding@resend.dev',
-      to: email,
+      to:   toEmail,
       subject: '🎨 Verify your 57 Arts & Customs account',
       html: `
         <!DOCTYPE html>
@@ -37,6 +49,9 @@ const sendVerificationEmail = async (email, name, otp) => {
             <div style="padding:32px;">
               <p style="color:#c9a84c;font-size:10px;font-weight:900;letter-spacing:0.2em;text-transform:uppercase;margin-bottom:12px;">Email Verification</p>
               <h1 style="color:#f0ece4;font-size:24px;font-weight:900;margin-bottom:8px;">Welcome, ${name}!</h1>
+              ${IS_DEV && process.env.RESEND_TEST_EMAIL && toEmail !== email
+                ? `<p style="color:#f97316;font-size:11px;background:#1a0a00;border:1px solid #f97316;border-radius:8px;padding:8px 12px;margin-bottom:16px;">⚠️ DEV MODE: Original recipient was <strong>${email}</strong></p>`
+                : ''}
               <p style="color:#606060;font-size:13px;line-height:1.8;margin-bottom:28px;">
                 Use the code below to verify your email address. This code expires in <strong style="color:#f0ece4;">10 minutes</strong>.
               </p>
@@ -56,9 +71,19 @@ const sendVerificationEmail = async (email, name, otp) => {
         </html>
       `,
     });
-    console.log('✅ Verification email sent to:', email);
+
+    if (IS_DEV && process.env.RESEND_TEST_EMAIL && toEmail !== email) {
+      console.log(`✅ Verification email rerouted: ${email} → ${toEmail}`);
+    } else {
+      console.log('✅ Verification email sent to:', toEmail);
+    }
+    return true; // email delivered (directly or via reroute)
   } catch (err) {
     console.error('❌ Email send error:', err.message);
+    if (IS_DEV) {
+      console.log(`\n⚡ DEV FALLBACK — OTP for ${email}: ${otp}\n`);
+      return false; // email failed — caller should expose devOtp
+    }
     throw err;
   }
 };
@@ -77,14 +102,15 @@ exports.register = async (req, res) => {
       // If user exists but not verified, resend OTP
       if (!existingUser.isEmailVerified) {
         const otp = generateOTP();
-        existingUser.emailOTP         = otp;
-        existingUser.emailOTPExpires  = new Date(Date.now() + 10 * 60 * 1000);
+        existingUser.emailOTP        = otp;
+        existingUser.emailOTPExpires = new Date(Date.now() + 10 * 60 * 1000);
         await existingUser.save();
-        await sendVerificationEmail(email, existingUser.name, otp);
+        const delivered1 = await sendVerificationEmail(email, existingUser.name, otp);
         return res.status(200).json({
           message: 'Account exists but not verified. New OTP sent.',
           requiresVerification: true,
           email,
+          ...(IS_DEV && !delivered1 && { devOtp: otp }),
         });
       }
       return res.status(400).json({ message: 'Email already registered' });
@@ -98,18 +124,18 @@ exports.register = async (req, res) => {
       name, email, password,
       role: assignedRole,
       isEmailVerified: false,
-      emailOTP: otp,
-      emailOTPExpires: new Date(Date.now() + 10 * 60 * 1000), // 10 mins
+      emailOTP:        otp,
+      emailOTPExpires: new Date(Date.now() + 10 * 60 * 1000),
     });
     await user.save();
 
-    // Send verification email
-    await sendVerificationEmail(email, name, otp);
+    const delivered2 = await sendVerificationEmail(email, name, otp);
 
     res.status(201).json({
       message: 'Account created! Check your email for the verification code.',
       requiresVerification: true,
       email,
+      ...(IS_DEV && !delivered2 && { devOtp: otp }),
     });
 
   } catch (error) {
@@ -142,10 +168,9 @@ exports.verifyEmail = async (req, res) => {
       return res.status(400).json({ message: 'Code expired. Please register again to get a new code.' });
     }
 
-    // Mark as verified and clear OTP
-    user.isEmailVerified  = true;
-    user.emailOTP         = undefined;
-    user.emailOTPExpires  = undefined;
+    user.isEmailVerified = true;
+    user.emailOTP        = undefined;
+    user.emailOTPExpires = undefined;
     await user.save();
 
     const token = generateToken(user);
@@ -172,7 +197,7 @@ exports.resendOTP = async (req, res) => {
   try {
     const { email } = req.body;
     const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (!user)               return res.status(404).json({ message: 'User not found' });
     if (user.isEmailVerified) return res.status(400).json({ message: 'Email already verified' });
 
     const otp = generateOTP();
@@ -180,8 +205,12 @@ exports.resendOTP = async (req, res) => {
     user.emailOTPExpires = new Date(Date.now() + 10 * 60 * 1000);
     await user.save();
 
-    await sendVerificationEmail(email, user.name, otp);
-    res.json({ message: 'New verification code sent!' });
+    const delivered3 = await sendVerificationEmail(email, user.name, otp);
+
+    res.json({
+      message: 'New verification code sent!',
+      ...(IS_DEV && !delivered3 && { devOtp: otp }),
+    });
 
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -202,19 +231,18 @@ exports.login = async (req, res) => {
 
     if (!user.isActive) return res.status(403).json({ message: 'Account is deactivated' });
 
-    // Check email verification
     if (!user.isEmailVerified) {
-      // Resend OTP automatically
       const otp = generateOTP();
       user.emailOTP        = otp;
       user.emailOTPExpires = new Date(Date.now() + 10 * 60 * 1000);
       await user.save();
-      await sendVerificationEmail(email, user.name, otp);
+      const delivered4 = await sendVerificationEmail(email, user.name, otp);
 
       return res.status(403).json({
         message: 'Please verify your email first. A new code has been sent.',
         requiresVerification: true,
         email,
+        ...(IS_DEV && !delivered4 && { devOtp: otp }),
       });
     }
 
