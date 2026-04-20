@@ -12,8 +12,14 @@ const userSchema = new mongoose.Schema({
     city:       { type: String, default: '' },
     country:    { type: String, default: '' },
   },
-  profileImage: { type: String, default: '' },
-  isActive:     { type: Boolean, default: true },
+  profileImage:     { type: String, default: '' },
+  isActive:         { type: Boolean, default: true },
+
+  // ✅ Email verification fields
+  isEmailVerified:  { type: Boolean, default: false },
+  emailOTP:         { type: String },
+  emailOTPExpires:  { type: Date },
+
 }, { timestamps: true });
 
 userSchema.pre('save', async function () {

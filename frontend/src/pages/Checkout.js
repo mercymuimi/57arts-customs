@@ -64,6 +64,39 @@ const Checkout = () => {
   const shipping = calcShipping(subtotal);
   const total    = subtotal + shipping;
 
+  // ── GPS Location ──────────────────────────────────────────────────────────
+  const [gpsLoading, setGpsLoading] = React.useState(false);
+  const [gpsError, setGpsError]     = React.useState('');
+
+  const detectLocation = () => {
+    if (!navigator.geolocation) { setGpsError('Geolocation not supported by your browser.'); return; }
+    setGpsLoading(true); setGpsError('');
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
+          const data = await res.json();
+          const addr = data.address || {};
+          setForm(prev => ({
+            ...prev,
+            address: [addr.road, addr.neighbourhood, addr.suburb].filter(Boolean).join(', ') || prev.address,
+            city:    addr.city || addr.town || addr.village || addr.county || prev.city,
+            country: addr.country || prev.country,
+          }));
+        } catch {
+          setGpsError('Could not fetch address. Please fill in manually.');
+        } finally { setGpsLoading(false); }
+      },
+      (err) => {
+        setGpsLoading(false);
+        if (err.code === 1) setGpsError('Location access denied. Please allow location in your browser.');
+        else setGpsError('Could not get your location. Please fill in manually.');
+      },
+      { timeout: 10000 }
+    );
+  };
+
   useEffect(() => {
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, []);
@@ -225,7 +258,18 @@ const Checkout = () => {
           {/* STEP 0 — Delivery */}
           {step === 0 && (
             <div>
-              <h2 style={{ color: C.cream, fontWeight: 900, fontSize: 20, textTransform: 'uppercase', marginBottom: 28 }}>Delivery Details</h2>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+                <h2 style={{ color: C.cream, fontWeight: 900, fontSize: 20, textTransform: 'uppercase' }}>Delivery Details</h2>
+                <button type="button" onClick={detectLocation} disabled={gpsLoading}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, backgroundColor: gpsLoading ? C.faint : 'rgba(201,168,76,0.1)', border: `1px solid ${gpsLoading ? C.border : C.gold}`, color: gpsLoading ? C.muted : C.gold, padding: '9px 16px', borderRadius: 10, fontWeight: 900, fontSize: 11, cursor: gpsLoading ? 'not-allowed' : 'pointer', letterSpacing: '0.04em' }}>
+                  {gpsLoading ? '📡 Detecting...' : '📍 Use My Location'}
+                </button>
+              </div>
+              {gpsError && (
+                <div style={{ backgroundColor: 'rgba(224,92,92,0.1)', border: '1px solid rgba(224,92,92,0.3)', borderRadius: 10, padding: '10px 14px', marginBottom: 16 }}>
+                  <p style={{ color: '#e05c5c', fontSize: 12 }}>{gpsError}</p>
+                </div>
+              )}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                   {[{ key: 'name', label: 'Full Name', placeholder: 'Your name', type: 'text' }, { key: 'email', label: 'Email', placeholder: 'you@example.com', type: 'email' }].map(({ key, label, placeholder, type }) => (
