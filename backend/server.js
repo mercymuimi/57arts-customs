@@ -13,6 +13,7 @@ const vendorRoutes    = require('./routes/vendorRoutes');
 const affiliateRoutes = require('./routes/affiliateRoutes');
 const reviewRoutes    = require('./routes/reviewRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
 
@@ -35,6 +36,7 @@ app.use('/api/vendors',    vendorRoutes);
 app.use('/api/affiliates', affiliateRoutes);
 app.use('/api/reviews',    reviewRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'Welcome to 57 Arts & Customs API!' });

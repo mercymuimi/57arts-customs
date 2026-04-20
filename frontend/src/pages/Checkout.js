@@ -60,7 +60,8 @@ const Checkout = () => {
 
   const [cardForm, setCardForm] = useState({ number: '', expiry: '', cvv: '', holder: '' });
 
-  const shipping = subtotal > 50000 ? 0 : 500;
+  //const shipping = subtotal > 50000 ? 0 : 500;
+  const shipping = 0;
   const total    = subtotal + shipping;
 
   useEffect(() => {

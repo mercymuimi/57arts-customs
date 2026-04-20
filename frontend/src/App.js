@@ -84,6 +84,7 @@ function App() {
               <Route path="/admin" element={
                 <ProtectedRoute role="admin"><AdminDashboard /></ProtectedRoute>
               } />
+              <Route path="/order-tracking/:id" element={<OrderTracking />} />
 
             </Routes>
           </Router>

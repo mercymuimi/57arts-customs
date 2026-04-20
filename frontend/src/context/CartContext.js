@@ -21,31 +21,14 @@ const writeCart = (key, items) => {
   } catch {}
 };
 
-/**
- * Extracts a valid MongoDB ObjectId string from a product object.
- * Prefers _id, falls back to id — but ONLY if it looks like an ObjectId (24 hex chars).
- * Never returns a slug.
- */
-const extractProductId = (product) => {
-  const candidates = [product._id, product.id];
-  for (const candidate of candidates) {
-    if (candidate && /^[a-f\d]{24}$/i.test(String(candidate))) {
-      return String(candidate);
-    }
-  }
-  // If neither is a valid ObjectId, warn and return null so the caller can handle it
-  console.warn('[CartContext] Could not extract a valid MongoDB ObjectId from product:', product);
-  return null;
-};
-
 export const CartProvider = ({ children }) => {
   const { user } = useAuth();
 
-  // Initialize directly from localStorage
+  // ✅ Initialize directly from localStorage — no useEffect needed for loading
   const [items, setItems] = useState(() => readCart(getKey(user)));
   const [storageKey, setStorageKey] = useState(() => getKey(user));
 
-  // When user logs in/out, switch to their cart immediately
+  // ✅ When user logs in/out, switch to their cart immediately
   useEffect(() => {
     const newKey = getKey(user);
     if (newKey !== storageKey) {
@@ -54,42 +37,26 @@ export const CartProvider = ({ children }) => {
     }
   }, [user]);
 
-  // Persist on every change
+  // ✅ Persist on every change
   useEffect(() => {
     writeCart(storageKey, items);
   }, [items, storageKey]);
 
   const addToCart = useCallback((product, qty = 1) => {
-    // ✅ FIX: Always extract a real MongoDB ObjectId — never a slug
-    const id = extractProductId(product);
-
-    if (!id) {
-      console.error(
-        '[CartContext] addToCart: product is missing a valid MongoDB _id. ' +
-        'Make sure you pass the full product object from the API response. ' +
-        'Product received:', product
-      );
-      return; // Don't add invalid items to cart
-    }
-
     setItems(prev => {
+      const id = product._id || product.id;
       const existing = prev.find(i => i.id === id);
       if (existing) {
         return prev.map(i => i.id === id ? { ...i, qty: i.qty + qty } : i);
       }
       return [...prev, {
-        id,                                              // ✅ always a MongoDB ObjectId string
-        _id:      id,                                    // ✅ explicit alias for safety
+        id,
         name:     product.name,
         price:    product.price,
         img:      product.images?.[0] || product.img || '',
         category: product.category,
-        slug:     product.slug || '',                   // kept for navigation/links only
-        vendorId: product.vendor?._id                   // ✅ store vendor ObjectId if present
-                    || product.vendor
-                    || product.vendorId
-                    || null,
-        desc:     product.description || product.desc || '',
+        slug:     product.slug,
+        desc:     product.description || '',
         qty,
       }];
     });
@@ -115,7 +82,7 @@ export const CartProvider = ({ children }) => {
   }, []);
 
   const isInCart = useCallback((productId) => {
-    return items.some(i => i.id === productId || i._id === productId);
+    return items.some(i => i.id === productId);
   }, [items]);
 
   const itemCount = items.reduce((s, i) => s + i.qty, 0);

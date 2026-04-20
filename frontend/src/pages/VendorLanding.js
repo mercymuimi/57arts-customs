@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { vendorAPI, authAPI } from '../services/api';
 
-// ── DESIGN TOKENS ─────────────────────────────────────────────────────────────
 const C = {
   bg: '#0a0a0a', surface: '#111111', border: '#1c1c1c', bHov: '#2e2e2e',
   faint: '#242424', cream: '#f0ece4', muted: '#606060', dim: '#333333',
@@ -17,36 +18,19 @@ const s = {
   card:     { backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 16 },
 };
 
-const stats = [
-  { value: '2,400+', label: 'Active buyers'  },
-  { value: '50+',    label: 'Countries reached' },
-  { value: 'KES 0',  label: 'Setup fee'      },
-  { value: '8%',     label: 'Commission only' },
-];
+// Map form craft to Vendor model category enum
+const craftToCategory = (craft) => {
+  if (!craft) return 'fashion';
+  const c = craft.toLowerCase();
+  if (c.includes('furniture') || c.includes('wood')) return 'furniture';
+  if (c.includes('antique') || c.includes('ceramic') || c.includes('metal') || c.includes('sculpture')) return 'antiques';
+  return 'fashion';
+};
 
-const steps = [
-  { num: '01', title: 'Apply',        desc: 'Fill in your artisan profile, upload portfolio photos, and tell us about your craft.' },
-  { num: '02', title: 'Get verified', desc: 'Our team reviews your application within 48 hours. We verify quality and authenticity.' },
-  { num: '03', title: 'List your work',desc: 'Upload products, set prices, and configure your custom order settings.' },
-  { num: '04', title: 'Start selling', desc: 'Receive orders, chat with buyers, get paid via M-Pesa or bank transfer.' },
-];
-
-const benefits = [
-  { icon: '💳', title: 'M-Pesa payouts',       desc: 'Get paid weekly directly to your Safaricom number. No bank account required.' },
-  { icon: '🎨', title: 'Custom order studio',   desc: 'Buyers submit detailed briefs. You quote, produce, and track everything in one place.' },
-  { icon: '🌍', title: 'Global buyers',         desc: 'Your products are discoverable by buyers in 50+ countries from day one.' },
-  { icon: '🤖', title: 'AI recommendations',    desc: 'Our recommendation engine surfaces your products to the right buyers automatically.' },
-  { icon: '💬', title: 'Direct messaging',      desc: 'Chat directly with buyers about specifications, progress, and delivery.' },
-  { icon: '📊', title: 'Sales analytics',       desc: 'Track views, conversions, revenue, and top products from your dashboard.' },
-];
-
-const faqs = [
-  { q: 'How much does it cost to join?',       a: 'Nothing upfront. We charge an 8% commission only on completed sales. No listing fees, no monthly subscriptions.' },
-  { q: 'How do I get paid?',                   a: 'Payouts are processed weekly via M-Pesa or bank transfer. You can track all earnings in your vendor dashboard.' },
-  { q: 'Can I accept custom orders?',          a: 'Yes — custom orders are a core feature. Buyers submit detailed briefs and you respond with a quote and timeline.' },
-  { q: 'What products can I sell?',            a: 'Fashion, furniture, beadwork, jewellery, and decorative arts. Products must be handmade or handcrafted.' },
-  { q: 'Do I need a business registration?',   a: 'Not to start. Individual artisans are welcome. Business registration helps with higher payout limits.' },
-];
+const stats    = [{ value: '2,400+', label: 'Active buyers' }, { value: '50+', label: 'Countries reached' }, { value: 'KES 0', label: 'Setup fee' }, { value: '8%', label: 'Commission only' }];
+const steps    = [{ num: '01', title: 'Apply', desc: 'Fill in your artisan profile, upload portfolio photos, and tell us about your craft.' }, { num: '02', title: 'Get verified', desc: 'Our team reviews your application within 48 hours. We verify quality and authenticity.' }, { num: '03', title: 'List your work', desc: 'Upload products, set prices, and configure your custom order settings.' }, { num: '04', title: 'Start selling', desc: 'Receive orders, chat with buyers, get paid via M-Pesa or bank transfer.' }];
+const benefits = [{ icon: '💳', title: 'M-Pesa payouts', desc: 'Get paid weekly directly to your Safaricom number. No bank account required.' }, { icon: '🎨', title: 'Custom order studio', desc: 'Buyers submit detailed briefs. You quote, produce, and track everything in one place.' }, { icon: '🌍', title: 'Global buyers', desc: 'Your products are discoverable by buyers in 50+ countries from day one.' }, { icon: '🤖', title: 'AI recommendations', desc: 'Our recommendation engine surfaces your products to the right buyers automatically.' }, { icon: '💬', title: 'Direct messaging', desc: 'Chat directly with buyers about specifications, progress, and delivery.' }, { icon: '📊', title: 'Sales analytics', desc: 'Track views, conversions, revenue, and top products from your dashboard.' }];
+const faqs     = [{ q: 'How much does it cost to join?', a: 'Nothing upfront. We charge an 8% commission only on completed sales. No listing fees, no monthly subscriptions.' }, { q: 'How do I get paid?', a: 'Payouts are processed weekly via M-Pesa or bank transfer. You can track all earnings in your vendor dashboard.' }, { q: 'Can I accept custom orders?', a: 'Yes — custom orders are a core feature. Buyers submit detailed briefs and you respond with a quote and timeline.' }, { q: 'What products can I sell?', a: 'Fashion, furniture, beadwork, jewellery, and decorative arts. Products must be handmade or handcrafted.' }, { q: 'Do I need a business registration?', a: 'Not to start. Individual artisans are welcome. Business registration helps with higher payout limits.' }];
 
 const Footer = () => (
   <footer style={{ backgroundColor: C.surface, borderTop: `1px solid ${C.border}`, padding: '52px 0 32px' }}>
@@ -58,8 +42,7 @@ const Footer = () => (
         </Link>
         <div style={{ display: 'flex', gap: 24 }}>
           {[['Affiliate Programme', '/affiliate'], ['Shop', '/shop'], ['Contact', '/contact'], ['← Home', '/']].map(([l, p]) => (
-            <Link key={l} to={p} style={{ color: C.muted, fontSize: 12, textDecoration: 'none' }}
-              onMouseEnter={e => e.target.style.color = C.cream} onMouseLeave={e => e.target.style.color = C.muted}>{l}</Link>
+            <Link key={l} to={p} style={{ color: C.muted, fontSize: 12, textDecoration: 'none' }}>{l}</Link>
           ))}
         </div>
         <p style={{ color: C.dim, fontSize: 11 }}>© 2024 57 Arts & Customs.</p>
@@ -69,34 +52,73 @@ const Footer = () => (
 );
 
 const VendorLanding = () => {
-  const [form, setForm]         = useState({ name: '', email: '', craft: '', phone: '', instagram: '', story: '' });
+  const { isLoggedIn, user, login, refreshUser } = useAuth();
+  const navigate = useNavigate();
+
+  const [form, setForm]         = useState({ name: '', email: '', password: '', craft: '', phone: '', instagram: '', story: '' });
   const [submitted, setSubmitted] = useState(false);
   const [openFaq, setOpenFaq]   = useState(null);
   const [errors, setErrors]     = useState({});
+  const [submitting, setSubmitting] = useState(false);
+  const [apiError, setApiError] = useState('');
 
   const validate = () => {
     const e = {};
-    if (!form.name.trim()) e.name = 'Required';
-    if (!form.email.trim()) e.email = 'Required';
-    if (!form.craft) e.craft = 'Required';
+    if (!isLoggedIn && !form.name.trim())  e.name = 'Required';
+    if (!isLoggedIn && !form.email.trim()) e.email = 'Required';
+    if (!isLoggedIn && form.password.length < 6) e.password = 'Min 6 characters';
+    if (!form.craft)  e.craft = 'Required';
     if (!form.story.trim() || form.story.trim().length < 30) e.story = 'Tell us more (min 30 chars)';
-    setErrors(e); return Object.keys(e).length === 0;
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
 
   const inputStyle = (field) => ({ ...s.input, borderColor: errors[field] ? C.err : C.border });
+
+  const handleSubmit = async () => {
+    if (!validate()) return;
+    setSubmitting(true);
+    setApiError('');
+    try {
+      let token = localStorage.getItem('57arts_token');
+
+      // If not logged in, register + login first
+      if (!isLoggedIn) {
+        const regRes = await authAPI.register({ name: form.name, email: form.email, password: form.password, phone: form.phone });
+        token = regRes.data.token;
+        login(regRes.data.user, token);
+      }
+
+      // Register vendor profile
+      await vendorAPI.register({
+        storeName: isLoggedIn ? (user.name + "'s Studio") : form.name + "'s Studio",
+        storeDescription: form.story,
+        category: craftToCategory(form.craft),
+      });
+
+      // Refresh user role to vendor
+      await refreshUser();
+      setSubmitted(true);
+
+    } catch (err) {
+      setApiError(err.response?.data?.message || 'Something went wrong. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (submitted) {
     return (
       <div style={{ backgroundColor: C.bg, color: C.cream, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ maxWidth: 440, width: '100%', textAlign: 'center', padding: '0 24px' }}>
           <div style={{ width: 72, height: 72, borderRadius: '50%', backgroundColor: C.gold, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', fontSize: 26 }}>✦</div>
-          <h1 style={{ color: C.cream, fontWeight: 900, fontSize: 28, textTransform: 'uppercase', marginBottom: 12 }}>Application Received!</h1>
+          <h1 style={{ color: C.cream, fontWeight: 900, fontSize: 28, textTransform: 'uppercase', marginBottom: 12 }}>You're a Vendor!</h1>
           <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.8, marginBottom: 28 }}>
-            Thanks <span style={{ color: C.gold, fontWeight: 900 }}>{form.name}</span>! We'll review your application and get back to you at <span style={{ color: C.gold }}>{form.email}</span> within 48 hours.
+            Welcome to the 57 Arts vendor community! Your store is now live.
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
             <Link to="/" style={s.btnGhost}>Back to Home</Link>
-            <Link to="/shop" style={s.btnGold}>Browse the Shop →</Link>
+            <button onClick={() => navigate('/vendor/dashboard')} style={s.btnGold}>Go to Dashboard →</button>
           </div>
         </div>
       </div>
@@ -188,11 +210,9 @@ const VendorLanding = () => {
             {faqs.map((faq, i) => (
               <div key={i} style={{ ...s.card, overflow: 'hidden' }}>
                 <button onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
-                  onMouseEnter={e => e.currentTarget.style.backgroundColor = C.faint}
-                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
                   <span style={{ color: C.cream, fontWeight: 900, fontSize: 13 }}>{faq.q}</span>
-                  <span style={{ color: C.gold, fontWeight: 900, fontSize: 18, transition: 'transform 0.2s', transform: openFaq === i ? 'rotate(45deg)' : 'none', flexShrink: 0, marginLeft: 12 }}>+</span>
+                  <span style={{ color: C.gold, fontWeight: 900, fontSize: 18, transform: openFaq === i ? 'rotate(45deg)' : 'none', flexShrink: 0, marginLeft: 12, display: 'inline-block', transition: 'transform 0.2s' }}>+</span>
                 </button>
                 {openFaq === i && (
                   <div style={{ padding: '0 20px 16px', borderTop: `1px solid ${C.border}` }}>
@@ -209,52 +229,83 @@ const VendorLanding = () => {
           <div style={{ height: 3, backgroundColor: C.gold }} />
           <div style={{ padding: '22px 28px', borderBottom: `1px solid ${C.border}` }}>
             <p style={s.eyebrow}>Apply now</p>
-            <h2 style={{ color: C.cream, fontWeight: 900, fontSize: 20 }}>Apply to become a vendor</h2>
-            <p style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>Free to apply · 48hr review · No commitment</p>
+            <h2 style={{ color: C.cream, fontWeight: 900, fontSize: 20 }}>
+              {isLoggedIn ? `Apply as ${user?.name}` : 'Apply to become a vendor'}
+            </h2>
+            <p style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>Free to apply · Instant approval · No commitment</p>
           </div>
           <div style={{ padding: 28, display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-              {[['Full Name', 'name', 'text', 'Your name'], ['Email', 'email', 'email', 'hello@yourstudio.com']].map(([label, field, type, ph]) => (
-                <div key={field}>
-                  <label style={s.label}>{label}</label>
-                  <input type={type} value={form[field]} placeholder={ph} onChange={e => setForm({ ...form, [field]: e.target.value })}
-                    style={inputStyle(field)} onFocus={e => e.target.style.borderColor = C.bHov} onBlur={e => e.target.style.borderColor = errors[field] ? C.err : C.border} />
-                  {errors[field] && <p style={{ color: C.err, fontSize: 11, marginTop: 4 }}>{errors[field]}</p>}
+
+            {/* Only show name/email/password if not logged in */}
+            {!isLoggedIn && (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                  {[['Full Name','name','text','Your name'],['Email','email','email','hello@yourstudio.com']].map(([label,field,type,ph]) => (
+                    <div key={field}>
+                      <label style={s.label}>{label}</label>
+                      <input type={type} value={form[field]} placeholder={ph} onChange={e => setForm({...form,[field]:e.target.value})} style={inputStyle(field)} />
+                      {errors[field] && <p style={{ color: C.err, fontSize: 11, marginTop: 4 }}>{errors[field]}</p>}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+                <div>
+                  <label style={s.label}>Password</label>
+                  <input type="password" value={form.password} placeholder="Min 6 characters" onChange={e => setForm({...form,password:e.target.value})} style={inputStyle('password')} />
+                  {errors.password && <p style={{ color: C.err, fontSize: 11, marginTop: 4 }}>{errors.password}</p>}
+                </div>
+              </>
+            )}
+
+            {isLoggedIn && (
+              <div style={{ backgroundColor: C.faint, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 16px' }}>
+                <p style={{ color: C.muted, fontSize: 11 }}>Applying as: <span style={{ color: C.gold, fontWeight: 900 }}>{user?.name} ({user?.email})</span></p>
+              </div>
+            )}
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               <div>
                 <label style={s.label}>Craft Category</label>
-                <select value={form.craft} onChange={e => setForm({ ...form, craft: e.target.value })} style={inputStyle('craft')}>
+                <select value={form.craft} onChange={e => setForm({...form,craft:e.target.value})} style={inputStyle('craft')}>
                   <option value="" disabled>Select your craft</option>
-                  {['Fashion & Apparel','Furniture & Woodwork','Beads & Jewellery','Paintings & Visual Art','Ceramics & Pottery','Metalwork & Sculpture','Textiles & Weaving','Other'].map(o => <option key={o}>{o}</option>)}
+                  {['Fashion & Apparel','Furniture & Woodwork','Beads & Jewellery','Antiques & Art','Ceramics & Pottery','Metalwork & Sculpture','Textiles & Weaving','Other'].map(o=><option key={o}>{o}</option>)}
                 </select>
                 {errors.craft && <p style={{ color: C.err, fontSize: 11, marginTop: 4 }}>{errors.craft}</p>}
               </div>
               <div>
                 <label style={s.label}>Phone (M-Pesa)</label>
-                <input type="text" value={form.phone} placeholder="+254 7XX XXX XXX" onChange={e => setForm({ ...form, phone: e.target.value })}
-                  style={s.input} onFocus={e => e.target.style.borderColor = C.bHov} onBlur={e => e.target.style.borderColor = C.border} />
+                <input type="text" value={form.phone} placeholder="+254 7XX XXX XXX" onChange={e => setForm({...form,phone:e.target.value})} style={s.input} />
               </div>
             </div>
+
             <div>
               <label style={s.label}>Instagram / Portfolio (optional)</label>
-              <input type="text" value={form.instagram} placeholder="@yourstudio or portfolio URL" onChange={e => setForm({ ...form, instagram: e.target.value })}
-                style={s.input} onFocus={e => e.target.style.borderColor = C.bHov} onBlur={e => e.target.style.borderColor = C.border} />
+              <input type="text" value={form.instagram} placeholder="@yourstudio or portfolio URL" onChange={e => setForm({...form,instagram:e.target.value})} style={s.input} />
             </div>
+
             <div>
               <label style={s.label}>Tell us about your craft</label>
-              <textarea value={form.story} onChange={e => setForm({ ...form, story: e.target.value })} rows={5}
+              <textarea value={form.story} onChange={e => setForm({...form,story:e.target.value})} rows={5}
                 placeholder="What do you make, how long have you been doing it, what makes your work distinctive..."
-                style={{ ...inputStyle('story'), resize: 'none', lineHeight: 1.7 }}
-                onFocus={e => e.target.style.borderColor = C.bHov} onBlur={e => e.target.style.borderColor = errors.story ? C.err : C.border} />
+                style={{ ...inputStyle('story'), resize: 'none', lineHeight: 1.7 }} />
               {errors.story && <p style={{ color: C.err, fontSize: 11, marginTop: 4 }}>{errors.story}</p>}
             </div>
-            <button onClick={() => { if (validate()) setSubmitted(true); }}
-              style={{ ...s.btnGold, width: '100%', padding: '14px', borderRadius: 10, textAlign: 'center', boxSizing: 'border-box', letterSpacing: '0.08em' }}>
-              Submit Application — Free →
+
+            {apiError && (
+              <div style={{ backgroundColor: 'rgba(248,113,113,0.1)', border: `1px solid rgba(248,113,113,0.3)`, borderRadius: 10, padding: '12px 16px' }}>
+                <p style={{ color: C.err, fontSize: 12 }}>{apiError}</p>
+              </div>
+            )}
+
+            <button onClick={handleSubmit} disabled={submitting}
+              style={{ ...s.btnGold, width: '100%', padding: '14px', borderRadius: 10, textAlign: 'center', boxSizing: 'border-box', letterSpacing: '0.08em', opacity: submitting ? 0.7 : 1 }}>
+              {submitting ? 'Submitting...' : 'Submit Application — Free →'}
             </button>
+
+            {!isLoggedIn && (
+              <p style={{ color: C.muted, fontSize: 12, textAlign: 'center' }}>
+                Already have an account? <Link to="/login" style={{ color: C.gold, fontWeight: 900, textDecoration: 'none' }}>Login first</Link>
+              </p>
+            )}
           </div>
         </div>
       </div>

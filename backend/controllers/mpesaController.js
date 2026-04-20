@@ -42,12 +42,15 @@ exports.stkPush = async (req, res) => {
     const formattedPhone = formatPhone(phone);
     const callbackUrl    = `${process.env.MPESA_CALLBACK_URL}/api/payments/mpesa/callback`;
 
+    // ✅ Use real amount — sandbox accepts any integer amount
+    const stkAmount = Math.ceil(Number(amount));
+
     const payload = {
       BusinessShortCode: process.env.MPESA_SHORTCODE,
       Password:          password,
       Timestamp:         timestamp,
       TransactionType:   'CustomerPayBillOnline',
-      Amount:            1, // Use 1 for sandbox testing
+      Amount:            stkAmount,
       PartyA:            formattedPhone,
       PartyB:            process.env.MPESA_SHORTCODE,
       PhoneNumber:       formattedPhone,
@@ -55,6 +58,8 @@ exports.stkPush = async (req, res) => {
       AccountReference:  'ArtsPayment',
       TransactionDesc:   'Payment',
     };
+
+    console.log('📱 STK Push:', { phone: formattedPhone, amount: stkAmount });
 
     const { data } = await axios.post(
       'https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest',
@@ -81,8 +86,6 @@ exports.stkPush = async (req, res) => {
 };
 
 // POST /api/payments/mpesa/query
-// ✅ Instead of querying Safaricom (blocked in sandbox),
-// check our local confirmedPayments map populated by callback
 exports.querySTK = async (req, res) => {
   try {
     const { checkoutRequestId } = req.body;
@@ -91,7 +94,6 @@ exports.querySTK = async (req, res) => {
       return res.status(400).json({ message: 'checkoutRequestId is required' });
     }
 
-    // Check if callback already confirmed this payment
     if (confirmedPayments.has(checkoutRequestId)) {
       const paymentData = confirmedPayments.get(checkoutRequestId);
       return res.json({
@@ -102,12 +104,7 @@ exports.querySTK = async (req, res) => {
       });
     }
 
-    // Not confirmed yet
-    res.json({
-      success: true,
-      paid:    false,
-      message: 'Payment not yet confirmed',
-    });
+    res.json({ success: true, paid: false, message: 'Payment not yet confirmed' });
 
   } catch (err) {
     console.error('❌ Query error:', err.message);
@@ -127,9 +124,8 @@ exports.mpesaCallback = async (req, res) => {
     if (ResultCode === 0) {
       const meta = {};
       CallbackMetadata?.Item?.forEach(item => { meta[item.Name] = item.Value; });
-      console.log('✅ Payment confirmed via callback:', meta);
+      console.log('✅ Payment confirmed:', meta);
 
-      // ✅ Store confirmed payment so query endpoint can find it
       confirmedPayments.set(CheckoutRequestID, {
         transactionId: meta.MpesaReceiptNumber,
         amount:        meta.Amount,
@@ -140,7 +136,7 @@ exports.mpesaCallback = async (req, res) => {
       // Clean up after 10 minutes
       setTimeout(() => confirmedPayments.delete(CheckoutRequestID), 10 * 60 * 1000);
     } else {
-      console.log('❌ Payment failed via callback:', ResultDesc);
+      console.log('❌ Payment failed:', ResultDesc);
     }
 
     res.status(200).json({ ResultCode: 0, ResultDesc: 'Accepted' });

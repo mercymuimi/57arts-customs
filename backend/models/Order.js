@@ -9,7 +9,7 @@ const orderItemSchema = new mongoose.Schema({
   vendor: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Vendor',
-    required: false, // ✅ optional — seeded products have no vendor
+    required: false,
   },
   name:     { type: String, required: true },
   image:    { type: String },
@@ -59,9 +59,9 @@ const orderSchema = new mongoose.Schema(
     },
     mpesaTransactionId: { type: String },
 
-    itemsPrice:   { type: Number, required: true },
-    shippingPrice:{ type: Number, default: 0 },
-    totalPrice:   { type: Number, required: true },
+    itemsPrice:    { type: Number, required: true },
+    shippingPrice: { type: Number, default: 0 },
+    totalPrice:    { type: Number, required: true },
 
     orderStatus: {
       type: String,
@@ -71,7 +71,6 @@ const orderSchema = new mongoose.Schema(
 
     notes: { type: String },
 
-    // Affiliate tracking
     affiliateCode:       { type: String },
     affiliate:           { type: mongoose.Schema.Types.ObjectId, ref: 'Affiliate' },
     affiliateCommission: { type: Number, default: 0 },
@@ -83,13 +82,12 @@ const orderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Auto-generate order number
-orderSchema.pre('save', async function (next) {
+// ✅ No next() — modern Mongoose handles async pre-hooks via returned promise
+orderSchema.pre('save', async function () {
   if (!this.orderNumber) {
     const count = await mongoose.model('Order').countDocuments();
-    this.orderNumber = `57AC-${Date.now()}-${String(count + 1).padStart(4, '0')}`;
+    this.orderNumber = `57AC${Date.now()}${String(count + 1).padStart(4, '0')}`;
   }
-  next();
 });
 
 orderSchema.virtual('totalItems').get(function () {

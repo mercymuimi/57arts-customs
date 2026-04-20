@@ -1,187 +1,113 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useParams, useNavigate } from 'react-router-dom';
+import { orderAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
-const steps = [
-  {
-    num: 1,
-    label: 'Order Placed',
-    desc: 'Your order has been received',
-    date: 'Oct 22, 2023 · 9:14 AM',
-    done: true,
-  },
-  {
-    num: 2,
-    label: 'Order Confirmed',
-    desc: 'Artisan accepted your request',
-    date: 'Oct 22, 2023 · 11:30 AM',
-    done: true,
-  },
-  {
-    num: 3,
-    label: 'Crafting',
-    desc: 'Your piece is being handcrafted',
-    date: 'Oct 24, 2023 · 8:00 AM',
-    done: true,
-    active: true,
-  },
-  {
-    num: 4,
-    label: 'Shipped',
-    desc: 'On the way to you',
-    date: 'Est. Oct 28, 2023',
-    done: false,
-  },
-  {
-    num: 5,
-    label: 'Delivered',
-    desc: 'Enjoy your masterpiece',
-    date: 'Est. Oct 30 – Nov 1',
-    done: false,
-  },
-];
+const C = {
+  bg: '#0a0a0a', surface: '#111111', border: '#1c1c1c',
+  cream: '#f0ece4', muted: '#606060', gold: '#c9a84c',
+  green: '#4ade80', red: '#f87171', blue: '#60a5fa',
+};
 
-const timeline = [
-  {
-    time: 'Oct 24 · 8:00 AM',
-    title: 'Crafting Started',
-    desc: 'Master Julian has begun work on your piece.',
-    icon: '🎨',
-    done: true,
-  },
-  {
-    time: 'Oct 23 · 3:45 PM',
-    title: 'Materials Sourced',
-    desc: '24k gold leaf and teak wood confirmed.',
-    icon: '📦',
-    done: true,
-  },
-  {
-    time: 'Oct 22 · 11:30 AM',
-    title: 'Order Confirmed',
-    desc: 'Your artisan accepted the commission.',
-    icon: '✓',
-    done: true,
-  },
-  {
-    time: 'Oct 22 · 9:14 AM',
-    title: 'Order Placed',
-    desc: 'Payment received via M-Pesa.',
-    icon: '💳',
-    done: true,
-  },
-];
+const fmt = (n) => `KSH ${Number(n).toLocaleString()}`;
 
-/* ─── MODAL OVERLAY ─── */
-const Modal = ({ onClose, children }) => (
-  <div
-    className="fixed inset-0 z-50 flex items-center justify-center p-4"
-    style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}
-    onClick={onClose}
-  >
-    <div
-      className="relative w-full max-w-md rounded-2xl border border-gray-700 p-6"
-      style={{ backgroundColor: '#1a1a00' }}
-      onClick={e => e.stopPropagation()}
-    >
-      {/* close btn */}
-      <button
-        onClick={onClose}
-        className="absolute top-4 right-4 text-gray-500 hover:text-white text-lg leading-none"
-      >
-        ✕
-      </button>
-      {children}
+const STATUS_STEPS = ['pending', 'confirmed', 'processing', 'shipped', 'delivered'];
+const STATUS_LABELS = {
+  pending:    'Order Placed',
+  confirmed:  'Confirmed',
+  processing: 'Crafting',
+  shipped:    'Shipped',
+  delivered:  'Delivered',
+  cancelled:  'Cancelled',
+};
+const STATUS_ICONS = {
+  pending:    '📋',
+  confirmed:  '✓',
+  processing: '🎨',
+  shipped:    '🚚',
+  delivered:  '📦',
+  cancelled:  '✕',
+};
+const STATUS_COLOR = {
+  pending:    C.gold,
+  confirmed:  C.blue,
+  processing: C.gold,
+  shipped:    C.blue,
+  delivered:  C.green,
+  cancelled:  C.red,
+};
+
+/* ─── MODAL ─── */
+const Modal = ({ title, onClose, children }) => (
+  <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 24 }}
+    onClick={onClose}>
+    <div style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto' }}
+      onClick={e => e.stopPropagation()}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 24px', borderBottom: `1px solid ${C.border}` }}>
+        <h3 style={{ color: C.cream, fontWeight: 900, fontSize: 15 }}>{title}</h3>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.muted, cursor: 'pointer', fontSize: 18 }}>✕</button>
+      </div>
+      <div style={{ padding: 24 }}>{children}</div>
     </div>
   </div>
 );
 
-/* ─── CANCEL ORDER MODAL ─── */
-const CancelModal = ({ onClose }) => {
+/* ─── CANCEL MODAL ─── */
+const CancelModal = ({ order, onClose, onCancelled }) => {
   const [reason, setReason] = useState('');
-  const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
 
-  const reasons = [
-    'Changed my mind',
-    'Found a better price elsewhere',
-    'Ordered by mistake',
-    'Delivery time too long',
-    'Other',
-  ];
+  const reasons = ['Changed my mind', 'Found a better price elsewhere', 'Ordered by mistake', 'Delivery time too long', 'Other'];
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!reason) return;
-    setSubmitted(true);
+    setLoading(true);
+    try {
+      await orderAPI.cancel(order._id, reason);
+      setDone(true);
+      onCancelled();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to cancel order');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <Modal onClose={onClose}>
-      {!submitted ? (
+    <Modal title="Cancel Order" onClose={onClose}>
+      {!done ? (
         <>
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-red-400 text-xl">⚠</span>
-            <h2 className="text-white font-black text-lg">Cancel Order</h2>
-          </div>
-          <p className="text-gray-400 text-xs mb-5 leading-relaxed">
-            Are you sure you want to cancel <span className="text-white font-black">#AC-98234</span>?
-            Since your order is currently in production, cancellation may not be fully refundable.
+          <p style={{ color: C.muted, fontSize: 13, marginBottom: 20, lineHeight: 1.7 }}>
+            Cancel order <strong style={{ color: C.cream }}>#{order.orderNumber}</strong>? This may affect your refund eligibility.
           </p>
-
-          <p className="text-gray-500 text-xs font-black uppercase tracking-widest mb-2">
-            Reason for cancellation
-          </p>
-          <div className="space-y-2 mb-5">
+          <p style={{ color: C.muted, fontSize: 10, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 10 }}>Reason</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
             {reasons.map(r => (
-              <button
-                key={r}
-                onClick={() => setReason(r)}
-                className={`w-full text-left text-xs px-4 py-3 rounded-xl border font-black transition ${
-                  reason === r
-                    ? 'border-red-500 text-red-400 bg-red-500 bg-opacity-10'
-                    : 'border-gray-700 text-gray-400 hover:border-gray-500 hover:text-white'
-                }`}
-              >
+              <button key={r} onClick={() => setReason(r)}
+                style={{ textAlign: 'left', fontSize: 12, padding: '10px 14px', borderRadius: 10, border: `1px solid ${reason === r ? C.red : C.border}`, backgroundColor: reason === r ? 'rgba(248,113,113,0.08)' : 'transparent', color: reason === r ? C.red : C.muted, cursor: 'pointer', fontWeight: 700 }}>
                 {r}
               </button>
             ))}
           </div>
-
-          <div className="flex gap-3">
-            <button
-              onClick={onClose}
-              className="flex-1 py-3 rounded-xl border border-gray-700 text-gray-400 font-black text-xs hover:border-gray-500 hover:text-white transition"
-            >
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={onClose}
+              style={{ flex: 1, padding: '11px', borderRadius: 10, border: `1px solid ${C.border}`, backgroundColor: 'transparent', color: C.cream, fontWeight: 900, fontSize: 12, cursor: 'pointer' }}>
               Keep Order
             </button>
-            <button
-              onClick={handleSubmit}
-              disabled={!reason}
-              className={`flex-1 py-3 rounded-xl font-black text-xs transition ${
-                reason
-                  ? 'bg-red-600 text-white hover:bg-red-700'
-                  : 'bg-gray-800 text-gray-600 cursor-not-allowed'
-              }`}
-            >
-              Confirm Cancellation
+            <button onClick={handleSubmit} disabled={!reason || loading}
+              style={{ flex: 1, padding: '11px', borderRadius: 10, border: 'none', backgroundColor: reason && !loading ? C.red : C.muted, color: '#000', fontWeight: 900, fontSize: 12, cursor: reason && !loading ? 'pointer' : 'not-allowed' }}>
+              {loading ? 'Cancelling...' : 'Confirm Cancel'}
             </button>
           </div>
         </>
       ) : (
-        <div className="text-center py-4">
-          <div className="w-14 h-14 rounded-full bg-red-500 bg-opacity-20 flex items-center justify-center mx-auto mb-4 text-2xl">
-            ✓
-          </div>
-          <h2 className="text-white font-black text-lg mb-2">Request Submitted</h2>
-          <p className="text-gray-400 text-xs leading-relaxed mb-5">
-            Your cancellation request has been sent. Our team will review it and respond within
-            24 hours. You'll receive a confirmation via email.
-          </p>
-          <p className="text-gray-600 text-xs mb-5">
-            ℹ️ This is a UI simulation — backend integration required to process cancellations.
-          </p>
-          <button
-            onClick={onClose}
-            className="w-full py-3 rounded-xl border border-gray-700 text-gray-300 font-black text-xs hover:border-yellow-400 hover:text-yellow-400 transition"
-          >
+        <div style={{ textAlign: 'center', padding: '20px 0' }}>
+          <p style={{ fontSize: 36, marginBottom: 12 }}>✓</p>
+          <p style={{ color: C.cream, fontWeight: 900, fontSize: 15, marginBottom: 8 }}>Cancellation Submitted</p>
+          <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>Our team will process it within 24 hours.</p>
+          <button onClick={onClose}
+            style={{ padding: '11px 24px', borderRadius: 10, border: `1px solid ${C.border}`, backgroundColor: 'transparent', color: C.cream, fontWeight: 900, fontSize: 12, cursor: 'pointer' }}>
             Close
           </button>
         </div>
@@ -190,644 +116,389 @@ const CancelModal = ({ onClose }) => {
   );
 };
 
-/* ─── REQUEST CHANGES MODAL ─── */
-const ChangesModal = ({ onClose }) => {
-  const [changeType, setChangeType] = useState('');
-  const [message, setMessage] = useState('');
-  const [submitted, setSubmitted] = useState(false);
+/* ─── INVOICE MODAL ─── */
+const InvoiceModal = ({ order, onClose }) => (
+  <Modal title="Invoice" onClose={onClose}>
+    <div style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 12, padding: 20, marginBottom: 16, fontSize: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, paddingBottom: 12, borderBottom: `1px solid ${C.border}` }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ width: 28, height: 28, borderRadius: 6, backgroundColor: C.gold, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 10, color: '#000' }}>57</div>
+          <div>
+            <p style={{ color: C.cream, fontWeight: 900 }}>57 Arts & Customs</p>
+            <p style={{ color: C.muted, fontSize: 10 }}>info@57artscustoms.com</p>
+          </div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <p style={{ color: C.gold, fontWeight: 900 }}>INVOICE</p>
+          <p style={{ color: C.muted }}>#{order.orderNumber}</p>
+        </div>
+      </div>
 
-  const changeTypes = [
-    { label: '🎨 Design / Style', value: 'design' },
-    { label: '📐 Size / Dimensions', value: 'size' },
-    { label: '🪵 Materials', value: 'materials' },
-    { label: '📦 Shipping Address', value: 'shipping' },
-    { label: '✍️ Other', value: 'other' },
-  ];
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+        <div>
+          <p style={{ color: C.muted, fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6 }}>Bill To</p>
+          <p style={{ color: C.cream, fontWeight: 900 }}>{order.shippingAddress?.fullName}</p>
+          <p style={{ color: C.muted }}>{order.shippingAddress?.street}</p>
+          <p style={{ color: C.muted }}>{order.shippingAddress?.city}, {order.shippingAddress?.country}</p>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <p style={{ color: C.muted, fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6 }}>Date</p>
+          <p style={{ color: C.cream, fontWeight: 900 }}>{new Date(order.createdAt).toLocaleDateString()}</p>
+          <p style={{ color: C.muted, fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', marginTop: 8, marginBottom: 4 }}>Payment</p>
+          <p style={{ color: C.cream, fontWeight: 900, textTransform: 'capitalize' }}>{order.paymentMethod}</p>
+        </div>
+      </div>
 
-  const handleSubmit = () => {
-    if (!changeType || !message.trim()) return;
-    setSubmitted(true);
+      <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, overflow: 'hidden', marginBottom: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', padding: '8px 12px', backgroundColor: C.surface, color: C.muted, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+          <span>Item</span><span>Amount</span>
+        </div>
+        {order.items?.map((item, i) => (
+          <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr auto', padding: '10px 12px', borderTop: `1px solid ${C.border}` }}>
+            <div>
+              <p style={{ color: C.cream, fontWeight: 900 }}>{item.name}</p>
+              <p style={{ color: C.muted, fontSize: 10 }}>{item.category} · Qty {item.quantity}</p>
+            </div>
+            <span style={{ color: C.cream, fontWeight: 900 }}>{fmt(item.price * item.quantity)}</span>
+          </div>
+        ))}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', padding: '10px 12px', borderTop: `1px solid ${C.border}` }}>
+          <span style={{ color: C.muted }}>Shipping</span>
+          <span style={{ color: order.shippingPrice === 0 ? C.green : C.cream, fontWeight: 900 }}>{order.shippingPrice === 0 ? 'Free' : fmt(order.shippingPrice)}</span>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderTop: `1px solid ${C.border}` }}>
+        <span style={{ color: C.cream, fontWeight: 900 }}>TOTAL</span>
+        <span style={{ color: C.gold, fontWeight: 900, fontSize: 15 }}>{fmt(order.totalPrice)}</span>
+      </div>
+    </div>
+
+    <div style={{ display: 'flex', gap: 10 }}>
+      <button onClick={onClose}
+        style={{ flex: 1, padding: '11px', borderRadius: 10, border: `1px solid ${C.border}`, backgroundColor: 'transparent', color: C.cream, fontWeight: 900, fontSize: 12, cursor: 'pointer' }}>
+        Close
+      </button>
+      <button onClick={() => window.print()}
+        style={{ flex: 1, padding: '11px', borderRadius: 10, border: 'none', backgroundColor: C.gold, color: '#000', fontWeight: 900, fontSize: 12, cursor: 'pointer' }}>
+        🖨 Print / PDF
+      </button>
+    </div>
+  </Modal>
+);
+
+/* ═══════════════ MAIN PAGE ═══════════════ */
+const OrderTracking = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { isLoggedIn } = useAuth();
+
+  const [order, setOrder]       = useState(null);
+  const [orders, setOrders]     = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState('');
+  const [activeTab, setActiveTab] = useState('timeline');
+  const [modal, setModal]       = useState(null);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+
+  useEffect(() => {
+    if (!isLoggedIn) { navigate('/login'); return; }
+    fetchData();
+  }, [id, isLoggedIn]);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      if (id) {
+        const { data } = await orderAPI.getById(id);
+        setOrder(data.order);
+      } else {
+        const { data } = await orderAPI.getMyOrders();
+        setOrders(data.orders || []);
+        if (data.orders?.length > 0) setOrder(data.orders[0]);
+      }
+    } catch (err) {
+      setError('Failed to load orders.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  return (
-    <Modal onClose={onClose}>
-      {!submitted ? (
-        <>
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-yellow-400 text-xl">↩</span>
-            <h2 className="text-white font-black text-lg">Request Changes</h2>
-          </div>
-          <p className="text-gray-400 text-xs mb-5 leading-relaxed">
-            Send a change request to your artisan for order{' '}
-            <span className="text-white font-black">#AC-98234</span>. Note that changes
-            during crafting may affect delivery time.
-          </p>
+  const getStepIndex = (status) => STATUS_STEPS.indexOf(status);
 
-          <p className="text-gray-500 text-xs font-black uppercase tracking-widest mb-2">
-            Type of Change
-          </p>
-          <div className="grid grid-cols-2 gap-2 mb-4">
-            {changeTypes.map(ct => (
-              <button
-                key={ct.value}
-                onClick={() => setChangeType(ct.value)}
-                className={`text-left text-xs px-3 py-2.5 rounded-xl border font-black transition ${
-                  changeType === ct.value
-                    ? 'border-yellow-400 text-yellow-400 bg-yellow-400 bg-opacity-10'
-                    : 'border-gray-700 text-gray-400 hover:border-gray-500 hover:text-white'
-                }`}
-              >
-                {ct.label}
-              </button>
-            ))}
-          </div>
+  const buildTimeline = (o) => {
+    const events = [];
+    const stepsDone = getStepIndex(o.orderStatus);
+    STATUS_STEPS.forEach((s, i) => {
+      if (i <= stepsDone) {
+        events.unshift({
+          icon: STATUS_ICONS[s],
+          title: STATUS_LABELS[s],
+          desc: s === 'pending' ? 'Payment received.' : s === 'confirmed' ? 'Artisan accepted the commission.' : s === 'processing' ? 'Your piece is being handcrafted.' : s === 'shipped' ? 'On its way to you.' : 'Delivered successfully.',
+          time: new Date(o.createdAt).toLocaleDateString(),
+          done: true,
+        });
+      }
+    });
+    return events;
+  };
 
-          <p className="text-gray-500 text-xs font-black uppercase tracking-widest mb-2">
-            Describe the Change
-          </p>
-          <textarea
-            value={message}
-            onChange={e => setMessage(e.target.value)}
-            placeholder="E.g. Please use a slightly darker wood stain on the frame..."
-            rows={4}
-            className="w-full bg-transparent border border-gray-700 rounded-xl px-4 py-3 text-white text-xs focus:outline-none focus:border-yellow-400 resize-none placeholder-gray-700 mb-5"
-          />
-
-          <div className="flex gap-3">
-            <button
-              onClick={onClose}
-              className="flex-1 py-3 rounded-xl border border-gray-700 text-gray-400 font-black text-xs hover:border-gray-500 hover:text-white transition"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={!changeType || !message.trim()}
-              className={`flex-1 py-3 rounded-xl font-black text-xs transition ${
-                changeType && message.trim()
-                  ? 'bg-yellow-400 text-black hover:bg-yellow-500'
-                  : 'bg-gray-800 text-gray-600 cursor-not-allowed'
-              }`}
-            >
-              Send Request
-            </button>
-          </div>
-        </>
-      ) : (
-        <div className="text-center py-4">
-          <div className="w-14 h-14 rounded-full bg-yellow-400 bg-opacity-20 flex items-center justify-center mx-auto mb-4 text-2xl">
-            ✓
-          </div>
-          <h2 className="text-white font-black text-lg mb-2">Request Sent!</h2>
-          <p className="text-gray-400 text-xs leading-relaxed mb-5">
-            Your change request has been forwarded to Master Julian. They'll review
-            it and respond within 12 hours via the artisan chat.
-          </p>
-          <p className="text-gray-600 text-xs mb-5">
-            ℹ️ This is a UI simulation — backend integration required to send requests.
-          </p>
-          <button
-            onClick={onClose}
-            className="w-full py-3 rounded-xl bg-yellow-400 text-black font-black text-xs hover:bg-yellow-500 transition"
-          >
-            Go to Chat
-          </button>
-        </div>
-      )}
-    </Modal>
+  if (loading) return (
+    <div style={{ backgroundColor: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <p style={{ color: C.muted, fontSize: 13 }}>Loading orders...</p>
+    </div>
   );
-};
 
-/* ─── INVOICE MODAL ─── */
-const InvoiceModal = ({ onClose }) => {
-  const handlePrint = () => window.print();
-
-  return (
-    <Modal onClose={onClose}>
-      <div className="flex items-center gap-2 mb-4">
-        <span className="text-yellow-400 text-xl">📄</span>
-        <h2 className="text-white font-black text-lg">Invoice</h2>
-      </div>
-
-      {/* Invoice preview */}
-      <div
-        className="rounded-xl border border-gray-700 p-4 mb-4 text-xs"
-        style={{ backgroundColor: '#0d0d00' }}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-800">
-          <div className="flex items-center gap-2">
-            <span className="bg-yellow-400 text-black w-7 h-7 rounded flex items-center justify-center font-black text-xs">57</span>
-            <div>
-              <p className="text-white font-black text-sm">57 Arts & Customs</p>
-              <p className="text-gray-600 text-xs">info@57artscustoms.com</p>
-            </div>
-          </div>
-          <div className="text-right">
-            <p className="text-yellow-400 font-black">INVOICE</p>
-            <p className="text-gray-500">#AC-98234</p>
-          </div>
-        </div>
-
-        {/* Bill to / dates */}
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div>
-            <p className="text-gray-500 uppercase tracking-widest mb-1" style={{ fontSize: '9px' }}>Bill To</p>
-            <p className="text-white font-black">Michael Henderson</p>
-            <p className="text-gray-400">1245 Artisan Way</p>
-            <p className="text-gray-400">San Francisco, CA 94103</p>
-          </div>
-          <div className="text-right">
-            <p className="text-gray-500 uppercase tracking-widest mb-1" style={{ fontSize: '9px' }}>Date Issued</p>
-            <p className="text-white font-black">Oct 22, 2023</p>
-            <p className="text-gray-500 uppercase tracking-widest mt-2 mb-1" style={{ fontSize: '9px' }}>Payment Method</p>
-            <p className="text-white font-black">M-Pesa</p>
-          </div>
-        </div>
-
-        {/* Line items */}
-        <div className="border border-gray-800 rounded-lg overflow-hidden mb-3">
-          <div className="grid grid-cols-3 bg-gray-900 px-3 py-2 text-gray-500 uppercase tracking-widest" style={{ fontSize: '9px' }}>
-            <span className="col-span-2">Item</span>
-            <span className="text-right">Amount</span>
-          </div>
-          <div className="grid grid-cols-3 px-3 py-2.5 border-t border-gray-800">
-            <div className="col-span-2">
-              <p className="text-white font-black">Custom Gold Leaf Portrait</p>
-              <p className="text-gray-500">Bespoke · 24k Gold on Teak</p>
-            </div>
-            <span className="text-white font-black text-right">$4,000.00</span>
-          </div>
-          <div className="grid grid-cols-3 px-3 py-2.5 border-t border-gray-800">
-            <div className="col-span-2 text-gray-400">Expedited Global Handling</div>
-            <span className="text-green-400 font-black text-right">FREE</span>
-          </div>
-        </div>
-
-        {/* Totals */}
-        <div className="space-y-1 text-right">
-          <div className="flex justify-between text-gray-500">
-            <span>Subtotal</span><span>$4,000.00</span>
-          </div>
-          <div className="flex justify-between text-gray-500">
-            <span>Tax (6.25%)</span><span>$250.00</span>
-          </div>
-          <div className="flex justify-between text-yellow-400 font-black pt-2 border-t border-gray-800 mt-2">
-            <span>TOTAL</span><span>$4,250.00</span>
-          </div>
-        </div>
-
-        <div className="mt-4 pt-3 border-t border-gray-800 text-center text-gray-600" style={{ fontSize: '9px' }}>
-          Thank you for your order · 57 Arts & Customs · © 2024
-        </div>
-      </div>
-
-      <p className="text-gray-600 text-xs mb-4 text-center">
-        ℹ️ PDF download requires backend integration. Use print to save as PDF.
-      </p>
-
-      <div className="flex gap-3">
-        <button
-          onClick={onClose}
-          className="flex-1 py-3 rounded-xl border border-gray-700 text-gray-400 font-black text-xs hover:border-gray-500 hover:text-white transition"
-        >
-          Close
-        </button>
-        <button
-          onClick={handlePrint}
-          className="flex-1 py-3 rounded-xl bg-yellow-400 text-black font-black text-xs hover:bg-yellow-500 transition"
-        >
-          🖨 Print / Save PDF
-        </button>
-      </div>
-    </Modal>
+  if (error) return (
+    <div style={{ backgroundColor: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
+      <p style={{ color: C.muted, fontSize: 13 }}>{error}</p>
+      <Link to="/shop" style={{ backgroundColor: C.gold, color: '#000', padding: '12px 24px', borderRadius: 10, fontWeight: 900, fontSize: 13, textDecoration: 'none' }}>Browse Shop</Link>
+    </div>
   );
-};
 
-/* ═══════════════════════════════════════════
-   MAIN PAGE
-═══════════════════════════════════════════ */
-const OrderTracking = () => {
-  const [activeTab, setActiveTab] = useState('timeline');
-  const [modal, setModal] = useState(null); // 'cancel' | 'changes' | 'invoice' | null
+  // ── No orders yet ──
+  if (!order && orders.length === 0) return (
+    <div style={{ backgroundColor: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
+      <p style={{ fontSize: 48 }}>◻</p>
+      <p style={{ color: C.cream, fontWeight: 900, fontSize: 18 }}>No Orders Yet</p>
+      <p style={{ color: C.muted, fontSize: 13 }}>Your orders will appear here after checkout.</p>
+      <Link to="/shop" style={{ backgroundColor: C.gold, color: '#000', padding: '12px 24px', borderRadius: 10, fontWeight: 900, fontSize: 13, textDecoration: 'none' }}>Browse Shop →</Link>
+    </div>
+  );
 
-  const currentStep = steps.find(s => s.active) || steps[0];
+  const timeline = order ? buildTimeline(order) : [];
+  const stepIndex = order ? getStepIndex(order.orderStatus) : 0;
 
   return (
-    <div className="min-h-screen text-white" style={{ backgroundColor: '#1a1500' }}>
+    <div style={{ backgroundColor: C.bg, color: C.cream, minHeight: '100vh' }}>
 
       {/* MODALS */}
-      {modal === 'cancel'  && <CancelModal  onClose={() => setModal(null)} />}
-      {modal === 'changes' && <ChangesModal onClose={() => setModal(null)} />}
-      {modal === 'invoice' && <InvoiceModal onClose={() => setModal(null)} />}
+      {modal === 'cancel' && order && (
+        <CancelModal order={order} onClose={() => setModal(null)} onCancelled={fetchData} />
+      )}
+      {modal === 'invoice' && order && (
+        <InvoiceModal order={order} onClose={() => setModal(null)} />
+      )}
 
       {/* BREADCRUMB */}
-      <div style={{ backgroundColor: '#1a1a00' }} className="border-b border-gray-800 px-8 py-4">
-        <div className="max-w-5xl mx-auto flex items-center gap-2 text-xs text-gray-500">
-          <Link to="/" className="hover:text-yellow-400 transition">Home</Link>
+      <div style={{ backgroundColor: C.surface, borderBottom: `1px solid ${C.border}`, padding: '14px 48px' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: C.muted }}>
+          <Link to="/" style={{ color: C.muted, textDecoration: 'none' }}>Home</Link>
           <span>›</span>
-          <Link to="/profile" className="hover:text-yellow-400 transition">My Account</Link>
+          <Link to="/profile" style={{ color: C.muted, textDecoration: 'none' }}>My Account</Link>
           <span>›</span>
-          <span className="text-yellow-400">Order Tracking</span>
+          <span style={{ color: C.gold }}>Order Tracking</span>
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-8 py-8">
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 48px 80px', display: 'grid', gridTemplateColumns: orders.length > 1 ? '220px 1fr' : '1fr', gap: 28 }}>
 
-        {/* ORDER HEADER */}
-        <div
-          className="rounded-2xl p-6 border border-gray-800 mb-6 flex items-center justify-between"
-          style={{ backgroundColor: '#1a1a00' }}
-        >
+        {/* ORDER LIST SIDEBAR (if multiple orders) */}
+        {orders.length > 1 && (
           <div>
-            <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-white font-black text-xl">Order #AC-98234</h1>
-              <span className="bg-yellow-400 bg-opacity-20 text-yellow-400 border border-yellow-900 text-xs font-black px-3 py-1 rounded-full">
-                IN PRODUCTION
-              </span>
+            <p style={{ color: C.muted, fontSize: 10, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 14 }}>Your Orders</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {orders.map(o => (
+                <button key={o._id} onClick={() => setOrder(o)}
+                  style={{ textAlign: 'left', padding: '12px 14px', borderRadius: 10, border: `1px solid ${order?._id === o._id ? C.gold : C.border}`, backgroundColor: order?._id === o._id ? 'rgba(201,168,76,0.06)' : 'transparent', cursor: 'pointer' }}>
+                  <p style={{ color: C.cream, fontWeight: 900, fontSize: 12, marginBottom: 3 }}>#{o.orderNumber}</p>
+                  <p style={{ color: C.muted, fontSize: 11 }}>{o.items?.[0]?.name}</p>
+                  <p style={{ color: STATUS_COLOR[o.orderStatus] || C.muted, fontSize: 10, fontWeight: 700, marginTop: 4 }}>{STATUS_LABELS[o.orderStatus]}</p>
+                </button>
+              ))}
             </div>
-            <p className="text-gray-400 text-sm">Custom Gold Leaf Portrait — by Master Julian</p>
-            <p className="text-gray-600 text-xs mt-1">Placed Oct 22, 2023 · Paid via M-Pesa · $4,250.00</p>
           </div>
-          <div className="text-right">
-            <p className="text-gray-500 text-xs uppercase tracking-widest mb-1">Est. Delivery</p>
-            <p className="text-yellow-400 font-black text-lg">Oct 30 – Nov 1</p>
-            <p className="text-gray-600 text-xs">Expedited Global Handling</p>
-          </div>
-        </div>
+        )}
 
-        {/* PROGRESS STEPS */}
-        <div
-          className="rounded-2xl p-6 border border-gray-800 mb-6"
-          style={{ backgroundColor: '#1a1a00' }}
-        >
-          <div className="flex items-center gap-2 mb-6">
-            <div className="w-5 h-px bg-yellow-400" />
-            <p className="text-yellow-400 text-xs font-black uppercase tracking-widest">Current Status</p>
-          </div>
-
-          <h2 className="text-white font-black text-2xl mb-6">
-            {currentStep.label === 'Crafting' ? 'In Production & Crafting' : currentStep.label}
-          </h2>
-
-          <div className="flex items-center gap-0 mb-6">
-            {steps.map((step, index) => (
-              <React.Fragment key={step.num}>
-                <div className="flex flex-col items-center gap-2 relative">
-                  <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm transition-all ${
-                      step.done
-                        ? 'bg-yellow-400 text-black'
-                        : 'border-2 border-gray-700 text-gray-600'
-                    } ${step.active ? 'ring-4 ring-yellow-400 ring-opacity-30' : ''}`}
-                  >
-                    {step.done ? '✓' : step.num}
-                  </div>
-                  <div className="text-center" style={{ width: '80px' }}>
-                    <p className={`text-xs font-black ${
-                      step.active ? 'text-yellow-400' : step.done ? 'text-white' : 'text-gray-600'
-                    }`}>
-                      {step.label}
-                    </p>
-                  </div>
+        {/* MAIN CONTENT */}
+        {order && (
+          <div>
+            {/* ORDER HEADER */}
+            <div style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: '24px 28px', marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
+                  <h1 style={{ color: C.cream, fontWeight: 900, fontSize: 20 }}>Order #{order.orderNumber}</h1>
+                  <span style={{ backgroundColor: `${STATUS_COLOR[order.orderStatus]}18`, color: STATUS_COLOR[order.orderStatus], border: `1px solid ${STATUS_COLOR[order.orderStatus]}44`, fontSize: 10, fontWeight: 900, padding: '3px 10px', borderRadius: 100, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    {STATUS_LABELS[order.orderStatus]}
+                  </span>
                 </div>
-                {index < steps.length - 1 && (
-                  <div
-                    className={`flex-1 h-0.5 mx-2 mb-6 rounded transition-all ${
-                      steps[index + 1].done || steps[index + 1].active
-                        ? 'bg-yellow-400'
-                        : 'bg-gray-800'
-                    }`}
-                  />
-                )}
-              </React.Fragment>
-            ))}
-          </div>
-
-          <div
-            className="rounded-xl p-4 border border-yellow-900 flex items-center gap-3"
-            style={{ backgroundColor: '#2a2000' }}
-          >
-            <span className="text-2xl">🎨</span>
-            <div>
-              <p className="text-yellow-400 font-black text-sm">Currently: Handcrafting Phase</p>
-              <p className="text-gray-400 text-xs mt-0.5">
-                Your artisan is actively working on your piece. Expected to ship Oct 28.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* TWO COLUMN */}
-        <div className="grid grid-cols-3 gap-6">
-
-          {/* LEFT - TABS */}
-          <div className="col-span-2 space-y-4">
-
-            {/* Artisan Update Card */}
-            <div
-              className="rounded-2xl border border-gray-800 overflow-hidden"
-              style={{ backgroundColor: '#1a1a00' }}
-            >
-              <div className="p-5 border-b border-gray-800 flex items-center gap-2">
-                <span className="text-yellow-400">✦</span>
-                <h3 className="text-white font-black text-sm uppercase tracking-widest">
-                  Artisan Crafting Update
-                </h3>
+                <p style={{ color: C.muted, fontSize: 12 }}>
+                  {order.items?.[0]?.name}{order.items?.length > 1 ? ` + ${order.items.length - 1} more` : ''}
+                </p>
+                <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>
+                  Placed {new Date(order.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} · {order.paymentMethod?.toUpperCase()} · {fmt(order.totalPrice)}
+                </p>
               </div>
-              <div className="p-5">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-yellow-400 flex items-center justify-center font-black text-black text-sm flex-shrink-0">
-                    MJ
-                  </div>
-                  <div className="flex-1">
-                    <div
-                      className="rounded-xl p-4 mb-3 border border-gray-700 relative"
-                      style={{ backgroundColor: '#2a2000' }}
-                    >
-                      <div className="absolute -left-2 top-4 w-3 h-3 rotate-45 border-l border-b border-gray-700"
-                        style={{ backgroundColor: '#2a2000' }} />
-                      <p className="text-gray-300 text-sm leading-relaxed italic">
-                        "The first sketch is complete. I've started applying the first layer of 24k gold
-                        leaf to the frame detailing. It's looking beautiful!"
-                      </p>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-yellow-400 font-black text-sm">— Julian, Master Artisan</p>
-                        <p className="text-gray-600 text-xs">Last updated: 4 hours ago</p>
+              <div style={{ textAlign: 'right' }}>
+                <p style={{ color: C.muted, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Delivery Est.</p>
+                <p style={{ color: C.gold, fontWeight: 900, fontSize: 16 }}>{order.deliveredAt ? new Date(order.deliveredAt).toLocaleDateString() : `${order.items?.[0]?.deliveryTime || '5-7 Business Days'}`}</p>
+              </div>
+            </div>
+
+            {/* PROGRESS STEPS */}
+            {order.orderStatus !== 'cancelled' && (
+              <div style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: '24px 28px', marginBottom: 20 }}>
+                <p style={{ color: C.gold, fontSize: 10, fontWeight: 900, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 6 }}>Current Status</p>
+                <h2 style={{ color: C.cream, fontWeight: 900, fontSize: 22, marginBottom: 24 }}>{STATUS_LABELS[order.orderStatus]}</h2>
+
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  {STATUS_STEPS.map((s, i) => (
+                    <React.Fragment key={s}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                        <div style={{ width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 13, backgroundColor: i <= stepIndex ? C.gold : 'transparent', border: `2px solid ${i <= stepIndex ? C.gold : C.border}`, color: i <= stepIndex ? '#000' : C.muted, boxShadow: i === stepIndex ? `0 0 0 4px rgba(201,168,76,0.2)` : 'none' }}>
+                          {i < stepIndex ? '✓' : i + 1}
+                        </div>
+                        <p style={{ fontSize: 10, fontWeight: 900, color: i === stepIndex ? C.gold : i < stepIndex ? C.cream : C.muted, textAlign: 'center', width: 70 }}>{STATUS_LABELS[s]}</p>
                       </div>
-                      <Link
-                        to="/artisan-chat"
-                        className="flex items-center gap-2 bg-yellow-400 text-black px-4 py-2 rounded-xl font-black text-xs hover:bg-yellow-500 transition"
-                      >
-                        💬 Reply
-                      </Link>
-                    </div>
-                  </div>
+                      {i < STATUS_STEPS.length - 1 && (
+                        <div style={{ flex: 1, height: 2, backgroundColor: i < stepIndex ? C.gold : C.border, margin: '0 4px', marginBottom: 24, borderRadius: 2 }} />
+                      )}
+                    </React.Fragment>
+                  ))}
                 </div>
               </div>
-            </div>
+            )}
 
-            {/* Tabs */}
-            <div
-              className="rounded-2xl border border-gray-800 overflow-hidden"
-              style={{ backgroundColor: '#1a1a00' }}
-            >
-              <div className="flex border-b border-gray-800">
-                {[
-                  { key: 'timeline', label: 'Timeline' },
-                  { key: 'details', label: 'Order Details' },
-                  { key: 'shipping', label: 'Shipping Info' },
-                ].map(tab => (
-                  <button
-                    key={tab.key}
-                    onClick={() => setActiveTab(tab.key)}
-                    className={`flex-1 py-3.5 font-black text-xs uppercase tracking-widest transition border-b-2 -mb-px ${
-                      activeTab === tab.key
-                        ? 'text-yellow-400 border-yellow-400'
-                        : 'text-gray-600 border-transparent hover:text-white'
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
+            {/* TWO COLUMN */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 20 }}>
 
-              {/* TIMELINE */}
-              {activeTab === 'timeline' && (
-                <div className="p-5">
-                  <div className="relative">
-                    <div className="absolute left-4 top-0 bottom-0 w-px bg-gray-800" />
-                    <div className="space-y-5">
-                      {timeline.map((item, i) => (
-                        <div key={i} className="flex items-start gap-4 relative pl-2">
-                          <div
-                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs flex-shrink-0 z-10 ${
-                              item.done
-                                ? 'bg-yellow-400 text-black font-black'
-                                : 'border border-gray-700 text-gray-600'
-                            }`}
-                          >
-                            {item.icon}
-                          </div>
-                          <div className="flex-1 pt-1">
-                            <div className="flex items-center justify-between mb-0.5">
-                              <p className="text-white font-black text-sm">{item.title}</p>
-                              <span className="text-gray-600 text-xs">{item.time}</span>
+              {/* LEFT — TABS */}
+              <div>
+                <div style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}` }}>
+                    {[['timeline','Timeline'], ['details','Order Details'], ['shipping','Shipping']].map(([key, label]) => (
+                      <button key={key} onClick={() => setActiveTab(key)}
+                        style={{ flex: 1, padding: '13px', fontWeight: 900, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', background: 'none', border: 'none', borderBottom: `2px solid ${activeTab === key ? C.gold : 'transparent'}`, color: activeTab === key ? C.gold : C.muted, cursor: 'pointer', marginBottom: -1 }}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* TIMELINE */}
+                  {activeTab === 'timeline' && (
+                    <div style={{ padding: 20 }}>
+                      <div style={{ position: 'relative' }}>
+                        <div style={{ position: 'absolute', left: 15, top: 0, bottom: 0, width: 1, backgroundColor: C.border }} />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                          {timeline.map((item, i) => (
+                            <div key={i} style={{ display: 'flex', gap: 16, position: 'relative' }}>
+                              <div style={{ width: 32, height: 32, borderRadius: '50%', backgroundColor: item.done ? C.gold : C.surface, border: `1px solid ${item.done ? C.gold : C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, flexShrink: 0, zIndex: 1, color: item.done ? '#000' : C.muted }}>
+                                {item.icon}
+                              </div>
+                              <div style={{ paddingTop: 4 }}>
+                                <p style={{ color: C.cream, fontWeight: 900, fontSize: 13, marginBottom: 2 }}>{item.title}</p>
+                                <p style={{ color: C.muted, fontSize: 12, marginBottom: 2 }}>{item.desc}</p>
+                                <p style={{ color: C.muted, fontSize: 11 }}>{item.time}</p>
+                              </div>
                             </div>
-                            <p className="text-gray-400 text-xs">{item.desc}</p>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ORDER DETAILS */}
+                  {activeTab === 'details' && (
+                    <div style={{ padding: 20 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+                        {order.items?.map((item, i) => (
+                          <div key={i} style={{ display: 'flex', gap: 14, alignItems: 'center', padding: '12px 14px', backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 10 }}>
+                            {item.image && <img src={item.image} alt={item.name} style={{ width: 52, height: 52, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />}
+                            <div style={{ flex: 1 }}>
+                              <p style={{ color: C.cream, fontWeight: 900, fontSize: 13, marginBottom: 2 }}>{item.name}</p>
+                              <p style={{ color: C.muted, fontSize: 11 }}>{item.category} · Qty {item.quantity}</p>
+                            </div>
+                            <p style={{ color: C.gold, fontWeight: 900, fontSize: 13 }}>{fmt(item.price * item.quantity)}</p>
                           </div>
+                        ))}
+                      </div>
+                      {[
+                        ['Order Number', `#${order.orderNumber}`],
+                        ['Payment Method', order.paymentMethod?.toUpperCase()],
+                        ['Payment Status', order.paymentStatus?.toUpperCase()],
+                        ['Date Placed', new Date(order.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })],
+                        ['Items Total', fmt(order.itemsPrice)],
+                        ['Shipping', order.shippingPrice === 0 ? 'Free' : fmt(order.shippingPrice)],
+                        ['Total', fmt(order.totalPrice)],
+                      ].map(([label, value]) => (
+                        <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: `1px solid ${C.border}` }}>
+                          <span style={{ color: C.muted, fontSize: 12 }}>{label}</span>
+                          <span style={{ color: label === 'Total' ? C.gold : label === 'Payment Status' && value === 'PAID' ? C.green : C.cream, fontWeight: 900, fontSize: 12 }}>{value}</span>
                         </div>
                       ))}
                     </div>
+                  )}
+
+                  {/* SHIPPING */}
+                  {activeTab === 'shipping' && (
+                    <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                      <div style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16 }}>
+                        <p style={{ color: C.muted, fontSize: 10, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 10 }}>Delivery Address</p>
+                        <p style={{ color: C.cream, fontWeight: 900, fontSize: 13 }}>{order.shippingAddress?.fullName}</p>
+                        <p style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>{order.shippingAddress?.street}</p>
+                        <p style={{ color: C.muted, fontSize: 12 }}>{order.shippingAddress?.city}, {order.shippingAddress?.country}</p>
+                        <p style={{ color: C.muted, fontSize: 12 }}>{order.shippingAddress?.phone}</p>
+                      </div>
+                      <div style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16 }}>
+                        <p style={{ color: C.muted, fontSize: 10, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 10 }}>Shipping</p>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <p style={{ color: C.cream, fontWeight: 900, fontSize: 13 }}>Standard Delivery</p>
+                          <span style={{ color: order.shippingPrice === 0 ? C.green : C.cream, fontWeight: 900, fontSize: 12 }}>{order.shippingPrice === 0 ? 'Free' : fmt(order.shippingPrice)}</span>
+                        </div>
+                      </div>
+                      {order.orderStatus === 'shipped' && (
+                        <div style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16 }}>
+                          <p style={{ color: C.muted, fontSize: 10, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 10 }}>Tracking</p>
+                          <p style={{ color: C.cream, fontWeight: 900, fontSize: 13 }}>57AC-{order.orderNumber}</p>
+                          <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>Track via courier partner</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* RIGHT PANEL */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+                {/* Assistance */}
+                <div style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, overflow: 'hidden' }}>
+                  <div style={{ padding: '16px 18px', borderBottom: `1px solid ${C.border}` }}>
+                    <p style={{ color: C.cream, fontWeight: 900, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Need Help?</p>
+                  </div>
+                  <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <Link to="/artisan-chat"
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, backgroundColor: C.gold, color: '#000', padding: '10px 14px', borderRadius: 10, fontWeight: 900, fontSize: 12, textDecoration: 'none' }}>
+                      💬 Chat with Artisan
+                    </Link>
+                    <Link to="/contact"
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, border: `1px solid ${C.border}`, color: C.cream, padding: '10px 14px', borderRadius: 10, fontWeight: 900, fontSize: 12, textDecoration: 'none' }}>
+                      📞 Contact Support
+                    </Link>
                   </div>
                 </div>
-              )}
 
-              {/* ORDER DETAILS */}
-              {activeTab === 'details' && (
-                <div className="p-5 space-y-4">
-                  <div className="flex items-center gap-4 p-4 rounded-xl border border-gray-800" style={{ backgroundColor: '#2a2000' }}>
-                    <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0">
-                      <img
-                        src="https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=200"
-                        alt="Order"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-white font-black text-sm">Custom Gold Leaf Portrait</p>
-                      <p className="text-gray-400 text-xs mt-0.5">Bespoke Commission · 24k Gold Leaf on Teak</p>
-                      <p className="text-yellow-400 font-black mt-1">$4,250.00</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    {[
-                      { label: 'Order Number', value: '#AC-98234' },
-                      { label: 'Artisan', value: 'Master Julian' },
-                      { label: 'Category', value: 'Custom Furniture' },
-                      { label: 'Payment Method', value: 'M-Pesa' },
-                      { label: 'Payment Status', value: 'PAID ✓' },
-                      { label: 'Date Placed', value: 'October 22, 2023' },
-                    ].map(row => (
-                      <div
-                        key={row.label}
-                        className="flex justify-between py-2.5 border-b border-gray-800 last:border-0"
-                      >
-                        <span className="text-gray-500 text-xs">{row.label}</span>
-                        <span className={`text-xs font-black ${
-                          row.value.includes('PAID') ? 'text-green-400' : 'text-white'
-                        }`}>
-                          {row.value}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* SHIPPING */}
-              {activeTab === 'shipping' && (
-                <div className="p-5 space-y-4">
-                  <div
-                    className="rounded-xl p-4 border border-gray-800"
-                    style={{ backgroundColor: '#2a2000' }}
-                  >
-                    <p className="text-gray-500 text-xs font-black uppercase tracking-widest mb-3">
-                      Delivery Address
-                    </p>
-                    <p className="text-white font-black text-sm">Michael Henderson</p>
-                    <p className="text-gray-400 text-xs mt-1">1245 Artisan Way</p>
-                    <p className="text-gray-400 text-xs">San Francisco, CA 94103</p>
-                    <p className="text-gray-400 text-xs">United States</p>
-                  </div>
-
-                  <div
-                    className="rounded-xl p-4 border border-gray-800"
-                    style={{ backgroundColor: '#2a2000' }}
-                  >
-                    <p className="text-gray-500 text-xs font-black uppercase tracking-widest mb-3">
-                      Shipping Method
-                    </p>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-white font-black text-sm">Expedited Global Art Handling</p>
-                        <p className="text-gray-400 text-xs mt-0.5">3–5 business days · Fully insured</p>
-                      </div>
-                      <span className="text-green-400 font-black text-xs">FREE</span>
-                    </div>
-                  </div>
-
-                  <div
-                    className="rounded-xl p-4 border border-gray-800"
-                    style={{ backgroundColor: '#2a2000' }}
-                  >
-                    <p className="text-gray-500 text-xs font-black uppercase tracking-widest mb-3">
-                      Tracking Number
-                    </p>
-                    <div className="flex items-center justify-between">
-                      <p className="text-white font-black text-sm font-mono tracking-widest">
-                        EGA-2023-AC98234
-                      </p>
-                      <button
-                        onClick={() => navigator.clipboard.writeText('EGA-2023-AC98234')}
-                        className="text-yellow-400 text-xs font-black hover:underline"
-                      >
-                        Copy
+                {/* Order Actions */}
+                <div style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: 16 }}>
+                  <p style={{ color: C.muted, fontSize: 10, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>Order Actions</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <button onClick={() => setModal('invoice')}
+                      style={{ textAlign: 'left', fontSize: 12, padding: '10px 12px', borderRadius: 10, border: `1px solid ${C.border}`, backgroundColor: 'transparent', color: C.muted, cursor: 'pointer', fontWeight: 700 }}>
+                      📄 Download Invoice
+                    </button>
+                    {!['delivered', 'cancelled', 'shipped'].includes(order.orderStatus) && (
+                      <button onClick={() => setModal('cancel')}
+                        style={{ textAlign: 'left', fontSize: 12, padding: '10px 12px', borderRadius: 10, border: `1px solid ${C.border}`, backgroundColor: 'transparent', color: C.red, cursor: 'pointer', fontWeight: 700 }}>
+                        ✕ Cancel Order
                       </button>
-                    </div>
-                    <p className="text-gray-600 text-xs mt-1">Available once shipped</p>
+                    )}
                   </div>
                 </div>
-              )}
-            </div>
-          </div>
-
-          {/* RIGHT PANEL */}
-          <div className="space-y-4">
-
-            {/* Need Assistance */}
-            <div
-              className="rounded-2xl border border-gray-800 overflow-hidden"
-              style={{ backgroundColor: '#1a1a00' }}
-            >
-              <div className="p-5 border-b border-gray-800">
-                <h3 className="text-white font-black text-sm uppercase tracking-widest">
-                  Need Assistance?
-                </h3>
-              </div>
-              <div className="p-5 space-y-3">
-                <Link
-                  to="/artisan-chat"
-                  className="flex items-center gap-3 w-full bg-yellow-400 text-black px-4 py-3 rounded-xl font-black text-xs hover:bg-yellow-500 transition"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                  </svg>
-                  Chat with Artisan
-                </Link>
-                <Link
-                  to="/contact"
-                  className="flex items-center gap-3 w-full border border-gray-700 text-gray-300 px-4 py-3 rounded-xl font-black text-xs hover:border-yellow-400 hover:text-yellow-400 transition"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </svg>
-                  Contact Support
-                </Link>
-              </div>
-            </div>
-
-            {/* Delivery estimate */}
-            <div
-              className="rounded-2xl border border-yellow-900 p-5"
-              style={{ backgroundColor: '#2a2000' }}
-            >
-              <p className="text-yellow-400 font-black text-xs uppercase tracking-widest mb-3">
-                📅 Delivery Estimate
-              </p>
-              <p className="text-white font-black text-2xl mb-1">Oct 30 – Nov 1</p>
-              <p className="text-gray-400 text-xs leading-relaxed">
-                Based on current crafting progress. Your artisan will notify
-                you once the piece is shipped.
-              </p>
-              <div className="mt-3 pt-3 border-t border-yellow-900">
-                <p className="text-gray-600 text-xs">
-                  ⚠️ Delivery dates update when backend is connected.
-                </p>
-              </div>
-            </div>
-
-            {/* Order actions — now all wired up */}
-            <div
-              className="rounded-2xl border border-gray-800 p-5"
-              style={{ backgroundColor: '#1a1a00' }}
-            >
-              <p className="text-gray-500 text-xs font-black uppercase tracking-widest mb-3">
-                Order Actions
-              </p>
-              <div className="space-y-2">
-                <button
-                  onClick={() => setModal('invoice')}
-                  className="w-full text-left text-xs text-gray-400 py-2.5 px-3 rounded-xl border border-gray-800 hover:border-yellow-400 hover:text-yellow-400 transition font-black"
-                >
-                  📄 Download Invoice
-                </button>
-                <button
-                  onClick={() => setModal('changes')}
-                  className="w-full text-left text-xs text-gray-400 py-2.5 px-3 rounded-xl border border-gray-800 hover:border-yellow-400 hover:text-yellow-400 transition font-black"
-                >
-                  ↩ Request Changes
-                </button>
-                <button
-                  onClick={() => setModal('cancel')}
-                  className="w-full text-left text-xs text-red-500 py-2.5 px-3 rounded-xl border border-gray-800 hover:border-red-500 transition font-black"
-                >
-                  ✕ Cancel Order
-                </button>
               </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
-
-      {/* FOOTER */}
-      <footer style={{ backgroundColor: '#0d0d00' }} className="border-t border-yellow-900 px-8 py-8 mt-8">
-        <div className="max-w-5xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <span className="bg-yellow-400 text-black w-6 h-6 rounded flex items-center justify-center text-xs font-black">57</span>
-            <span className="text-white font-black text-sm">57 ARTS & CUSTOMS</span>
-          </div>
-          <div className="flex gap-6 text-xs text-gray-500">
-            <Link to="/shop" className="hover:text-yellow-400 transition">Shop</Link>
-            <Link to="/custom-order" className="hover:text-yellow-400 transition">Custom Orders</Link>
-            <Link to="/contact" className="hover:text-yellow-400 transition">Contact</Link>
-          </div>
-          <p className="text-gray-700 text-xs">© 2024 57 Arts & Customs.</p>
-        </div>
-      </footer>
     </div>
   );
 };

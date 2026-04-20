@@ -37,7 +37,7 @@ const featuredProducts = [
     id: 'monarch-carry-all',
     name: 'Monarch Carry-all',
     label: 'Bespoke Only',
-    price: 2000,
+    price: 22000,
     category: 'Fashion',
     slug: 'monarch-carry-all',
     img: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=800',
@@ -95,13 +95,6 @@ const s = {
   btnGold:    { backgroundColor: C.gold, color: '#000', padding: '13px 26px', borderRadius: 10, fontWeight: 900, fontSize: 12, textDecoration: 'none', letterSpacing: '0.04em', display: 'inline-block', border: 'none', cursor: 'pointer' },
   card:       { backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 16 },
 };
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-// ✅ FIX 1: Normalize product so CartContext always receives a consistent shape
-// - ensures `id` is always set (used for deduplication in CartContext)
-// - parses string prices like "KSH 3,000" into numbers
-// - resolves image from multiple possible field names
 const normalizeProduct = (product) => {
   const rawPrice = typeof product.price === 'string'
     ? Number(product.price.replace(/[^0-9.]/g, ''))
@@ -139,7 +132,6 @@ const STRATEGY_LABELS = {
   popularity_based:        'Trending on 57 Arts',
 };
 
-// ✅ FIX 3: fallback images for AI rec cards when API returns no image
 const FALLBACK_IMAGES = [
   'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=500',
   'https://images.unsplash.com/photo-1592078615290-033ee584e267?w=500',
@@ -164,8 +156,6 @@ const SkeletonCard = () => (
 
 const RecCard = ({ item, isWishlisted, onToggleWish, onView, onCart, alreadyInCart }) => {
   const [hov, setHov] = useState(false);
-
-  // ✅ FIX 3: resolve image with fallback chain
   const imgSrc = item.images?.[0] || item.image || item.img
     || FALLBACK_IMAGES[Math.abs((item.name || '').length) % FALLBACK_IMAGES.length];
 
@@ -235,7 +225,7 @@ const RecCard = ({ item, isWishlisted, onToggleWish, onView, onCart, alreadyInCa
 
 const Home = () => {
   const navigate = useNavigate();
-  const { addToCart, isInCart } = useCart(); // ✅ FIX 2: pull isInCart for dedup checks
+  const { addToCart, isInCart } = useCart(); 
 
   // Hero carousel
   const [current, setCurrent] = useState(0);
@@ -315,11 +305,9 @@ const Home = () => {
     aiAPI.recordInteraction({ user_id: 'guest', product_id: productId, action }).catch(() => {});
   };
 
-  // ── Helpers ──
   const goTo       = (i) => { setFading(true); setTimeout(() => { setCurrent(i); setFading(false); }, 350); };
   const toggleWish = (slug) => setWishlist(p => p.includes(slug) ? p.filter(x => x !== slug) : [...p, slug]);
 
-  // ✅ FIX 1 + FIX 2: normalize product, check for duplicate, then add
   const addHeroToCart = (product) => {
     const normalized = normalizeProduct(product);
     if (isInCart(normalized.id)) return; // already in cart — do nothing
@@ -329,7 +317,7 @@ const Home = () => {
     setTimeout(() => setHeroCartAdded(prev => ({ ...prev, [normalized.id]: false })), 2000);
   };
 
-  // ✅ FIX 1 + FIX 2: same for recommendation cards
+  // same for recommendation cards
   const addRecToCart = (product) => {
     const normalized = normalizeProduct(product);
     if (isInCart(normalized.id)) return;
