@@ -11,9 +11,11 @@ const C = {
 };
 
 const fmt = n => `KSH ${Number(n).toLocaleString()}`;
-
-// ✅ FIX: shared shipping rule — identical to Cart.js so totals always match
 const calcShipping = (subtotal) => subtotal > 50000 ? 0 : 500;
+
+// ✅ Fix: resolve image from any product shape
+const FALLBACK_IMG = 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=500';
+const resolveImg = (item) => item.img || item.images?.[0] || item.image || FALLBACK_IMG;
 
 const paymentMethods = [
   { id: 'mpesa',  label: 'M-Pesa',           desc: 'Pay via Safaricom M-Pesa STK push', icon: '📱' },
@@ -51,17 +53,14 @@ const Checkout = () => {
     country: user?.address?.country || 'Kenya',
     notes:   '',
   });
-  const [errors, setErrors]           = useState({});
-
-  const [verifying, setVerifying]     = useState(false);
+  const [errors, setErrors]       = useState({});
+  const [verifying, setVerifying] = useState(false);
   const [verifyError, setVerifyError] = useState('');
-  const [verified, setVerified]       = useState(false);
-  const [pollCount, setPollCount]     = useState(0);
-  const pollRef                       = useRef(null);
+  const [verified, setVerified]   = useState(false);
+  const [pollCount, setPollCount] = useState(0);
+  const pollRef                   = useRef(null);
+  const [cardForm, setCardForm]   = useState({ number: '', expiry: '', cvv: '', holder: '' });
 
-  const [cardForm, setCardForm] = useState({ number: '', expiry: '', cvv: '', holder: '' });
-
-  // ✅ FIX: shipping now uses same calcShipping as Cart.js
   const shipping = calcShipping(subtotal);
   const total    = subtotal + shipping;
 
@@ -83,33 +82,22 @@ const Checkout = () => {
   const handleNext = () => {
     if (step === 0 && !validateDelivery()) return;
     if (step === 1) {
-      if (payMethod === 'mpesa' && !stkSent) {
-        setVerifyError('Please send the STK push first.');
-        return;
-      }
-      setVerifyError('');
-      setVerified(false);
+      if (payMethod === 'mpesa' && !stkSent) { setVerifyError('Please send the STK push first.'); return; }
+      setVerifyError(''); setVerified(false);
     }
     setStep(s => s + 1);
   };
 
   const sendSTK = async () => {
     if (!mpesaPhone.trim()) return;
-    setStkLoading(true);
-    setVerifyError('');
+    setStkLoading(true); setVerifyError('');
     try {
-      const { data } = await api.post('/payments/mpesa/stk', {
-        phone:   mpesaPhone,
-        amount:  total,
-        orderId: `TEMP${Date.now()}`,
-      });
+      const { data } = await api.post('/payments/mpesa/stk', { phone: mpesaPhone, amount: total, orderId: `TEMP${Date.now()}` });
       setCheckoutRequestId(data.checkoutRequestId);
       setStkSent(true);
     } catch (err) {
       setVerifyError(err.response?.data?.message || 'Failed to send STK push. Try again.');
-    } finally {
-      setStkLoading(false);
-    }
+    } finally { setStkLoading(false); }
   };
 
   const startPolling = () => {
@@ -117,124 +105,65 @@ const Checkout = () => {
     setPollCount(0);
     pollRef.current = setInterval(async () => {
       setPollCount(c => {
-        if (c >= 12) {
-          clearInterval(pollRef.current);
-          setVerifying(false);
-          setVerifyError('Payment not confirmed. Please check your phone and try again.');
-          return c;
-        }
+        if (c >= 12) { clearInterval(pollRef.current); setVerifying(false); setVerifyError('Payment not confirmed. Please check your phone and try again.'); return c; }
         return c + 1;
       });
       try {
         const { data } = await api.post('/payments/mpesa/query', { checkoutRequestId });
-        if (data.paid) {
-          clearInterval(pollRef.current);
-          setVerified(true);
-          setVerifying(false);
-          setVerifyError('');
-        }
+        if (data.paid) { clearInterval(pollRef.current); setVerified(true); setVerifying(false); setVerifyError(''); }
       } catch {}
     }, 5000);
   };
 
   const handleVerifyPayment = async () => {
-    setVerifying(true);
-    setVerifyError('');
-
+    setVerifying(true); setVerifyError('');
     if (payMethod === 'mpesa') {
-      if (!checkoutRequestId) {
-        setVerifyError('No STK push found. Please send STK push first.');
-        setVerifying(false);
-        return;
-      }
+      if (!checkoutRequestId) { setVerifyError('No STK push found. Please send STK push first.'); setVerifying(false); return; }
       try {
         const { data } = await api.post('/payments/mpesa/query', { checkoutRequestId });
         if (data.paid) { setVerified(true); setVerifying(false); return; }
       } catch {}
-      startPolling();
-      return;
+      startPolling(); return;
     }
-
     if (payMethod === 'card') {
-      if (!cardForm.number || !cardForm.expiry || !cardForm.cvv || !cardForm.holder) {
-        setVerifyError('Please fill in all card details.');
-        setVerifying(false);
-        return;
-      }
+      if (!cardForm.number || !cardForm.expiry || !cardForm.cvv || !cardForm.holder) { setVerifyError('Please fill in all card details.'); setVerifying(false); return; }
     }
-
     setTimeout(() => { setVerified(true); setVerifying(false); }, 1500);
   };
 
   const placeOrder = async () => {
-    if (!verified) {
-      setPlaceError('Please verify your payment before placing the order.');
-      return;
-    }
-
+    if (!verified) { setPlaceError('Please verify your payment before placing the order.'); return; }
     const invalidItems = items.filter(item => !isValidObjectId(item.id));
     if (invalidItems.length > 0) {
-      const names = invalidItems.map(i => i.name).join(', ');
-      setPlaceError(
-        `Some items have an invalid product ID (${names}). ` +
-        `Please remove them from your cart and add them again.`
-      );
+      setPlaceError(`Some items have an invalid product ID (${invalidItems.map(i => i.name).join(', ')}). Please remove them and add again.`);
       return;
     }
-
-    setPlacing(true);
-    setPlaceError('');
-
+    setPlacing(true); setPlaceError('');
     try {
       const { data } = await orderAPI.create({
         items: items.map(item => ({
-          product:  item.id,
-          name:     item.name,
-          image:    item.img,
-          category: item.category,
-          quantity: item.qty,
-          price:    item.price,
+          product: item.id, name: item.name, image: resolveImg(item),
+          category: item.category, quantity: item.qty, price: item.price,
           ...(isValidObjectId(item.vendorId) ? { vendor: item.vendorId } : {}),
         })),
-        shippingAddress: {
-          fullName: form.name,
-          phone:    form.phone,
-          street:   form.address,
-          city:     form.city,
-          country:  form.country,
-        },
-        paymentMethod:      payMethod,
-        paymentStatus:      'paid',
-        itemsPrice:         subtotal,
-        shippingPrice:      shipping,
-        totalPrice:         total,
-        notes:              form.notes,
-        mpesaTransactionId: checkoutRequestId || '',
+        shippingAddress: { fullName: form.name, phone: form.phone, street: form.address, city: form.city, country: form.country },
+        paymentMethod: payMethod, paymentStatus: 'paid',
+        itemsPrice: subtotal, shippingPrice: shipping, totalPrice: total,
+        notes: form.notes, mpesaTransactionId: checkoutRequestId || '',
       });
-
-      clearCart();
-      setPlacedOrder(data.order);
-      setPlaced(true);
-
+      clearCart(); setPlacedOrder(data.order); setPlaced(true);
     } catch (err) {
-      setPlaceError(
-        err.response?.data?.message ||
-        err.response?.data?.error   ||
-        'Failed to place order. Please try again.'
-      );
-    } finally {
-      setPlacing(false);
-    }
+      setPlaceError(err.response?.data?.message || err.response?.data?.error || 'Failed to place order. Please try again.');
+    } finally { setPlacing(false); }
   };
 
   const inp = (field) => ({
     width: '100%', backgroundColor: C.bg,
     border: `1px solid ${errors[field] ? 'rgba(224,92,92,0.4)' : C.border}`,
-    borderRadius: 10, padding: '12px 15px', color: C.cream,
-    fontSize: 13, outline: 'none', boxSizing: 'border-box',
+    borderRadius: 10, padding: '12px 15px', color: C.cream, fontSize: 13, outline: 'none', boxSizing: 'border-box',
   });
 
-  // ── ORDER PLACED ──────────────────────────────────────────────────────────────
+  // ── ORDER PLACED ──────────────────────────────────────────────────────────
   if (placed && placedOrder) return (
     <div style={{ backgroundColor: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ textAlign: 'center', maxWidth: 460 }}>
@@ -249,12 +178,8 @@ const Checkout = () => {
           Confirmation sent to <strong style={{ color: C.cream }}>{form.email}</strong>. Artisan will contact you within 24 hours.
         </p>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-          <Link to="/order-tracking" style={{ backgroundColor: C.gold, color: '#000', padding: '12px 24px', borderRadius: 10, fontWeight: 900, fontSize: 13, textDecoration: 'none' }}>
-            Track Order →
-          </Link>
-          <Link to="/shop" style={{ backgroundColor: 'transparent', color: C.cream, padding: '12px 24px', borderRadius: 10, fontWeight: 900, fontSize: 13, textDecoration: 'none', border: `1px solid ${C.border}` }}>
-            Continue Shopping
-          </Link>
+          <Link to="/order-tracking" style={{ backgroundColor: C.gold, color: '#000', padding: '12px 24px', borderRadius: 10, fontWeight: 900, fontSize: 13, textDecoration: 'none' }}>Track Order →</Link>
+          <Link to="/shop" style={{ backgroundColor: 'transparent', color: C.cream, padding: '12px 24px', borderRadius: 10, fontWeight: 900, fontSize: 13, textDecoration: 'none', border: `1px solid ${C.border}` }}>Continue Shopping</Link>
         </div>
       </div>
     </div>
@@ -330,9 +255,7 @@ const Checkout = () => {
                   <div>
                     <label style={{ color: C.muted, fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 7 }}>Country</label>
                     <select value={form.country} onChange={e => setForm({ ...form, country: e.target.value })} style={{ ...inp('country'), cursor: 'pointer' }}>
-                      {['Kenya', 'Nigeria', 'Ghana', 'Uganda', 'Tanzania', 'South Africa', 'Other'].map(c => (
-                        <option key={c} value={c} style={{ backgroundColor: C.surface }}>{c}</option>
-                      ))}
+                      {['Kenya','Nigeria','Ghana','Uganda','Tanzania','South Africa','Other'].map(c => <option key={c} value={c} style={{ backgroundColor: C.surface }}>{c}</option>)}
                     </select>
                   </div>
                 </div>
@@ -352,7 +275,7 @@ const Checkout = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
                 {paymentMethods.map(m => (
                   <div key={m.id} onClick={() => { setPayMethod(m.id); setStkSent(false); setVerifyError(''); setCheckoutRequestId(''); }}
-                    style={{ backgroundColor: C.surface, border: `1px solid ${payMethod === m.id ? C.gold : C.border}`, borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer', transition: 'all 0.2s' }}>
+                    style={{ backgroundColor: C.surface, border: `1px solid ${payMethod === m.id ? C.gold : C.border}`, borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer' }}>
                     <div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: C.faint, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{m.icon}</div>
                     <div style={{ flex: 1 }}>
                       <p style={{ color: C.cream, fontWeight: 900, fontSize: 13, marginBottom: 2 }}>{m.label}</p>
@@ -379,7 +302,7 @@ const Checkout = () => {
                   </div>
                   {stkSent && (
                     <div style={{ marginTop: 12, padding: '10px 14px', backgroundColor: 'rgba(76,175,80,0.1)', border: '1px solid rgba(76,175,80,0.3)', borderRadius: 8 }}>
-                      <p style={{ color: '#4caf50', fontSize: 12, fontWeight: 700 }}>✓ STK push sent to {mpesaPhone}. Enter your PIN on your phone, then click Continue.</p>
+                      <p style={{ color: '#4caf50', fontSize: 12, fontWeight: 700 }}>✓ STK push sent to {mpesaPhone}. Enter your PIN, then click Continue.</p>
                     </div>
                   )}
                 </div>
@@ -389,15 +312,11 @@ const Checkout = () => {
                 <div style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 22 }}>
                   <p style={{ color: C.cream, fontWeight: 900, fontSize: 13, marginBottom: 16 }}>Card Details</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    <input placeholder="Cardholder Name" value={cardForm.holder} onChange={e => setCardForm({ ...cardForm, holder: e.target.value })}
-                      style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 9, padding: '11px 14px', color: C.cream, fontSize: 13, outline: 'none' }} />
-                    <input placeholder="Card Number" value={cardForm.number} onChange={e => setCardForm({ ...cardForm, number: e.target.value })} maxLength={19}
-                      style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 9, padding: '11px 14px', color: C.cream, fontSize: 13, outline: 'none' }} />
+                    <input placeholder="Cardholder Name" value={cardForm.holder} onChange={e => setCardForm({ ...cardForm, holder: e.target.value })} style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 9, padding: '11px 14px', color: C.cream, fontSize: 13, outline: 'none' }} />
+                    <input placeholder="Card Number" value={cardForm.number} onChange={e => setCardForm({ ...cardForm, number: e.target.value })} maxLength={19} style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 9, padding: '11px 14px', color: C.cream, fontSize: 13, outline: 'none' }} />
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                      <input placeholder="MM / YY" value={cardForm.expiry} onChange={e => setCardForm({ ...cardForm, expiry: e.target.value })} maxLength={5}
-                        style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 9, padding: '11px 14px', color: C.cream, fontSize: 13, outline: 'none' }} />
-                      <input placeholder="CVV" value={cardForm.cvv} onChange={e => setCardForm({ ...cardForm, cvv: e.target.value })} maxLength={4} type="password"
-                        style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 9, padding: '11px 14px', color: C.cream, fontSize: 13, outline: 'none' }} />
+                      <input placeholder="MM / YY" value={cardForm.expiry} onChange={e => setCardForm({ ...cardForm, expiry: e.target.value })} maxLength={5} style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 9, padding: '11px 14px', color: C.cream, fontSize: 13, outline: 'none' }} />
+                      <input placeholder="CVV" value={cardForm.cvv} onChange={e => setCardForm({ ...cardForm, cvv: e.target.value })} maxLength={4} type="password" style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 9, padding: '11px 14px', color: C.cream, fontSize: 13, outline: 'none' }} />
                     </div>
                   </div>
                 </div>
@@ -413,7 +332,7 @@ const Checkout = () => {
               {payMethod === 'bank' && (
                 <div style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 22 }}>
                   <p style={{ color: C.cream, fontWeight: 900, fontSize: 13, marginBottom: 12 }}>Bank Transfer Details</p>
-                  {[['Bank', 'Equity Bank Kenya'], ['Account Name', '57 Arts & Customs Ltd'], ['Account No.', '0123456789'], ['Branch', 'Nairobi CBD']].map(([label, val]) => (
+                  {[['Bank','Equity Bank Kenya'],['Account Name','57 Arts & Customs Ltd'],['Account No.','0123456789'],['Branch','Nairobi CBD']].map(([label,val])=>(
                     <div key={label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                       <span style={{ color: C.muted, fontSize: 12 }}>{label}</span>
                       <span style={{ color: C.cream, fontWeight: 700, fontSize: 12 }}>{val}</span>
@@ -437,8 +356,8 @@ const Checkout = () => {
               <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.7, marginBottom: 28 }}>
                 {payMethod === 'mpesa'  && `STK push sent to ${mpesaPhone}. After entering your PIN, click verify below.`}
                 {payMethod === 'card'   && 'Click below to verify your card payment.'}
-                {payMethod === 'paypal' && "Complete your PayPal payment, then click verify."}
-                {payMethod === 'bank'   && "After completing the bank transfer, click verify."}
+                {payMethod === 'paypal' && 'Complete your PayPal payment, then click verify.'}
+                {payMethod === 'bank'   && 'After completing the bank transfer, click verify.'}
               </p>
               <div style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: 28, textAlign: 'center' }}>
                 <div style={{ fontSize: 48, marginBottom: 16 }}>
@@ -454,14 +373,11 @@ const Checkout = () => {
                       {payMethod === 'mpesa' && ` · ${mpesaPhone}`}
                     </p>
                     {!verifying && (
-                      <button onClick={handleVerifyPayment}
-                        style={{ backgroundColor: C.gold, color: '#000', border: 'none', borderRadius: 10, padding: '14px 32px', fontWeight: 900, fontSize: 13, cursor: 'pointer' }}>
+                      <button onClick={handleVerifyPayment} style={{ backgroundColor: C.gold, color: '#000', border: 'none', borderRadius: 10, padding: '14px 32px', fontWeight: 900, fontSize: 13, cursor: 'pointer' }}>
                         I Have Paid — Verify Now
                       </button>
                     )}
-                    {verifying && payMethod === 'mpesa' && (
-                      <p style={{ color: C.muted, fontSize: 11, marginTop: 12 }}>Checking every 5 seconds. Up to 60 seconds.</p>
-                    )}
+                    {verifying && payMethod === 'mpesa' && <p style={{ color: C.muted, fontSize: 11, marginTop: 12 }}>Checking every 5 seconds. Up to 60 seconds.</p>}
                   </>
                 ) : (
                   <>
@@ -499,7 +415,13 @@ const Checkout = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {items.map(item => (
                   <div key={item.id} style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: '14px 18px', display: 'flex', gap: 14, alignItems: 'center' }}>
-                    <img src={item.img} alt={item.name} style={{ width: 52, height: 52, borderRadius: 8, objectFit: 'cover' }} />
+                    {/* ✅ Fixed: resolveImg handles all image shapes */}
+                    <img
+                      src={resolveImg(item)}
+                      alt={item.name}
+                      onError={e => { e.target.onerror = null; e.target.src = FALLBACK_IMG; }}
+                      style={{ width: 52, height: 52, borderRadius: 8, objectFit: 'cover' }}
+                    />
                     <div style={{ flex: 1 }}>
                       <p style={{ color: C.cream, fontWeight: 800, fontSize: 13 }}>{item.name}</p>
                       <p style={{ color: C.muted, fontSize: 11 }}>{item.category} · Qty {item.qty}</p>
@@ -550,7 +472,13 @@ const Checkout = () => {
             {items.map(item => (
               <div key={item.id} style={{ display: 'flex', gap: 12, marginBottom: 14, paddingBottom: 14, borderBottom: `1px solid ${C.border}` }}>
                 <div style={{ position: 'relative', flexShrink: 0 }}>
-                  <img src={item.img} alt={item.name} style={{ width: 52, height: 52, borderRadius: 8, objectFit: 'cover' }} />
+                  {/* ✅ Fixed: resolveImg + onError fallback */}
+                  <img
+                    src={resolveImg(item)}
+                    alt={item.name}
+                    onError={e => { e.target.onerror = null; e.target.src = FALLBACK_IMG; }}
+                    style={{ width: 52, height: 52, borderRadius: 8, objectFit: 'cover' }}
+                  />
                   <span style={{ position: 'absolute', top: -6, right: -6, backgroundColor: C.faint, border: `1px solid ${C.border}`, color: C.cream, fontSize: 10, fontWeight: 900, width: 18, height: 18, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{item.qty}</span>
                 </div>
                 <div style={{ flex: 1 }}>
@@ -567,13 +495,9 @@ const Checkout = () => {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: C.muted, fontSize: 12 }}>Shipping</span>
-                <span style={{ color: shipping === 0 ? '#4caf50' : C.cream, fontWeight: 700, fontSize: 12 }}>
-                  {shipping === 0 ? 'Free' : fmt(shipping)}
-                </span>
+                <span style={{ color: shipping === 0 ? '#4caf50' : C.cream, fontWeight: 700, fontSize: 12 }}>{shipping === 0 ? 'Free' : fmt(shipping)}</span>
               </div>
-              {shipping > 0 && (
-                <p style={{ color: C.muted, fontSize: 11 }}>Free shipping on orders over KSH 50,000</p>
-              )}
+              {shipping > 0 && <p style={{ color: C.muted, fontSize: 11 }}>Free shipping on orders over KSH 50,000</p>}
               <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 10, marginTop: 4, display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: C.cream, fontWeight: 900, fontSize: 14 }}>Total</span>
                 <span style={{ color: C.gold, fontWeight: 900, fontSize: 16 }}>{fmt(total)}</span>
