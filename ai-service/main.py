@@ -1,10 +1,9 @@
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sklearn.metrics.pairwise import cosine_similarity
-from typing import Optional
+from typing import Optional, List
 import pandas as pd
-import os
 
 app = FastAPI(title="57 Arts Recommendation & Chat API")
 
@@ -15,24 +14,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Products — matches MongoDB Seed.js exactly ────────────────────────────────
+# ── Products ──────────────────────────────────────────────────────────────────
 PRODUCTS = [
-    {"id": "p1",  "name": "Obsidian Throne v.2",        "category": "Furniture", "price": 12000, "tag": "Custom",  "slug": "obsidian-throne-v2"},
-    {"id": "p2",  "name": "Midnight Denim Jacket",       "category": "Fashion",   "price": 1500,  "tag": "Limited", "slug": "midnight-denim-jacket"},
-    {"id": "p3",  "name": "Gold Pulse Beads",            "category": "Beads",     "price": 2500,  "tag": "New",     "slug": "gold-pulse-beads"},
-    {"id": "p4",  "name": "Monarch Carry-all",           "category": "Fashion",   "price": 2000,  "tag": "Hot",     "slug": "monarch-carry-all"},
-    {"id": "p5",  "name": "Distressed Denim Trouser",    "category": "Fashion",   "price": 3000,  "tag": "Hot",     "slug": "distressed-denim-trouser"},
-    {"id": "p6",  "name": "Vanguard Teak Chair",         "category": "Furniture", "price": 12000, "tag": "Custom",  "slug": "vanguard-teak-chair"},
-    {"id": "p7",  "name": "Gold-Infused Obsidian Beads", "category": "Beads",     "price": 2500,  "tag": "New",     "slug": "gold-infused-obsidian-beads"},
-    {"id": "p8",  "name": "Midnight Velvet Blazer",      "category": "Fashion",   "price": 2000,  "tag": "Limited", "slug": "midnight-velvet-blazer"},
-    {"id": "p9",  "name": "Kente Print Hoodie",          "category": "Fashion",   "price": 3500,  "tag": "New",     "slug": "kente-print-hoodie"},
-    {"id": "p10", "name": "Ankara Accent Stool",         "category": "Furniture", "price": 8500,  "tag": "Custom",  "slug": "ankara-accent-stool"},
-    {"id": "p11", "name": "Heritage Cowrie Necklace",    "category": "Beads",     "price": 1800,  "tag": "Hot",     "slug": "heritage-cowrie-necklace"},
-    {"id": "p12", "name": "Woven Leather Sandals",       "category": "Fashion",   "price": 4500,  "tag": "Limited", "slug": "woven-leather-sandals"},
+    {"id": "p1",  "name": "Obsidian Throne v.2",        "category": "Furniture", "price": 12000, "tag": "Custom",  "slug": "obsidian-throne-v2",        "img": "/assets/products/obsidian-throne-v2.jpg"},
+    {"id": "p2",  "name": "Midnight Denim Jacket",       "category": "Fashion",   "price": 1500,  "tag": "Limited", "slug": "midnight-denim-jacket",       "img": "/assets/products/midnight-denim-jacket.jpg"},
+    {"id": "p3",  "name": "Gold Pulse Beads",            "category": "Beads",     "price": 2500,  "tag": "New",     "slug": "gold-pulse-beads",            "img": "/assets/products/gold-pulse-beads.jpg"},
+    {"id": "p4",  "name": "Monarch Carry-all",           "category": "Fashion",   "price": 2000,  "tag": "Hot",     "slug": "monarch-carry-all",           "img": "/assets/products/monarch-carry-all.jpg"},
+    {"id": "p5",  "name": "Distressed Denim Trouser",    "category": "Fashion",   "price": 3000,  "tag": "Hot",     "slug": "distressed-denim-trouser",    "img": "/assets/products/distressed-denim-trouser.jpg"},
+    {"id": "p6",  "name": "Vanguard Teak Chair",         "category": "Furniture", "price": 12000, "tag": "Custom",  "slug": "vanguard-teak-chair",         "img": "/assets/products/vanguard-teak-chair.jpg"},
+    {"id": "p7",  "name": "Gold-Infused Obsidian Beads", "category": "Beads",     "price": 2500,  "tag": "New",     "slug": "gold-infused-obsidian-beads", "img": "/assets/products/gold-infused-obsidian-beads.jpg"},
+    {"id": "p8",  "name": "Midnight Velvet Blazer",      "category": "Fashion",   "price": 2000,  "tag": "Limited", "slug": "midnight-velvet-blazer",      "img": "/assets/products/midnight-velvet-blazer.jpg"},
+    {"id": "p9",  "name": "Kente Print Hoodie",          "category": "Fashion",   "price": 3500,  "tag": "New",     "slug": "kente-print-hoodie",          "img": "/assets/products/kente-print-hoodie.jpg"},
+    {"id": "p10", "name": "Ankara Accent Stool",         "category": "Furniture", "price": 8500,  "tag": "Custom",  "slug": "ankara-accent-stool",         "img": "/assets/products/ankara-accent-stool.jpg"},
+    {"id": "p11", "name": "Heritage Cowrie Necklace",    "category": "Beads",     "price": 1800,  "tag": "Hot",     "slug": "heritage-cowrie-necklace",    "img": "/assets/products/heritage-cowrie-necklace.jpg"},
+    {"id": "p12", "name": "Woven Leather Sandals",       "category": "Fashion",   "price": 4500,  "tag": "Limited", "slug": "woven-leather-sandals",       "img": "/assets/products/woven-leather-sandals.jpg"},
 ]
 
-# ── Slug → product ID map (so MongoDB slugs can look up AI products) ──────────
-SLUG_TO_ID = {p["slug"]: p["id"] for p in PRODUCTS}
+SLUG_TO_ID  = {p["slug"]: p["id"] for p in PRODUCTS}
 PRODUCT_MAP = {p["id"]: p for p in PRODUCTS}
 
 # ── Seed interactions ─────────────────────────────────────────────────────────
@@ -71,18 +69,13 @@ RAW_INTERACTIONS = [
     {"user": "u10", "product": "p9",  "score": 3},
 ]
 
-# ── In-memory interaction store (persists across requests in same session) ─────
-# Key: (user_id, product_id) → score
-# This means new interactions accumulate and improve recommendations live
 _live_interactions: dict = {}
 
 def build_matrix():
-    # Merge seed data + live interactions
     merged = {}
     for row in RAW_INTERACTIONS:
         merged[(row["user"], row["product"])] = float(row["score"])
     for (uid, pid), score in _live_interactions.items():
-        # Live interactions override/add to seed data
         merged[(uid, pid)] = float(score)
 
     all_users    = list(set(k[0] for k in merged))
@@ -94,69 +87,140 @@ def build_matrix():
     return df
 
 # ── Chatbot knowledge base ────────────────────────────────────────────────────
-CHAT_KNOWLEDGE = {
-    "greeting":    ["hello", "hi", "hey", "good morning", "good afternoon"],
-    "shipping":    ["shipping", "delivery", "how long", "arrive", "dispatch"],
-    "returns":     ["return", "refund", "exchange", "money back", "cancel"],
-    "payment":     ["pay", "payment", "mpesa", "card", "cash", "paypal"],
-    "custom":      ["custom", "customise", "customize", "personalize", "bespoke", "made to order"],
-    "categories":  ["fashion", "furniture", "beads", "antiques", "what do you sell", "products"],
-    "vendor":      ["sell", "vendor", "become a seller", "list products", "open shop"],
-    "affiliate":   ["affiliate", "earn", "commission", "refer", "referral"],
-    "contact":     ["contact", "support", "help", "email", "phone", "reach"],
-    "order":       ["order", "track", "where is my", "status", "my order"],
+# Each intent has: keywords (substring match) + phrases (exact phrase match, higher priority)
+INTENTS = {
+    "greeting": {
+        "keywords": ["hello", "hi", "hey", "howdy", "sup", "good morning", "good afternoon", "good evening"],
+        "response": "Hello! Welcome to 57 Arts & Customs 🎨 I'm your AI assistant. How can I help you today? You can ask me about products, shipping, payments, or customization.",
+    },
+    "shipping": {
+        "keywords": ["shipping", "delivery", "how long", "arrive", "dispatch", "when will", "how soon", "days to deliver"],
+        "response": "We deliver across Kenya in 3–5 business days 🚚 Nairobi orders may arrive sooner. International shipping is available on request. You can track your order from your profile dashboard.",
+    },
+    "returns": {
+        "keywords": ["return", "refund", "exchange", "money back", "cancel order", "send back", "return policy"],
+        "response": "We accept returns within 7 days of delivery for unused items in original condition 📦 Custom/personalized orders are non-refundable unless there's a defect. Contact support to initiate a return.",
+    },
+    "payment": {
+        "keywords": ["pay", "payment", "mpesa", "m-pesa", "card", "cash", "paypal", "visa", "mastercard", "how to pay", "payment method"],
+        "response": "We accept M-Pesa 📱, Visa/Mastercard 💳, PayPal, and Cash on Delivery. All payments are secure and encrypted. M-Pesa is the most popular option for Kenyan customers.",
+    },
+    "custom": {
+        "keywords": ["custom", "customise", "customize", "personalise", "personalize", "bespoke", "made to order", "make for me", "special order"],
+        "response": "We love custom orders! 🎨 Most of our products can be personalized — choose your colors, materials, sizes, or add special instructions. Visit any product page and look for the customization options.",
+    },
+    "categories": {
+        "keywords": ["what do you sell", "what products", "categories", "antiques", "what can i buy", "your products", "product range"],
+        "response": "We specialize in: 👗 Fashion (jackets, hoodies, sandals), 🪑 Furniture (chairs, stools, thrones), 📿 Beads & Jewelry, and 🏺 Antiques. All handcrafted by verified Kenyan artisans.",
+    },
+    "fashion": {
+        "keywords": ["fashion", "clothing", "clothes", "jacket", "blazer", "denim", "trouser", "hoodie", "sandal", "outfit", "wear", "dress"],
+        "response": "Our Fashion collection features handcrafted pieces 👗 — from the Midnight Denim Jacket (KES 1,500) to the Kente Print Hoodie (KES 3,500) and Woven Leather Sandals (KES 4,500). Each piece is unique and made by Kenyan artisans.",
+    },
+    "furniture": {
+        "keywords": ["furniture", "chair", "stool", "table", "throne", "sofa", "teak", "wood", "seating", "home decor"],
+        "response": "Our Furniture collection features stunning handcrafted pieces 🪑 — including the Obsidian Throne v.2 (KES 12,000), Vanguard Teak Chair (KES 12,000), and Ankara Accent Stool (KES 8,500). Custom sizing and finishes available!",
+    },
+    "beads": {
+        "keywords": ["bead", "beads", "jewelry", "jewellery", "necklace", "cowrie", "accessory", "accessories"],
+        "response": "Our Beads & Jewelry collection is stunning 📿 — featuring Gold Pulse Beads (KES 2,500), Gold-Infused Obsidian Beads (KES 2,500), and the Heritage Cowrie Necklace (KES 1,800). Perfect as gifts or personal statement pieces.",
+    },
+    "vendor": {
+        "keywords": ["sell", "vendor", "become a seller", "list products", "open shop", "sell on", "start selling", "register as seller"],
+        "response": "Want to sell on 57 Arts? 🛍️ Register as a vendor, set up your store profile, and start listing your products. We charge a small commission per sale. Go to Register and select 'Vendor' role.",
+    },
+    "affiliate": {
+        "keywords": ["affiliate", "earn", "commission", "refer", "referral", "make money", "earn money", "affiliate program"],
+        "response": "Join our affiliate program and earn commissions! 💰 Share your unique affiliate link, earn up to 15% on every sale you refer. Go to Register and select 'Affiliate' role to get started.",
+    },
+    "contact": {
+        "keywords": ["contact", "support", "email", "phone", "reach", "whatsapp", "talk to", "speak to", "customer service"],
+        "response": "You can reach our support team at support@57artscustoms.com 📧 or via WhatsApp. We're available Monday–Saturday, 8am–6pm EAT.",
+    },
+    "order": {
+        "keywords": ["track order", "where is my order", "order status", "my order", "order history", "track my"],
+        "response": "To track your order, log in and visit your Profile → Order History 📋 You'll see real-time status updates there. If you need help with a specific order, please contact support.",
+    },
+    "price": {
+        "keywords": ["price", "cost", "how much", "pricing", "expensive", "cheap", "affordable", "budget"],
+        "response": "Our prices range from KES 1,500 to KES 12,000 depending on the item 💰 Fashion starts from KES 1,500, Beads from KES 1,800, and Furniture from KES 8,500. Custom orders may have different pricing. Check any product page for exact prices.",
+    },
+    "thanks": {
+        "keywords": ["thank", "thanks", "thank you", "appreciate", "great", "awesome", "perfect", "nice", "helpful"],
+        "response": "You're welcome! 😊 Is there anything else I can help you with? Feel free to browse our collections or ask me anything.",
+    },
 }
 
-CHAT_RESPONSES = {
-    "greeting":   "Hello! Welcome to 57 Arts & Customs 🎨 I'm your AI assistant. How can I help you today? You can ask me about products, shipping, payments, or customization.",
-    "shipping":   "We deliver across Kenya in 3–5 business days 🚚 Nairobi orders may arrive sooner. International shipping is available on request. You can track your order from your profile dashboard.",
-    "returns":    "We accept returns within 7 days of delivery for unused items in original condition 📦 Custom/personalized orders are non-refundable unless there's a defect. Contact support to initiate a return.",
-    "payment":    "We accept M-Pesa 📱, Visa/Mastercard 💳, PayPal, and Cash on Delivery. All payments are secure and encrypted. M-Pesa is the most popular option for Kenyan customers.",
-    "custom":     "We love custom orders! 🎨 Most of our products can be personalized — choose your colors, materials, sizes, or add special instructions. Visit any product page and look for the customization options.",
-    "categories": "We specialize in: 👗 Fashion (jackets, hoodies, sandals), 🪑 Furniture (chairs, stools, thrones), 📿 Beads & Jewelry, and 🏺 Antiques. All handcrafted by verified Kenyan artisans.",
-    "vendor":     "Want to sell on 57 Arts? 🛍️ Register as a vendor, set up your store profile, and start listing your products. We charge a small commission per sale. Go to Register and select 'Vendor' role.",
-    "affiliate":  "Join our affiliate program and earn commissions! 💰 Share your unique affiliate link, earn up to 15% on every sale you refer. Go to Register and select 'Affiliate' role to get started.",
-    "contact":    "You can reach our support team at support@57artscustoms.com 📧 or via WhatsApp. We're available Monday–Saturday, 8am–6pm EAT.",
-    "order":      "To track your order, log in and visit your Profile → Order History 📋 You'll see real-time status updates there. If you need help with a specific order, please contact support.",
-    "default":    "I'm not sure I understand that question 🤔 I can help with: shipping, returns, payments, customization, product categories, becoming a vendor, or our affiliate program. What would you like to know?",
-}
+DEFAULT_RESPONSE = "I'm not sure I understand that question 🤔 I can help with: shipping, returns, payments, customization, product categories, becoming a vendor, or our affiliate program. What would you like to know?"
 
-def get_chat_response(message: str) -> str:
+
+def detect_intent(message: str) -> Optional[str]:
+    """Return the best-matching intent key, or None."""
     msg = message.lower().strip()
+    # Remove common punctuation that breaks substring matching
+    for ch in ["'", "'", "?", "!", ".", ","]:
+        msg = msg.replace(ch, " ")
+    msg = " " + msg + " "  # pad so we can do whole-word-ish matching
 
-    # Check each intent
-    for intent, keywords in CHAT_KNOWLEDGE.items():
-        if any(kw in msg for kw in keywords):
-            return CHAT_RESPONSES[intent]
+    for intent, data in INTENTS.items():
+        for kw in data["keywords"]:
+            if kw in msg:
+                return intent
+    return None
 
-    # Product name match — suggest product
+
+def get_chat_response(message: str, history: List[dict]) -> str:
+    """
+    Resolve intent from current message, with fallback context from history.
+    history: list of {role, content} dicts (most recent last).
+    """
+    intent = detect_intent(message)
+
+    # If no intent found, try to infer from recent history (last 3 user messages)
+    if not intent and history:
+        recent_user_msgs = [
+            h["content"] for h in history[-6:]
+            if h.get("role") == "user"
+        ]
+        for past_msg in reversed(recent_user_msgs):
+            intent = detect_intent(past_msg)
+            if intent:
+                break
+
+    if intent:
+        return INTENTS[intent]["response"]
+
+    # Specific product name match (only match full product name, not partial words)
+    msg_lower = message.lower()
     for product in PRODUCTS:
-        if product["name"].lower() in msg or any(
-            word in msg for word in product["name"].lower().split()
-            if len(word) > 3
-        ):
+        if product["name"].lower() in msg_lower:
             return (
                 f"You're asking about **{product['name']}**! 🛍️ "
                 f"It's in our {product['category']} category, priced at KES {product['price']:,}. "
                 f"You can view it at /products/{product['slug']}"
             )
 
-    return CHAT_RESPONSES["default"]
+    return DEFAULT_RESPONSE
+
 
 # ── Pydantic models ───────────────────────────────────────────────────────────
+class HistoryMessage(BaseModel):
+    role: str
+    content: str
+
 class InteractionPayload(BaseModel):
     user_id:    str
-    product_id: str  # accepts either "p1" style OR a slug
+    product_id: str
     action:     str  # "view" | "cart" | "purchase"
 
 class ChatPayload(BaseModel):
-    message:  str
-    user_id:  Optional[str] = None
-    history:  Optional[list] = []  # future: multi-turn context
+    message: str
+    user_id: Optional[str] = None
+    # FIX: never use mutable default [] in Python — use None + default in validator
+    history: Optional[List[HistoryMessage]] = Field(default_factory=list)
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 def resolve_product_id(raw_id: str) -> Optional[str]:
-    """Accept p1-style ID, a slug, or a MongoDB ObjectId mapped via slug."""
     if raw_id in PRODUCT_MAP:
         return raw_id
     if raw_id in SLUG_TO_ID:
@@ -246,34 +310,19 @@ def recommendations(
         recs     = get_popular_recommendations(n)
         strategy = "popularity_based"
 
-    return {
-        "strategy":        strategy,
-        "user_id":         user_id,
-        "category":        category,
-        "count":           len(recs),
-        "recommendations": recs,
-    }
+    return {"strategy": strategy, "user_id": user_id, "category": category, "count": len(recs), "recommendations": recs}
 
 @app.post("/interactions")
 def record_interaction(payload: InteractionPayload):
     score_map = {"view": 1, "cart": 2, "purchase": 3}
     score     = score_map.get(payload.action, 1)
 
-    # Resolve product ID (handles slugs too)
     pid = resolve_product_id(payload.product_id)
     if not pid:
         return {"status": "ignored", "reason": "product not found"}
 
-    # ✅ Store in live interactions so matrix improves over time
     _live_interactions[(payload.user_id, pid)] = float(score)
-
-    return {
-        "status":     "recorded",
-        "user_id":    payload.user_id,
-        "product_id": pid,
-        "action":     payload.action,
-        "score":      score,
-    }
+    return {"status": "recorded", "user_id": payload.user_id, "product_id": pid, "action": payload.action, "score": score}
 
 @app.get("/similar/{product_id}")
 def similar_products(product_id: str, n: int = Query(4, ge=1, le=8)):
@@ -281,7 +330,7 @@ def similar_products(product_id: str, n: int = Query(4, ge=1, le=8)):
     if not pid:
         return {"error": "Product not found", "similar": []}
 
-    matrix     = build_matrix()
+    matrix = build_matrix()
     if pid not in matrix.columns:
         return {"error": "Product not in matrix", "similar": []}
 
@@ -304,18 +353,16 @@ def similar_products(product_id: str, n: int = Query(4, ge=1, le=8)):
 
     return {"product_id": pid, "similar": results}
 
-# ✅ NEW: Chatbot endpoint
 @app.post("/chat")
 def chat(payload: ChatPayload):
     if not payload.message or not payload.message.strip():
         return {"response": "Please type a message so I can help you! 😊"}
 
-    response = get_chat_response(payload.message)
+    # Convert history models to plain dicts for processing
+    history_dicts = [{"role": h.role, "content": h.content} for h in (payload.history or [])]
+    response = get_chat_response(payload.message, history_dicts)
 
-    return {
-        "response": response,
-        "user_id":  payload.user_id,
-    }
+    return {"response": response, "user_id": payload.user_id}
 
 @app.get("/products")
 def list_products():
