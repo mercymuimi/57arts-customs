@@ -23,9 +23,7 @@ const Login = () => {
     setLoading(true);
     setError('');
     try {
-      // ✅ Use authAPI not raw axios
       const res = await authAPI.login(form);
-      // ✅ Pass navigate so role-based redirect works
       login(res.data.user, res.data.token, navigate);
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid email or password');
@@ -94,7 +92,11 @@ const Login = () => {
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                 <label style={{ color: C.muted, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Password</label>
-                <button type="button" style={{ color: C.gold, fontSize: 11, fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer' }}>Forgot password?</button>
+                {/* ✅ FIX: Now navigates to /forgot-password */}
+                <Link to="/forgot-password"
+                  style={{ color: C.gold, fontSize: 11, fontWeight: 700, textDecoration: 'none' }}>
+                  Forgot password?
+                </Link>
               </div>
               <div style={{ position: 'relative' }}>
                 <input type={showPw ? 'text' : 'password'} name="password" value={form.password} onChange={handleChange} required placeholder="••••••••"

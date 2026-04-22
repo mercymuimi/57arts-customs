@@ -8,17 +8,21 @@ const userSchema = new mongoose.Schema({
   role:         { type: String, enum: ['buyer','vendor','affiliate','admin'], default: 'buyer' },
   phone:        { type: String, default: '' },
   address: {
-    street:     { type: String, default: '' },
-    city:       { type: String, default: '' },
-    country:    { type: String, default: '' },
+    street:  { type: String, default: '' },
+    city:    { type: String, default: '' },
+    country: { type: String, default: '' },
   },
   profileImage:     { type: String, default: '' },
   isActive:         { type: Boolean, default: true },
 
-  // ✅ Email verification fields
+  // Email verification
   isEmailVerified:  { type: Boolean, default: false },
   emailOTP:         { type: String },
   emailOTPExpires:  { type: Date },
+
+  // ✅ Password reset
+  resetOTP:         { type: String },
+  resetOTPExpires:  { type: Date },
 
 }, { timestamps: true });
 
