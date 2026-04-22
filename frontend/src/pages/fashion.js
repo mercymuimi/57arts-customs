@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 
-// ── DESIGN TOKENS (matches Home.js exactly) ───────────────────────────────────
+// ── DESIGN TOKENS ─────────────────────────────────────────────────────────────
 const C = {
   bg:      '#0a0a0a',
   surface: '#111111',
@@ -27,57 +27,65 @@ const s = {
   input:      { backgroundColor: C.faint, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 16px', color: C.cream, fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box' },
 };
 
-// ── DATA ──────────────────────────────────────────────────────────────────────
+// ── CATEGORIES ────────────────────────────────────────────────────────────────
 const styleCategories = [
-  { key: 'old-money',    label: 'Old Money',    icon: '🎩', desc: 'Understated luxury. Quiet wealth.',       img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=700', count: 6 },
-  { key: 'streetwear',  label: 'Streetwear',   icon: '🧢', desc: 'Bold. Raw. Culture-coded.',               img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=700', count: 8 },
-  { key: 'official-wear', label: 'Official Wear', icon: '💼', desc: 'Power dressing for the boardroom.',    img: 'https://images.unsplash.com/photo-1551537482-f2075a1d41f2?w=700', count: 5 },
-  { key: 'denim-wear',  label: 'Denim Wear',   icon: '👖', desc: 'Artisan-distressed. Hand-finished.',      img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=700', count: 6 },
-  { key: 'afro-luxury', label: 'Afro Luxury',  icon: '🌍', desc: 'Heritage craft meets high fashion.',      img: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=700', count: 7 },
-  { key: 'resort-wear', label: 'Resort Wear',  icon: '🌊', desc: 'Sun-drenched and effortlessly elegant.',  img: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=700', count: 4 },
+  { key: 'old-money',    label: 'Old Money',    icon: '🎩', desc: 'Understated luxury. Quiet wealth.',         img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=700', count: 6 },
+  { key: 'streetwear',  label: 'Streetwear',   icon: '🧢', desc: 'Bold. Raw. Culture-coded.',                 img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=700', count: 8 },
+  { key: 'official-wear', label: 'Official Wear', icon: '💼', desc: 'Power dressing for the boardroom.',      img: 'https://images.unsplash.com/photo-1551537482-f2075a1d41f2?w=700', count: 5 },
+  { key: 'denim-wear',  label: 'Denim Wear',   icon: '👖', desc: 'Artisan-distressed. Hand-finished.',        img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=700', count: 6 },
+  { key: 'afro-luxury', label: 'Afro Luxury',  icon: '🌍', desc: 'Heritage craft meets high fashion.',        img: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=700', count: 7 },
+  { key: 'resort-wear', label: 'Resort Wear',  icon: '🌊', desc: 'Sun-drenched and effortlessly elegant.',    img: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=700', count: 4 },
 ];
 
+// ── PRODUCTS — all prices KES 1,500–3,500 ────────────────────────────────────
 const allProducts = {
   'old-money': [
-    { id: 'om1', name: 'Regency Silk Polo',   price: 'KES 18,500', desc: 'Premium knit cream silk with mother-of-pearl buttons.', tag: 'NEW', inStock: true, materials: ['100% Mulberry Silk', 'Mother-of-pearl buttons'], sizes: ['S','M','L','XL'], img: 'https://images.unsplash.com/photo-1586363104862-3a5e2ab60d99?w=500', vendor: 'Fatima Al-Hassan' },
-    { id: 'om2', name: 'Cashmere Overcoat',   price: 'KES 64,000', desc: 'Double-faced Italian cashmere overcoat. Notched lapel.', tag: 'BESPOKE', inStock: true, materials: ['Italian Cashmere', 'Silk Satin Lining'], sizes: ['S','M','L'], img: 'https://images.unsplash.com/photo-1551537482-f2075a1d41f2?w=500', vendor: 'Master Julian' },
-    { id: 'om3', name: 'Linen Riviera Set',   price: 'KES 24,000', desc: 'Hand-dyed Belgian linen shirt and trousers set.', tag: '', inStock: true, materials: ['Belgian Linen', 'Natural Dyes'], sizes: ['S','M','L','XL','XXL'], img: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=500', vendor: 'Adaeze Obi' },
-    { id: 'om4', name: 'Heritage Blazer',     price: 'KES 38,000', desc: 'Single-button wool blazer in stone grey. Hand-stitched lapels.', tag: '', inStock: false, materials: ['100% Merino Wool', 'Copper-tone buttons'], sizes: ['M','L','XL'], img: 'https://images.unsplash.com/photo-1617127365659-c47fa864d8bc?w=500', vendor: 'Fatima Al-Hassan' },
-    { id: 'om5', name: 'Pearl Knit Vest',     price: 'KES 12,500', desc: 'Fine-gauge merino wool vest. Ribbed edges, pearl sheen.', tag: 'NEW', inStock: true, materials: ['Merino Wool', 'Pearl-thread yarn'], sizes: ['XS','S','M','L'], img: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500', vendor: 'Abena Asante' },
-    { id: 'om6', name: 'Ivory Trench Coat',   price: 'KES 52,000', desc: 'Gabardine trench in off-white. Storm shield, double breast.', tag: 'LIMITED', inStock: true, materials: ['Cotton Gabardine', 'Tortoise-shell buttons'], sizes: ['S','M','L'], img: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=500', vendor: 'Fatima Al-Hassan' },
+    { id: 'om1', name: 'Regency Polo',        price: 'KES 2,800', numPrice: 2800, desc: 'Premium knit cream polo with mother-of-pearl buttons.', tag: 'NEW',     inStock: true,  materials: ['Cotton Blend', 'Pearl Buttons'],          sizes: ['S','M','L','XL'],        img: 'https://images.unsplash.com/photo-1586363104862-3a5e2ab60d99?w=500', vendor: 'Fatima Al-Hassan' },
+    { id: 'om2', name: 'Classic Overcoat',    price: 'KES 3,500', numPrice: 3500, desc: 'Structured wool-blend overcoat. Notched lapel.',         tag: 'BESPOKE', inStock: true,  materials: ['Wool Blend', 'Satin Lining'],              sizes: ['S','M','L'],             img: 'https://images.unsplash.com/photo-1551537482-f2075a1d41f2?w=500', vendor: 'Master Julian' },
+    { id: 'om3', name: 'Linen Riviera Set',   price: 'KES 3,200', numPrice: 3200, desc: 'Linen shirt and trousers set in natural tones.',         tag: '',        inStock: true,  materials: ['Linen', 'Natural Dyes'],                  sizes: ['S','M','L','XL','XXL'],  img: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=500', vendor: 'Adaeze Obi' },
+    { id: 'om4', name: 'Heritage Blazer',     price: 'KES 3,400', numPrice: 3400, desc: 'Single-button wool blazer in stone grey.',               tag: '',        inStock: false, materials: ['Merino Wool', 'Copper Buttons'],           sizes: ['M','L','XL'],            img: 'https://images.unsplash.com/photo-1617127365659-c47fa864d8bc?w=500', vendor: 'Fatima Al-Hassan' },
+    { id: 'om5', name: 'Knit Vest',           price: 'KES 1,800', numPrice: 1800, desc: 'Fine-gauge merino wool vest. Ribbed edges.',             tag: 'NEW',     inStock: true,  materials: ['Merino Wool'],                            sizes: ['XS','S','M','L'],        img: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500', vendor: 'Abena Asante' },
+    { id: 'om6', name: 'Ivory Trench',        price: 'KES 3,300', numPrice: 3300, desc: 'Classic trench in off-white. Double breast.',            tag: 'LIMITED', inStock: true,  materials: ['Cotton Gabardine', 'Shell Buttons'],      sizes: ['S','M','L'],             img: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=500', vendor: 'Fatima Al-Hassan' },
   ],
   'streetwear': [
-    { id: 'sw1', name: 'Midnight Denim',      price: 'KES 28,000', desc: 'Hand-distressed raw denim jacket with painted chest graphic.', tag: 'HOT', inStock: true, materials: ['Raw Japanese Denim', 'Hand-applied Graphic'], sizes: ['S','M','L','XL'], img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=500', vendor: 'Kofi Mensah' },
-    { id: 'sw2', name: 'Aura Metallic Tee',   price: 'KES 8,500',  desc: '400GSM heavyweight cotton tee with foil-print tribal pattern.', tag: 'NEW', inStock: true, materials: ['400GSM Cotton', 'Metallic Foil Print'], sizes: ['S','M','L','XL','XXL'], img: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500', vendor: 'Kofi Mensah' },
-    { id: 'sw3', name: 'Artifact Wide Leg',   price: 'KES 22,000', desc: 'Custom paint-finish cargo trousers. Side pockets, drawstring.', tag: '', inStock: true, materials: ['Cotton Twill', 'Hand-applied Paint'], sizes: ['28','30','32','34','36'], img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=500', vendor: 'Kofi Mensah' },
-    { id: 'sw4', name: 'Shadow Rider Leather',price: 'KES 45,000', desc: 'Boxy moto jacket in matte black lambskin. Asymmetric zip.', tag: 'LIMITED', inStock: true, materials: ['Lambskin Leather', 'YKK Hardware'], sizes: ['S','M','L'], img: 'https://images.unsplash.com/photo-1551537482-f2075a1d41f2?w=500', vendor: 'Adaeze Obi' },
-    { id: 'sw5', name: 'Cyber Hoodie v.2',    price: 'KES 16,000', desc: 'Tech fleece oversized hoodie with mesh panelling.', tag: 'NEW', inStock: true, materials: ['Tech Fleece', 'Reflective Thread'], sizes: ['S','M','L','XL'], img: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=500', vendor: 'Kofi Mensah' },
-    { id: 'sw6', name: 'Kente Cargo Set',     price: 'KES 32,000', desc: 'Two-piece cargo set with hand-woven Kente panels.', tag: '', inStock: true, materials: ['Cotton Ripstop', 'Hand-woven Kente'], sizes: ['S','M','L','XL'], img: 'https://images.unsplash.com/photo-1596752765962-c89db2f87768?w=500', vendor: 'Abena Asante' },
+    { id: 'sw1', name: 'Midnight Denim Jacket', price: 'KES 3,100', numPrice: 3100, desc: 'Distressed denim jacket with chest graphic.',       tag: 'HOT',  inStock: true,  materials: ['Denim', 'Screen Print'],             sizes: ['S','M','L','XL'],        img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=500', vendor: 'Kofi Mensah' },
+    { id: 'sw2', name: 'Graphic Heavyweight Tee', price: 'KES 1,500', numPrice: 1500, desc: 'Heavyweight cotton tee with tribal print.',      tag: 'NEW',  inStock: true,  materials: ['Cotton 400GSM', 'Foil Print'],       sizes: ['S','M','L','XL','XXL'],  img: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500', vendor: 'Kofi Mensah' },
+    { id: 'sw3', name: 'Cargo Wide Leg',        price: 'KES 2,600', numPrice: 2600, desc: 'Custom cargo trousers. Side pockets, drawstring.', tag: '',     inStock: true,  materials: ['Cotton Twill'],                      sizes: ['28','30','32','34','36'], img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=500', vendor: 'Kofi Mensah' },
+    { id: 'sw4', name: 'Moto Jacket',           price: 'KES 3,500', numPrice: 3500, desc: 'Boxy moto jacket in matte black. Asymmetric zip.', tag: 'LIMITED', inStock: true, materials: ['PU Leather', 'Metal Hardware'],      sizes: ['S','M','L'],             img: 'https://images.unsplash.com/photo-1551537482-f2075a1d41f2?w=500', vendor: 'Adaeze Obi' },
+    { id: 'sw5', name: 'Oversized Hoodie',      price: 'KES 2,200', numPrice: 2200, desc: 'Tech fleece oversized hoodie with mesh panel.',    tag: 'NEW',  inStock: true,  materials: ['Tech Fleece', 'Mesh Panel'],          sizes: ['S','M','L','XL'],        img: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=500', vendor: 'Kofi Mensah' },
+    { id: 'sw6', name: 'Kente Cargo Set',       price: 'KES 3,000', numPrice: 3000, desc: 'Two-piece cargo set with woven Kente panels.',     tag: '',     inStock: true,  materials: ['Cotton Ripstop', 'Kente Weave'],     sizes: ['S','M','L','XL'],        img: 'https://images.unsplash.com/photo-1596752765962-c89db2f87768?w=500', vendor: 'Abena Asante' },
+    { id: 'sw7', name: 'Puffer Vest',           price: 'KES 1,900', numPrice: 1900, desc: 'Lightweight puffer vest. Side zip pockets.',       tag: '',     inStock: true,  materials: ['Nylon Shell', 'Poly Fill'],           sizes: ['S','M','L','XL'],        img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=500', vendor: 'Kofi Mensah' },
+    { id: 'sw8', name: 'Track Pants',           price: 'KES 1,600', numPrice: 1600, desc: 'Slim track pants with contrast stripe.',           tag: 'HOT',  inStock: true,  materials: ['Tricot Fabric'],                     sizes: ['S','M','L','XL','XXL'],  img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=500', vendor: 'Kofi Mensah' },
   ],
   'official-wear': [
-    { id: 'ow1', name: 'Midnight Velvet Blazer', price: 'KES 58,000', desc: 'Double-weave midnight velvet blazer with boned structure.', tag: 'SIGNATURE', inStock: true, materials: ['Double-weave Velvet', 'Boned Lining'], sizes: ['S','M','L','XL'], img: 'https://images.unsplash.com/photo-1551537482-f2075a1d41f2?w=500', vendor: 'Fatima Al-Hassan' },
-    { id: 'ow2', name: 'Power Suit — Slate',     price: 'KES 72,000', desc: 'Two-piece slim-fit suit in charcoal wool-blend.', tag: 'BESPOKE', inStock: true, materials: ['Wool-Polyester Blend', 'Viscose Lining'], sizes: ['36','38','40','42','44'], img: 'https://images.unsplash.com/photo-1617127365659-c47fa864d8bc?w=500', vendor: 'Fatima Al-Hassan' },
-    { id: 'ow3', name: 'Ankara Boardroom Dress', price: 'KES 34,000', desc: 'Structured midi dress in premium Ankara. Padded shoulders.', tag: '', inStock: true, materials: ['Premium Ankara', 'Shoulder Padding'], sizes: ['XS','S','M','L','XL'], img: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=500', vendor: 'Adaeze Obi' },
-    { id: 'ow4', name: 'Obsidian Agbada',        price: 'KES 85,000', desc: 'Three-piece agbada in ivory damask with gold thread embroidery.', tag: 'EXCLUSIVE', inStock: true, materials: ['Ivory Damask', 'Gold Thread Embroidery'], sizes: ['S','M','L','XL'], img: 'https://images.unsplash.com/photo-1596752765962-c89db2f87768?w=500', vendor: 'Adaeze Obi' },
+    { id: 'ow1', name: 'Velvet Blazer',         price: 'KES 3,400', numPrice: 3400, desc: 'Structured velvet blazer for evening events.',     tag: 'SIGNATURE', inStock: true, materials: ['Velvet Blend', 'Lining'],          sizes: ['S','M','L','XL'],        img: 'https://images.unsplash.com/photo-1551537482-f2075a1d41f2?w=500', vendor: 'Fatima Al-Hassan' },
+    { id: 'ow2', name: 'Slim Suit — Charcoal',  price: 'KES 3,500', numPrice: 3500, desc: 'Two-piece slim-fit suit in charcoal blend.',       tag: 'BESPOKE',   inStock: true, materials: ['Wool-Poly Blend', 'Viscose Lining'], sizes: ['36','38','40','42','44'], img: 'https://images.unsplash.com/photo-1617127365659-c47fa864d8bc?w=500', vendor: 'Fatima Al-Hassan' },
+    { id: 'ow3', name: 'Ankara Midi Dress',     price: 'KES 2,900', numPrice: 2900, desc: 'Structured midi dress in premium Ankara.',         tag: '',          inStock: true, materials: ['Ankara Cotton', 'Shoulder Pad'],    sizes: ['XS','S','M','L','XL'],   img: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=500', vendor: 'Adaeze Obi' },
+    { id: 'ow4', name: 'Damask Agbada',         price: 'KES 3,300', numPrice: 3300, desc: 'Three-piece agbada in ivory damask.',               tag: 'EXCLUSIVE', inStock: true, materials: ['Ivory Damask', 'Gold Thread'],      sizes: ['S','M','L','XL'],        img: 'https://images.unsplash.com/photo-1596752765962-c89db2f87768?w=500', vendor: 'Adaeze Obi' },
+    { id: 'ow5', name: 'Pencil Skirt Suit',     price: 'KES 2,700', numPrice: 2700, desc: 'Blazer and pencil skirt combo in deep navy.',      tag: 'NEW',       inStock: true, materials: ['Crepe Fabric', 'Satin Lining'],     sizes: ['XS','S','M','L'],        img: 'https://images.unsplash.com/photo-1551537482-f2075a1d41f2?w=500', vendor: 'Fatima Al-Hassan' },
   ],
   'denim-wear': [
-    { id: 'dw1', name: 'Golden Distressed Denim', price: 'KES 32,000', desc: 'Hand-distressed selvedge denim. Gold leaf on collar and cuffs.', tag: 'HOT', inStock: true, materials: ['Selvedge Denim', '24k Gold Leaf'], sizes: ['S','M','L','XL'], img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=500', vendor: 'Kofi Mensah' },
-    { id: 'dw2', name: 'Indigo Wide-Leg Jeans',   price: 'KES 18,000', desc: 'Hand-dyed Japanese indigo wide-leg denim. High rise.', tag: 'NEW', inStock: true, materials: ['Japanese Denim', 'Natural Indigo Dye'], sizes: ['26','28','30','32','34'], img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=500', vendor: 'Kofi Mensah' },
-    { id: 'dw3', name: 'Patchwork Denim Coat',    price: 'KES 48,000', desc: 'Floor-length coat assembled from 8 vintage denim fabrics.', tag: 'LIMITED', inStock: true, materials: ['8 Vintage Denims'], sizes: ['S','M','L'], img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=500', vendor: 'Adaeze Obi' },
-    { id: 'dw4', name: 'Raw Edge Trucker',         price: 'KES 22,000', desc: 'Classic trucker in raw unwashed denim. Exposed seams.', tag: '', inStock: true, materials: ['Raw Unwashed Denim', 'Exposed Seam Finish'], sizes: ['S','M','L','XL'], img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=500', vendor: 'Kofi Mensah' },
+    { id: 'dw1', name: 'Distressed Denim Jacket', price: 'KES 2,800', numPrice: 2800, desc: 'Hand-distressed selvedge denim jacket.',         tag: 'HOT',     inStock: true,  materials: ['Selvedge Denim'],                  sizes: ['S','M','L','XL'],        img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=500', vendor: 'Kofi Mensah' },
+    { id: 'dw2', name: 'Indigo Wide-Leg Jeans',   price: 'KES 2,200', numPrice: 2200, desc: 'Wide-leg denim in deep indigo. High rise.',      tag: 'NEW',     inStock: true,  materials: ['Denim', 'Indigo Dye'],             sizes: ['26','28','30','32','34'], img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=500', vendor: 'Kofi Mensah' },
+    { id: 'dw3', name: 'Patchwork Denim Coat',    price: 'KES 3,200', numPrice: 3200, desc: 'Long coat from multi-wash denim fabrics.',       tag: 'LIMITED', inStock: true,  materials: ['Mixed Denim'],                     sizes: ['S','M','L'],             img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=500', vendor: 'Adaeze Obi' },
+    { id: 'dw4', name: 'Raw Edge Trucker',         price: 'KES 1,900', numPrice: 1900, desc: 'Classic trucker in raw unwashed denim.',        tag: '',        inStock: true,  materials: ['Raw Denim', 'Exposed Seam Finish'], sizes: ['S','M','L','XL'],        img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=500', vendor: 'Kofi Mensah' },
+    { id: 'dw5', name: 'Denim Maxi Skirt',         price: 'KES 1,700', numPrice: 1700, desc: 'Flare maxi denim skirt with slit detail.',      tag: 'NEW',     inStock: true,  materials: ['Stretch Denim'],                   sizes: ['XS','S','M','L','XL'],   img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=500', vendor: 'Kofi Mensah' },
+    { id: 'dw6', name: 'Denim Overalls',           price: 'KES 2,500', numPrice: 2500, desc: 'Relaxed-fit bib overalls in mid-wash denim.',   tag: '',        inStock: true,  materials: ['Cotton Denim'],                    sizes: ['S','M','L','XL'],        img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=500', vendor: 'Kofi Mensah' },
   ],
   'afro-luxury': [
-    { id: 'al1', name: 'Aso-Oke Agbada',     price: 'KES 96,000', desc: 'Hand-woven Aso-Oke agbada in indigo and copper thread.', tag: 'CUSTOM', inStock: true, materials: ['Hand-woven Aso-Oke', 'Copper Thread'], sizes: ['S','M','L','XL','XXL'], img: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=500', vendor: 'Adaeze Obi' },
-    { id: 'al2', name: 'Kente Wrap Coat',    price: 'KES 48,000', desc: 'Hand-woven Kente wrap coat with structured shoulders.', tag: 'HOT', inStock: true, materials: ['Hand-woven Kente', 'Interfacing'], sizes: ['S','M','L'], img: 'https://images.unsplash.com/photo-1596752765962-c89db2f87768?w=500', vendor: 'Abena Asante' },
-    { id: 'al3', name: 'Adire Silk Set',     price: 'KES 41,000', desc: 'Hand-dyed adire silk co-ord in indigo. Top and palazzo trousers.', tag: 'NEW', inStock: true, materials: ['Silk', 'Natural Indigo Dye'], sizes: ['XS','S','M','L','XL'], img: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500', vendor: 'Adaeze Obi' },
-    { id: 'al4', name: 'Dashiki Shirt',      price: 'KES 14,000', desc: 'Contemporary long dashiki in gold-embroidered cotton voile.', tag: '', inStock: true, materials: ['Cotton Voile', 'Gold Embroidery'], sizes: ['S','M','L','XL','XXL'], img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500', vendor: 'Adaeze Obi' },
-    { id: 'al5', name: 'Bogolanfini Bomber', price: 'KES 35,000', desc: 'Contemporary bomber in hand-made Malian mud cloth.', tag: '', inStock: true, materials: ['Mud Cloth', 'Satin Lining'], sizes: ['S','M','L','XL'], img: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=500', vendor: 'Adaeze Obi' },
+    { id: 'al1', name: 'Aso-Oke Agbada',      price: 'KES 3,500', numPrice: 3500, desc: 'Hand-woven Aso-Oke agbada in indigo and copper.',  tag: 'CUSTOM', inStock: true, materials: ['Aso-Oke Weave', 'Copper Thread'],   sizes: ['S','M','L','XL','XXL'], img: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=500', vendor: 'Adaeze Obi' },
+    { id: 'al2', name: 'Kente Wrap Coat',     price: 'KES 3,400', numPrice: 3400, desc: 'Kente wrap coat with structured shoulders.',       tag: 'HOT',    inStock: true, materials: ['Kente Weave', 'Interfacing'],        sizes: ['S','M','L'],            img: 'https://images.unsplash.com/photo-1596752765962-c89db2f87768?w=500', vendor: 'Abena Asante' },
+    { id: 'al3', name: 'Adire Co-ord Set',    price: 'KES 2,900', numPrice: 2900, desc: 'Adire top and palazzo trousers in indigo.',        tag: 'NEW',    inStock: true, materials: ['Cotton', 'Adire Dye'],              sizes: ['XS','S','M','L','XL'],  img: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500', vendor: 'Adaeze Obi' },
+    { id: 'al4', name: 'Dashiki Shirt',       price: 'KES 1,800', numPrice: 1800, desc: 'Long dashiki in gold-embroidered cotton voile.',   tag: '',       inStock: true, materials: ['Cotton Voile', 'Embroidery'],        sizes: ['S','M','L','XL','XXL'], img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500', vendor: 'Adaeze Obi' },
+    { id: 'al5', name: 'Mud Cloth Bomber',    price: 'KES 3,100', numPrice: 3100, desc: 'Contemporary bomber in Malian mud cloth.',         tag: '',       inStock: true, materials: ['Mud Cloth', 'Satin Lining'],         sizes: ['S','M','L','XL'],       img: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=500', vendor: 'Adaeze Obi' },
+    { id: 'al6', name: 'Kanga Wrap Dress',    price: 'KES 1,600', numPrice: 1600, desc: 'Vibrant kanga-print wrap dress. One size fits.',   tag: 'NEW',    inStock: true, materials: ['Kanga Cotton'],                     sizes: ['One Size'],             img: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=500', vendor: 'Abena Asante' },
+    { id: 'al7', name: 'Bogolan Waistcoat',   price: 'KES 2,200', numPrice: 2200, desc: 'Sleeveless waistcoat in hand-made bogolan cloth.', tag: '',       inStock: true, materials: ['Bogolan Cloth', 'Lining'],          sizes: ['S','M','L','XL'],       img: 'https://images.unsplash.com/photo-1596752765962-c89db2f87768?w=500', vendor: 'Abena Asante' },
   ],
   'resort-wear': [
-    { id: 'rw1', name: 'Linen Riviera Set',  price: 'KES 24,000', desc: 'Hand-dyed Belgian linen shirt and trousers in sage.', tag: 'NEW', inStock: true, materials: ['Belgian Linen', 'Natural Dyes'], sizes: ['S','M','L','XL'], img: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=500', vendor: 'Adaeze Obi' },
-    { id: 'rw2', name: 'Silk Wrap Dress',    price: 'KES 31,000', desc: 'Hand-painted silk wrap dress with abstract coastal motif.', tag: '', inStock: true, materials: ['Silk Charmeuse', 'Hand-painted'], sizes: ['XS','S','M','L'], img: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500', vendor: 'Fatima Al-Hassan' },
-    { id: 'rw3', name: 'Cotton Kaftan',      price: 'KES 19,500', desc: 'Block-printed cotton kaftan in terracotta and cream.', tag: '', inStock: true, materials: ['Cotton', 'Block Print'], sizes: ['One Size'], img: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=500', vendor: 'Adaeze Obi' },
-    { id: 'rw4', name: 'Linen Wide-Leg',     price: 'KES 14,000', desc: 'High-rise wide-leg linen in natural ecru. Elasticated waist.', tag: '', inStock: true, materials: ['Linen'], sizes: ['XS','S','M','L','XL'], img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=500', vendor: 'Abena Asante' },
+    { id: 'rw1', name: 'Linen Shirt & Trousers', price: 'KES 2,900', numPrice: 2900, desc: 'Linen shirt and trousers in sage.',             tag: 'NEW', inStock: true, materials: ['Linen', 'Natural Dyes'],      sizes: ['S','M','L','XL'],       img: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=500', vendor: 'Adaeze Obi' },
+    { id: 'rw2', name: 'Wrap Dress',             price: 'KES 2,400', numPrice: 2400, desc: 'Abstract coastal-print wrap dress.',            tag: '',    inStock: true, materials: ['Rayon', 'Screen Print'],       sizes: ['XS','S','M','L'],       img: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500', vendor: 'Fatima Al-Hassan' },
+    { id: 'rw3', name: 'Block-Print Kaftan',     price: 'KES 1,900', numPrice: 1900, desc: 'Block-printed kaftan in terracotta and cream.', tag: '',    inStock: true, materials: ['Cotton', 'Block Print'],       sizes: ['One Size'],             img: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=500', vendor: 'Adaeze Obi' },
+    { id: 'rw4', name: 'Wide-Leg Linen Pants',   price: 'KES 1,700', numPrice: 1700, desc: 'High-rise wide-leg linen. Elasticated waist.', tag: '',    inStock: true, materials: ['Linen'],                       sizes: ['XS','S','M','L','XL'],  img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=500', vendor: 'Abena Asante' },
   ],
 };
 
@@ -85,7 +93,7 @@ const allFlat = Object.entries(allProducts).flatMap(([catKey, prods]) =>
   prods.map(p => ({ ...p, catKey }))
 );
 
-// ── SHARED FOOTER ─────────────────────────────────────────────────────────────
+// ── FOOTER ────────────────────────────────────────────────────────────────────
 const Footer = ({ onOpenCategory }) => (
   <footer style={{ backgroundColor: C.surface, borderTop: `1px solid ${C.border}`, padding: '64px 0 36px' }}>
     <div style={s.section}>
@@ -98,10 +106,9 @@ const Footer = ({ onOpenCategory }) => (
             </Link>
           </div>
           <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.8, maxWidth: 270, marginBottom: 18 }}>
-            Redefining luxury through artisanal craftsmanship and AI-powered creativity. Built for the bold generation.
+            Redefining style through artisanal craftsmanship. Built for the bold generation.
           </p>
-          {/* Back to main site */}
-          <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: C.muted, fontSize: 11, fontWeight: 900, letterSpacing: '0.08em', textDecoration: 'none', border: `1px solid ${C.border}`, padding: '6px 14px', borderRadius: 8, transition: 'all 0.2s' }}
+          <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: C.muted, fontSize: 11, fontWeight: 900, letterSpacing: '0.08em', textDecoration: 'none', border: `1px solid ${C.border}`, padding: '6px 14px', borderRadius: 8 }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = C.bHov; e.currentTarget.style.color = C.cream; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.muted; }}>
             ← Back to Home
@@ -110,9 +117,8 @@ const Footer = ({ onOpenCategory }) => (
         <div>
           <h4 style={{ color: C.cream, fontWeight: 900, fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 18 }}>Collections</h4>
           {styleCategories.map(cat => (
-            <button key={cat.key}
-              onClick={() => onOpenCategory(cat)}
-              style={{ display: 'block', color: C.muted, fontSize: 13, marginBottom: 9, cursor: 'pointer', background: 'none', border: 'none', padding: 0, textAlign: 'left', transition: 'color 0.2s' }}
+            <button key={cat.key} onClick={() => onOpenCategory(cat)}
+              style={{ display: 'block', color: C.muted, fontSize: 13, marginBottom: 9, cursor: 'pointer', background: 'none', border: 'none', padding: 0, textAlign: 'left' }}
               onMouseEnter={e => e.currentTarget.style.color = C.cream}
               onMouseLeave={e => e.currentTarget.style.color = C.muted}>
               {cat.label}
@@ -122,7 +128,7 @@ const Footer = ({ onOpenCategory }) => (
         <div>
           <h4 style={{ color: C.cream, fontWeight: 900, fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 18 }}>Company</h4>
           {[['About Us', '/about'], ['Custom Orders', '/custom-order'], ['Affiliate', '/affiliate'], ['Contact', '/contact']].map(([label, path]) => (
-            <Link key={label} to={path} style={{ display: 'block', color: C.muted, fontSize: 13, marginBottom: 9, textDecoration: 'none', transition: 'color 0.2s' }}
+            <Link key={label} to={path} style={{ display: 'block', color: C.muted, fontSize: 13, marginBottom: 9, textDecoration: 'none' }}
               onMouseEnter={e => e.target.style.color = C.cream} onMouseLeave={e => e.target.style.color = C.muted}>{label}</Link>
           ))}
         </div>
@@ -131,7 +137,7 @@ const Footer = ({ onOpenCategory }) => (
         <p style={{ color: C.muted, fontSize: 11 }}>© 2024 57 Arts & Customs. All rights reserved. Nairobi, Kenya.</p>
         <div style={{ display: 'flex', gap: 22 }}>
           {[['Privacy Policy', '/contact'], ['Terms of Service', '/contact']].map(([label, path]) => (
-            <Link key={label} to={path} style={{ color: C.muted, fontSize: 11, textDecoration: 'none', transition: 'color 0.2s' }}
+            <Link key={label} to={path} style={{ color: C.muted, fontSize: 11, textDecoration: 'none' }}
               onMouseEnter={e => e.target.style.color = C.cream} onMouseLeave={e => e.target.style.color = C.muted}>{label}</Link>
           ))}
         </div>
@@ -146,7 +152,9 @@ const ProductCard = ({ product, onOpen, wishlist, onToggleWishlist }) => {
   const cat = styleCategories.find(c => c.key === product.catKey);
   const inWish = wishlist.includes(product.id);
   return (
-    <div onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+    <div
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
       onClick={() => onOpen(product, cat)}
       style={{ cursor: 'pointer', backgroundColor: C.surface, border: `1px solid ${hov ? C.bHov : C.border}`, borderRadius: 14, overflow: 'hidden', transition: 'border-color 0.2s' }}>
       <div style={{ position: 'relative', height: 260, overflow: 'hidden', backgroundColor: C.faint }}>
@@ -162,7 +170,8 @@ const ProductCard = ({ product, onOpen, wishlist, onToggleWishlist }) => {
             {product.tag}
           </span>
         )}
-        <button onClick={e => { e.stopPropagation(); onToggleWishlist(product.id); }}
+        <button
+          onClick={e => { e.stopPropagation(); onToggleWishlist(product.id); }}
           style={{ position: 'absolute', top: 10, right: 10, width: 30, height: 30, borderRadius: 7, border: `1px solid ${C.border}`, backgroundColor: 'rgba(10,10,10,0.85)', color: inWish ? '#e74c3c' : C.muted, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {inWish ? '♥' : '♡'}
         </button>
@@ -183,15 +192,17 @@ const ProductCard = ({ product, onOpen, wishlist, onToggleWishlist }) => {
   );
 };
 
-// ── COMPONENT ─────────────────────────────────────────────────────────────────
+// ── MAIN COMPONENT ────────────────────────────────────────────────────────────
 const Fashion = () => {
   const navigate = useNavigate();
   const { addToCart, itemCount } = useCart();
+
   const [view, setView]                       = useState('home');
   const [activeCategory, setActiveCategory]   = useState(null);
   const [activeProduct, setActiveProduct]     = useState(null);
   const [wishlist, setWishlist]               = useState([]);
   const [selectedSize, setSelectedSize]       = useState('');
+  const [sizeError, setSizeError]             = useState(false);   // ✅ NEW: size validation feedback
   const [addedToCart, setAddedToCart]         = useState(false);
   const [activeCatFilter, setActiveCatFilter] = useState('all');
   const [searchQuery, setSearchQuery]         = useState('');
@@ -216,39 +227,59 @@ const Fashion = () => {
     if (searchOpen && searchInputRef.current) searchInputRef.current.focus();
   }, [searchOpen]);
 
-  const toggleWishlist = (id) => setWishlist(p => p.includes(id) ? p.filter(w => w !== id) : [...p, id]);
-  const openCategory   = (cat) => { setActiveCategory(cat); setView('category'); window.scrollTo(0, 0); };
+  const toggleWishlist  = (id) => setWishlist(p => p.includes(id) ? p.filter(w => w !== id) : [...p, id]);
+  const openCategory    = (cat) => { setActiveCategory(cat); setView('category'); window.scrollTo(0, 0); };
   const openAllProducts = (catKey = 'all') => { setActiveCatFilter(catKey); setView('all'); window.scrollTo(0, 0); };
-  const openProduct    = (product, cat) => {
+  const openProduct     = (product, cat) => {
     if (cat) setActiveCategory(cat);
-    setActiveProduct(product); setSelectedSize(''); setAddedToCart(false);
+    setActiveProduct(product);
+    setSelectedSize('');
+    setSizeError(false);
+    setAddedToCart(false);
     setActiveTab('description');
-    setView('detail'); window.scrollTo(0, 0);
-    setSearchOpen(false); setSearchQuery('');
+    setView('detail');
+    window.scrollTo(0, 0);
+    setSearchOpen(false);
+    setSearchQuery('');
   };
   const goHome     = () => { setView('home');     window.scrollTo(0, 0); };
   const goCategory = () => { setView('category'); window.scrollTo(0, 0); };
 
+  // ── ADD TO CART — fixed ───────────────────────────────────────────────────
   const handleAddToCart = () => {
-    if (!selectedSize && activeProduct.sizes.length > 1) return;
-    addToCart(activeProduct, 1);
+    if (!activeProduct || !activeProduct.inStock) return;
+
+    // Only require size selection when there are multiple real sizes (not "One Size")
+    const needsSize = activeProduct.sizes.length > 1 && !activeProduct.sizes.includes('One Size');
+    if (needsSize && !selectedSize) {
+      setSizeError(true);
+      setTimeout(() => setSizeError(false), 2000);
+      return;
+    }
+
+    const sizeToUse = selectedSize || activeProduct.sizes[0];
+
+    // Pass product with numeric price so CartContext stores it correctly
+    addToCart(
+      { ...activeProduct, price: activeProduct.numPrice },
+      1,
+      sizeToUse
+    );
     setAddedToCart(true);
-    setTimeout(() => setAddedToCart(false), 2000);
+    setTimeout(() => setAddedToCart(false), 2500);
   };
 
-  // ── NAVBAR (shared across views) ──────────────────────────────────────────
+  // ── NAVBAR ────────────────────────────────────────────────────────────────
   const Navbar = () => (
     <nav style={{ backgroundColor: C.bg, borderBottom: `1px solid ${C.border}`, height: 58, display: 'flex', alignItems: 'center', position: 'sticky', top: 0, zIndex: 50 }}>
       <div style={{ ...s.section, display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          {/* Back to main site */}
-          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 6, color: C.muted, fontSize: 11, fontWeight: 900, letterSpacing: '0.06em', textDecoration: 'none', transition: 'color 0.2s' }}
+          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 6, color: C.muted, fontSize: 11, fontWeight: 900, letterSpacing: '0.06em', textDecoration: 'none' }}
             onMouseEnter={e => e.currentTarget.style.color = C.cream}
             onMouseLeave={e => e.currentTarget.style.color = C.muted}>
             ← Home
           </Link>
           <span style={{ color: C.border, fontSize: 14 }}>|</span>
-          {/* Fashion internal home */}
           <button onClick={goHome} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer' }}>
             <div style={{ width: 26, height: 26, borderRadius: 5, backgroundColor: C.gold, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 10, color: '#000' }}>57</div>
             <span style={{ color: C.cream, fontWeight: 900, fontSize: 12, letterSpacing: '0.06em' }}>FASHION</span>
@@ -306,13 +337,12 @@ const Fashion = () => {
     </nav>
   );
 
-  // ── HOME VIEW ──────────────────────────────────────────────────────────────
+  // ── HOME VIEW ─────────────────────────────────────────────────────────────
   if (view === 'home') {
     return (
       <div style={{ backgroundColor: C.bg, color: C.cream, minHeight: '100vh' }}>
-        {/* ANNOUNCEMENT */}
         <div style={{ backgroundColor: C.gold, color: '#000', fontSize: 11, fontWeight: 900, textAlign: 'center', padding: '7px 16px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-          1,200+ fashion pieces · KES pricing · Free shipping over KSH 50,000
+          All pieces KES 1,500 – 3,500 · Free shipping over KES 10,000 · Nairobi artisans
         </div>
         <Navbar />
 
@@ -322,7 +352,6 @@ const Fashion = () => {
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.28 }} />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(10,10,10,0.97) 40%, rgba(10,10,10,0.4))' }} />
           <div style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: 1, backgroundColor: C.border }} />
-
           <div style={{ ...s.section, position: 'relative', zIndex: 2 }}>
             <div style={{ maxWidth: 600 }}>
               <p style={s.eyebrow}>57 Arts & Customs — Fashion</p>
@@ -331,14 +360,14 @@ const Fashion = () => {
               </h1>
               <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.8, maxWidth: 440, marginBottom: 36 }}>
                 Six distinct style universes. Handcrafted fashion from Africa's finest artisans.
-                Old money luxury to Afro-heritage streetwear — all in one place.
+                Every piece KES 1,500–3,500. Old money luxury to Afro-heritage streetwear.
               </p>
               <div style={{ display: 'flex', gap: 12 }}>
                 <button style={s.btnGold} onClick={() => openAllProducts('all')}>Shop All Pieces</button>
                 <button style={s.btnGhost} onClick={() => openCategory(styleCategories[4])}>Explore Afro Luxury</button>
               </div>
               <div style={{ display: 'flex', gap: 40, marginTop: 56, paddingTop: 40, borderTop: `1px solid ${C.border}` }}>
-                {[['1,200+', 'Fashion Pieces'], ['36', 'Artisan Vendors'], ['6', 'Style Universes']].map(([num, label]) => (
+                {[['37+', 'Fashion Pieces'], ['36', 'Artisan Vendors'], ['6', 'Style Universes'], ['1,500', 'Starting Price (KES)']].map(([num, label]) => (
                   <div key={label}>
                     <p style={{ color: C.gold, fontSize: 28, fontWeight: 900, lineHeight: 1 }}>{num}</p>
                     <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>{label}</p>
@@ -349,7 +378,7 @@ const Fashion = () => {
           </div>
         </section>
 
-        {/* STYLE CATEGORIES GRID */}
+        {/* CATEGORIES GRID */}
         <section style={{ padding: '80px 0', borderTop: `1px solid ${C.border}` }}>
           <div style={s.section}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 36 }}>
@@ -359,12 +388,12 @@ const Fashion = () => {
               </div>
               <button onClick={() => openAllProducts('all')} style={{ ...s.btnGhost, fontSize: 11, padding: '10px 20px' }}>View All Pieces →</button>
             </div>
-
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
               {styleCategories.map(cat => {
                 const isHov = hovCat === cat.key;
                 return (
-                  <div key={cat.key} onMouseEnter={() => setHovCat(cat.key)} onMouseLeave={() => setHovCat(null)}
+                  <div key={cat.key}
+                    onMouseEnter={() => setHovCat(cat.key)} onMouseLeave={() => setHovCat(null)}
                     onClick={() => openCategory(cat)}
                     style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', height: 260, cursor: 'pointer', border: `1px solid ${isHov ? C.bHov : C.border}`, transition: 'border-color 0.2s' }}>
                     <img src={cat.img} alt={cat.label}
@@ -373,7 +402,7 @@ const Fashion = () => {
                     <div style={{ position: 'absolute', bottom: 20, left: 20, right: 20 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                         <div>
-                          <p style={{ color: C.gold, fontSize: 9, fontWeight: 900, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 4 }}>{cat.icon} {cat.count} pieces</p>
+                          <p style={{ color: C.gold, fontSize: 9, fontWeight: 900, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 4 }}>{cat.icon} {allProducts[cat.key]?.length || 0} pieces</p>
                           <p style={{ color: C.cream, fontSize: 18, fontWeight: 900, textTransform: 'uppercase' }}>{cat.label}</p>
                           <p style={{ color: C.muted, fontSize: 11, marginTop: 3 }}>{cat.desc}</p>
                         </div>
@@ -387,7 +416,7 @@ const Fashion = () => {
           </div>
         </section>
 
-        {/* FEATURED PRODUCTS — first 6 from all */}
+        {/* FEATURED — NEW + HOT */}
         <section style={{ padding: '80px 0', borderTop: `1px solid ${C.border}` }}>
           <div style={s.section}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 36 }}>
@@ -415,7 +444,7 @@ const Fashion = () => {
                   <p style={s.eyebrow}>Bespoke Fashion</p>
                   <h2 style={{ ...s.h2, marginBottom: 12 }}>Commission Your<br />Perfect Piece</h2>
                   <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.85 }}>
-                    Can't find exactly what you want? Our artisans specialise in bespoke garments made to your exact vision —
+                    Can't find exactly what you want? Our artisans specialise in bespoke garments —
                     from Ankara boardroom wear to hand-painted denim.
                   </p>
                 </div>
@@ -433,33 +462,28 @@ const Fashion = () => {
     );
   }
 
-  // ── CATEGORY VIEW ──────────────────────────────────────────────────────────
+  // ── CATEGORY VIEW ─────────────────────────────────────────────────────────
   if (view === 'category' && activeCategory) {
     const products = allProducts[activeCategory.key] || [];
     return (
       <div style={{ backgroundColor: C.bg, color: C.cream, minHeight: '100vh' }}>
         <Navbar />
-        {/* Hero */}
         <section style={{ position: 'relative', height: 340, display: 'flex', alignItems: 'flex-end', overflow: 'hidden' }}>
           <img src={activeCategory.img} alt={activeCategory.label}
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.35 }} />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(10,10,10,1) 30%, rgba(10,10,10,0.4))' }} />
           <div style={{ ...s.section, position: 'relative', zIndex: 2, paddingBottom: 48 }}>
-            <button onClick={goHome} style={{ color: C.muted, fontSize: 11, background: 'none', border: 'none', cursor: 'pointer', marginBottom: 16, letterSpacing: '0.06em' }}>
-              ← Fashion
-            </button>
+            <button onClick={goHome} style={{ color: C.muted, fontSize: 11, background: 'none', border: 'none', cursor: 'pointer', marginBottom: 16, letterSpacing: '0.06em' }}>← Fashion</button>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <div style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: C.faint, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>{activeCategory.icon}</div>
               <div>
-                <p style={s.eyebrow}>{products.length} pieces</p>
+                <p style={s.eyebrow}>{products.length} pieces · From KES 1,500</p>
                 <h1 style={{ color: C.cream, fontSize: 48, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.03em', lineHeight: 1 }}>{activeCategory.label}</h1>
               </div>
             </div>
             <p style={{ color: C.muted, fontSize: 14, marginTop: 10 }}>{activeCategory.desc}</p>
           </div>
         </section>
-
-        {/* Products */}
         <div style={{ ...s.section, padding: '48px 48px 80px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
             {products.map(p => (
@@ -472,7 +496,7 @@ const Fashion = () => {
     );
   }
 
-  // ── ALL PRODUCTS VIEW ──────────────────────────────────────────────────────
+  // ── ALL PRODUCTS VIEW ─────────────────────────────────────────────────────
   if (view === 'all') {
     return (
       <div style={{ backgroundColor: C.bg, color: C.cream, minHeight: '100vh' }}>
@@ -483,8 +507,7 @@ const Fashion = () => {
               <p style={s.eyebrow}>All Fashion</p>
               <h2 style={s.h2}>{filteredAll.length} Pieces</h2>
             </div>
-            {/* Filter tabs */}
-            <div style={{ display: 'flex', gap: 6 }}>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {[['all', 'All'], ...styleCategories.map(c => [c.key, c.label])].map(([key, label]) => (
                 <button key={key} onClick={() => setActiveCatFilter(key)}
                   style={{ padding: '7px 14px', borderRadius: 8, fontSize: 10, fontWeight: 900, cursor: 'pointer', border: `1px solid ${activeCatFilter === key ? C.gold : C.border}`, backgroundColor: activeCatFilter === key ? C.gold : 'transparent', color: activeCatFilter === key ? '#000' : C.muted, transition: 'all 0.15s' }}>
@@ -504,10 +527,14 @@ const Fashion = () => {
     );
   }
 
-  // ── PRODUCT DETAIL VIEW ────────────────────────────────────────────────────
+  // ── PRODUCT DETAIL VIEW ───────────────────────────────────────────────────
   if (view === 'detail' && activeProduct) {
     const catProducts = allProducts[activeCategory?.key] || [];
     const related = catProducts.filter(p => p.id !== activeProduct.id).slice(0, 3);
+
+    // Determine if size selection is required
+    const needsSize = activeProduct.sizes.length > 1 && !activeProduct.sizes.includes('One Size');
+
     return (
       <div style={{ backgroundColor: C.bg, color: C.cream, minHeight: '100vh' }}>
         <Navbar />
@@ -522,11 +549,10 @@ const Fashion = () => {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, marginBottom: 64 }}>
-            {/* Images */}
+            {/* Image */}
             <div>
-              <div style={{ borderRadius: 16, overflow: 'hidden', height: 520, backgroundColor: C.surface, border: `1px solid ${C.border}`, marginBottom: 12 }}>
-                <img src={activeProduct.img} alt={activeProduct.name}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <div style={{ borderRadius: 16, overflow: 'hidden', height: 520, backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+                <img src={activeProduct.img} alt={activeProduct.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
             </div>
 
@@ -555,13 +581,23 @@ const Fashion = () => {
 
               {/* Size selector */}
               <div style={{ marginBottom: 24 }}>
-                <p style={{ color: C.muted, fontSize: 10, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 10 }}>
-                  Select Size {selectedSize && <span style={{ color: C.gold }}>— {selectedSize}</span>}
+                <p style={{ color: sizeError ? '#f87171' : C.muted, fontSize: 10, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 10, transition: 'color 0.2s' }}>
+                  {needsSize
+                    ? sizeError
+                      ? '⚠ Please select a size to continue'
+                      : `Select Size${selectedSize ? ` — ${selectedSize}` : ''}`
+                    : `Size — ${activeProduct.sizes[0]}`}
                 </p>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {activeProduct.sizes.map(sz => (
-                    <button key={sz} onClick={() => setSelectedSize(sz)}
-                      style={{ padding: '8px 16px', borderRadius: 8, fontSize: 11, fontWeight: 900, cursor: 'pointer', border: `1px solid ${selectedSize === sz ? C.gold : C.border}`, backgroundColor: selectedSize === sz ? C.gold : 'transparent', color: selectedSize === sz ? '#000' : C.muted, transition: 'all 0.15s' }}>
+                    <button key={sz} onClick={() => { setSelectedSize(sz); setSizeError(false); }}
+                      style={{
+                        padding: '8px 16px', borderRadius: 8, fontSize: 11, fontWeight: 900, cursor: 'pointer',
+                        border: `1px solid ${selectedSize === sz ? C.gold : sizeError ? 'rgba(248,113,113,0.5)' : C.border}`,
+                        backgroundColor: selectedSize === sz ? C.gold : 'transparent',
+                        color: selectedSize === sz ? '#000' : sizeError ? '#f87171' : C.muted,
+                        transition: 'all 0.15s',
+                      }}>
                       {sz}
                     </button>
                   ))}
@@ -580,11 +616,29 @@ const Fashion = () => {
 
               {/* CTAs */}
               <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-                <button onClick={handleAddToCart} disabled={!activeProduct.inStock}
-                  style={{ flex: 1, padding: '14px', borderRadius: 10, fontWeight: 900, fontSize: 12, cursor: activeProduct.inStock ? 'pointer' : 'not-allowed', border: 'none', letterSpacing: '0.04em', transition: 'all 0.2s',
-                    backgroundColor: addedToCart ? '#1a3a1a' : activeProduct.inStock ? C.gold : C.faint,
-                    color: addedToCart ? '#4ade80' : activeProduct.inStock ? '#000' : C.dim }}>
-                  {!activeProduct.inStock ? 'Out of Stock' : addedToCart ? '✓ Added to Cart!' : '+ Add to Cart'}
+                <button
+                  onClick={handleAddToCart}
+                  disabled={!activeProduct.inStock}
+                  style={{
+                    flex: 1, padding: '14px', borderRadius: 10, fontWeight: 900, fontSize: 12,
+                    cursor: activeProduct.inStock ? 'pointer' : 'not-allowed',
+                    border: 'none', letterSpacing: '0.04em', transition: 'all 0.2s',
+                    backgroundColor: addedToCart
+                      ? '#1a3a1a'
+                      : sizeError
+                      ? 'rgba(248,113,113,0.15)'
+                      : activeProduct.inStock
+                      ? C.gold
+                      : C.faint,
+                    color: addedToCart ? '#4ade80' : sizeError ? '#f87171' : activeProduct.inStock ? '#000' : C.dim,
+                  }}>
+                  {!activeProduct.inStock
+                    ? 'Out of Stock'
+                    : addedToCart
+                    ? '✓ Added to Cart!'
+                    : sizeError
+                    ? 'Select a size first'
+                    : '+ Add to Cart'}
                 </button>
                 <button onClick={() => toggleWishlist(activeProduct.id)}
                   style={{ width: 48, height: 48, borderRadius: 10, border: `1px solid ${wishlist.includes(activeProduct.id) ? C.gold : C.border}`, backgroundColor: 'transparent', color: wishlist.includes(activeProduct.id) ? '#e74c3c' : C.muted, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -592,8 +646,7 @@ const Fashion = () => {
                 </button>
               </div>
 
-              <Link to="/custom-order"
-                style={{ ...s.btnGhost, display: 'block', textAlign: 'center', padding: '13px' }}>
+              <Link to="/custom-order" style={{ ...s.btnGhost, display: 'block', textAlign: 'center', padding: '13px' }}>
                 Commission a Custom Version →
               </Link>
             </div>
@@ -614,7 +667,7 @@ const Fashion = () => {
                 <div>
                   <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.85, marginBottom: 20 }}>{activeProduct.desc}</p>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-                    {[['🎨', 'Hand-crafted', 'Made by master artisans'], ['🌿', 'Sustainable', 'Ethically sourced materials'], ['✦', 'Certified', 'Certificate of authenticity']].map(([icon, title, desc]) => (
+                    {[['🎨', 'Hand-crafted', 'Made by master artisans'], ['🌿', 'Sustainable', 'Ethically sourced'], ['✦', 'Certified', 'Certificate of authenticity']].map(([icon, title, desc]) => (
                       <div key={title} style={{ backgroundColor: C.faint, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, textAlign: 'center' }}>
                         <span style={{ fontSize: 22, display: 'block', marginBottom: 8 }}>{icon}</span>
                         <p style={{ color: C.cream, fontWeight: 900, fontSize: 11 }}>{title}</p>

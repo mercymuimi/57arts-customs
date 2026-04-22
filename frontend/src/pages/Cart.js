@@ -7,17 +7,17 @@ const C = {
   faint: '#242424', cream: '#f0ece4', muted: '#606060', gold: '#c9a84c',
 };
 
-const fmt = n => `KSH ${n.toLocaleString()}`;
+// ── price is now always a number in cart, so fmt is clean ─────────────────────
+const fmt = n => `KES ${Number(n).toLocaleString('en-KE')}`;
 
-// ✅ Shared shipping rule — keep this in sync with Checkout.js
 const calcShipping = (subtotal) => subtotal < 500 ? 0 : 500; // TODO: revert to 50000 before production
 
-// ✅ Image fallback used in render (safety net in case older cart entries lack img)
 const FALLBACK_IMG = 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=500';
 const resolveImg = (item) => item.img || item.images?.[0] || item.image || FALLBACK_IMG;
 
 const Cart = () => {
   const navigate = useNavigate();
+  // ✅ Use lineKey-based updateQty and removeItem from updated CartContext
   const { items, updateQty, removeItem, addToCart, subtotal } = useCart();
 
   const [saved, setSaved]                 = useState([]);
@@ -25,14 +25,19 @@ const Cart = () => {
   const [couponApplied, setCouponApplied] = useState(false);
   const [couponError, setCouponError]     = useState('');
 
-  const saveForLater = id => {
-    const item = items.find(i => i.id === id);
-    if (item) { setSaved(p => [...p, item]); removeItem(id); }
+  // ✅ FIX: saveForLater now uses item.lineKey for removeItem
+  const saveForLater = (lineKey) => {
+    const item = items.find(i => i.lineKey === lineKey);
+    if (item) {
+      setSaved(p => [...p, item]);
+      removeItem(lineKey);                          // ✅ lineKey not id
+    }
   };
 
-  const moveToCart = item => {
-    setSaved(p => p.filter(i => i.id !== item.id));
-    addToCart(item, 1);
+  // ✅ FIX: moveToCart passes size back so it re-creates the correct lineKey
+  const moveToCart = (item) => {
+    setSaved(p => p.filter(i => i.lineKey !== item.lineKey));
+    addToCart(item, 1, item.size || '');            // ✅ restore size
   };
 
   const applyCoupon = () => {
@@ -41,7 +46,6 @@ const Cart = () => {
   };
 
   const discount = couponApplied ? Math.round(subtotal * 0.1) : 0;
-  // ✅ FIX: use shared calcShipping so Cart and Checkout always match
   const shipping  = calcShipping(subtotal - discount);
   const total     = subtotal - discount + shipping;
 
@@ -87,13 +91,16 @@ const Cart = () => {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               {items.map(item => (
-                <div key={item.id} style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: 20, display: 'flex', gap: 16, transition: 'border-color 0.2s' }}
+                // ✅ FIX: key is now item.lineKey (unique per product+size combo)
+                <div key={item.lineKey}
+                  style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: 20, display: 'flex', gap: 16, transition: 'border-color 0.2s' }}
                   onMouseEnter={e => e.currentTarget.style.borderColor = C.bHov}
                   onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
+
+                  {/* Image */}
                   <div
                     style={{ width: 88, height: 88, borderRadius: 10, overflow: 'hidden', flexShrink: 0, border: `1px solid ${C.border}`, cursor: 'pointer', backgroundColor: C.faint }}
-                    onClick={() => navigate(`/product/${item.slug}`)}>
-                    {/* ✅ FIX: resolveImg handles any product shape so image always shows */}
+                    onClick={() => item.slug && navigate(`/product/${item.slug}`)}>
                     <img
                       src={resolveImg(item)}
                       alt={item.name}
@@ -101,32 +108,55 @@ const Cart = () => {
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                   </div>
+
+                  {/* Details */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
                       <div>
-                        <p style={{ color: C.cream, fontWeight: 900, fontSize: 14, cursor: 'pointer', marginBottom: 2 }}
-                          onClick={() => navigate(`/product/${item.slug}`)}>{item.name}</p>
+                        <p style={{ color: C.cream, fontWeight: 900, fontSize: 14, cursor: item.slug ? 'pointer' : 'default', marginBottom: 2 }}
+                          onClick={() => item.slug && navigate(`/product/${item.slug}`)}>
+                          {item.name}
+                        </p>
                         <p style={{ color: C.muted, fontSize: 11 }}>{item.desc}</p>
-                        <span style={{ display: 'inline-block', marginTop: 6, color: C.muted, fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', border: `1px solid ${C.border}`, padding: '2px 8px', borderRadius: 100 }}>{item.category}</span>
+
+                        {/* Tags row: category + size */}
+                        <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+                          {item.category && (
+                            <span style={{ color: C.muted, fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', border: `1px solid ${C.border}`, padding: '2px 8px', borderRadius: 100 }}>
+                              {item.category}
+                            </span>
+                          )}
+                          {/* ✅ NEW: show selected size if it exists */}
+                          {item.size && (
+                            <span style={{ color: C.gold, fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', border: `1px solid ${C.gold}`, padding: '2px 8px', borderRadius: 100 }}>
+                              Size: {item.size}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <p style={{ color: C.gold, fontWeight: 900, fontSize: 15, flexShrink: 0, marginLeft: 12 }}>{fmt(item.price * item.qty)}</p>
+                      {/* ✅ FIX: price is now a number, so multiplication works correctly */}
+                      <p style={{ color: C.gold, fontWeight: 900, fontSize: 15, flexShrink: 0, marginLeft: 12 }}>
+                        {fmt(item.price * item.qty)}
+                      </p>
                     </div>
+
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 }}>
-                      {/* Qty controls */}
+                      {/* Qty controls — ✅ FIX: now pass item.lineKey */}
                       <div style={{ display: 'flex', alignItems: 'center', border: `1px solid ${C.border}`, borderRadius: 8, overflow: 'hidden' }}>
-                        <button onClick={() => updateQty(item.id, -1)}
+                        <button onClick={() => updateQty(item.lineKey, -1)}
                           style={{ width: 32, height: 32, backgroundColor: 'transparent', border: 'none', color: C.cream, cursor: 'pointer', fontSize: 16 }}>−</button>
                         <span style={{ width: 32, textAlign: 'center', color: C.cream, fontWeight: 900, fontSize: 13, borderLeft: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`, lineHeight: '32px' }}>{item.qty}</span>
-                        <button onClick={() => updateQty(item.id, 1)}
+                        <button onClick={() => updateQty(item.lineKey, 1)}
                           style={{ width: 32, height: 32, backgroundColor: 'transparent', border: 'none', color: C.cream, cursor: 'pointer', fontSize: 16 }}>+</button>
                       </div>
-                      {/* Actions */}
+
+                      {/* Actions — ✅ FIX: pass item.lineKey */}
                       <div style={{ display: 'flex', gap: 14 }}>
-                        <button onClick={() => saveForLater(item.id)}
+                        <button onClick={() => saveForLater(item.lineKey)}
                           style={{ background: 'none', border: 'none', color: C.muted, fontSize: 11, cursor: 'pointer', fontWeight: 700 }}>
                           Save for later
                         </button>
-                        <button onClick={() => removeItem(item.id)}
+                        <button onClick={() => removeItem(item.lineKey)}
                           style={{ background: 'none', border: 'none', color: '#e05c5c', fontSize: 11, cursor: 'pointer', fontWeight: 700 }}>
                           Remove
                         </button>
@@ -141,10 +171,14 @@ const Cart = () => {
           {/* Saved for later */}
           {saved.length > 0 && (
             <div style={{ marginTop: 32 }}>
-              <p style={{ color: C.muted, fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 14 }}>Saved for Later ({saved.length})</p>
+              <p style={{ color: C.muted, fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 14 }}>
+                Saved for Later ({saved.length})
+              </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {/* ✅ FIX: key is item.lineKey */}
                 {saved.map(item => (
-                  <div key={item.id} style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16, display: 'flex', gap: 14, alignItems: 'center' }}>
+                  <div key={item.lineKey}
+                    style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16, display: 'flex', gap: 14, alignItems: 'center' }}>
                     <div style={{ width: 56, height: 56, borderRadius: 8, overflow: 'hidden', flexShrink: 0, backgroundColor: C.faint }}>
                       <img
                         src={resolveImg(item)}
@@ -155,7 +189,11 @@ const Cart = () => {
                     </div>
                     <div style={{ flex: 1 }}>
                       <p style={{ color: C.cream, fontWeight: 800, fontSize: 13 }}>{item.name}</p>
+                      {/* ✅ FIX: fmt(item.price) — price is a number now */}
                       <p style={{ color: C.gold, fontSize: 12, fontWeight: 700 }}>{fmt(item.price)}</p>
+                      {item.size && (
+                        <p style={{ color: C.muted, fontSize: 10, marginTop: 2 }}>Size: {item.size}</p>
+                      )}
                     </div>
                     <button onClick={() => moveToCart(item)}
                       style={{ border: `1px solid ${C.border}`, backgroundColor: 'transparent', color: C.cream, padding: '7px 14px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
@@ -178,10 +216,15 @@ const Cart = () => {
             ) : (
               <>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
+                  {/* ✅ FIX: key is item.lineKey; price is a number */}
                   {items.map(item => (
-                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <span style={{ color: C.muted, fontSize: 12, flex: 1, paddingRight: 12, lineHeight: 1.5 }}>{item.name} × {item.qty}</span>
-                      <span style={{ color: C.cream, fontWeight: 700, fontSize: 12, flexShrink: 0 }}>{fmt(item.price * item.qty)}</span>
+                    <div key={item.lineKey} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <span style={{ color: C.muted, fontSize: 12, flex: 1, paddingRight: 12, lineHeight: 1.5 }}>
+                        {item.name}{item.size ? ` (${item.size})` : ''} × {item.qty}
+                      </span>
+                      <span style={{ color: C.cream, fontWeight: 700, fontSize: 12, flexShrink: 0 }}>
+                        {fmt(item.price * item.qty)}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -204,7 +247,7 @@ const Cart = () => {
                     </span>
                   </div>
                   {shipping > 0 && (
-                    <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>Free shipping on orders under KSH 500</p>
+                    <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>Free shipping on orders under KES 500</p>
                   )}
                 </div>
 
@@ -224,6 +267,7 @@ const Cart = () => {
                   type="text"
                   value={coupon}
                   onChange={e => setCoupon(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && applyCoupon()}
                   placeholder="Coupon code"
                   style={{ flex: 1, backgroundColor: C.bg, border: `1px solid ${couponError ? 'rgba(224,92,92,0.4)' : C.border}`, borderRadius: 8, padding: '10px 12px', color: C.cream, fontSize: 12, outline: 'none' }}
                   onFocus={e => e.target.style.borderColor = C.bHov}
@@ -234,7 +278,7 @@ const Cart = () => {
                   Apply
                 </button>
               </div>
-              {couponError  && <p style={{ color: '#e05c5c', fontSize: 11, marginTop: 4 }}>{couponError}</p>}
+              {couponError   && <p style={{ color: '#e05c5c', fontSize: 11, marginTop: 4 }}>{couponError}</p>}
               {couponApplied && <p style={{ color: '#4caf50', fontSize: 11, marginTop: 4 }}>10% discount applied!</p>}
             </div>
 

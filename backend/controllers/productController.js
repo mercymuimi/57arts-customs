@@ -7,15 +7,19 @@ const generateSlug = (name) =>
 // GET /api/products
 exports.getProducts = async (req, res) => {
   try {
-    const { category, featured, trending, search, limit = 20, page = 1 } = req.query;
-    const filter = { inStock: true };
+    const { category, featured, trending, search, vendor, limit = 20, page = 1 } = req.query;
+    const filter = {};
+
+    // ✅ Only filter inStock if not fetching by vendor (vendor wants to see all their products)
+    if (!vendor) filter.inStock = true;
 
     if (category) filter.category = { $regex: new RegExp(category, 'i') };
     if (featured === 'true') filter.featured = true;
     if (trending === 'true') filter.trending = true;
-    if (search) filter.name = { $regex: new RegExp(search, 'i') };
+    if (search)  filter.name = { $regex: new RegExp(search, 'i') };
+    if (vendor)  filter.vendor = vendor;
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const skip  = (parseInt(page) - 1) * parseInt(limit);
     const total = await Product.countDocuments(filter);
     const products = await Product.find(filter)
       .populate('vendor', 'storeName category')
@@ -27,8 +31,8 @@ exports.getProducts = async (req, res) => {
     res.json({
       success: true,
       total,
-      page: parseInt(page),
-      pages: Math.ceil(total / parseInt(limit)),
+      page:    parseInt(page),
+      pages:   Math.ceil(total / parseInt(limit)),
       products,
     });
   } catch (err) {
@@ -78,7 +82,7 @@ exports.addProduct = async (req, res) => {
       name, description, price, originalPrice,
       category, tag, images, sizes, materials,
       deliveryTime, customizationOptions,
-      inStock, featured, trending,
+      inStock, featured, trending, stock,
     } = req.body;
 
     const slug = generateSlug(name);
@@ -88,11 +92,19 @@ exports.addProduct = async (req, res) => {
     if (existing) return res.status(400).json({ success: false, error: 'Product name too similar to existing product' });
 
     const product = await Product.create({
-      vendor: req.user.id,
-      name, description, price, originalPrice,
-      category, tag, images, sizes, materials,
-      deliveryTime, customizationOptions,
-      inStock, featured, trending, slug,
+      vendor: req.user.id,   // ✅ Always links product to the logged-in vendor
+      name, description, price,
+      originalPrice: originalPrice || price,
+      category, tag, images: images || [],
+      sizes:       sizes       || [],
+      materials:   materials   || [],
+      deliveryTime: deliveryTime || '3-5 Business Days',
+      customizationOptions: customizationOptions || { colors: [], sizes: [] },
+      inStock: inStock !== undefined ? inStock : true,
+      stock:   stock   || 0,
+      featured: featured || false,
+      trending: trending || false,
+      slug,
     });
 
     res.status(201).json({ success: true, message: 'Product added successfully', product });
@@ -107,13 +119,21 @@ exports.updateProduct = async (req, res) => {
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ success: false, error: 'Product not found' });
 
-    // Only the owning vendor can update
-    if (product.vendor?.toString() !== req.user.id) {
+    // Only the owning vendor (or admin) can update
+    if (product.vendor?.toString() !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, error: 'Not authorized' });
     }
 
-    const updated = await Product.findByIdAndUpdate(req.params.id, req.body, {
-      new: true, runValidators: true
+    // ✅ Regenerate slug if name changed
+    const updateData = { ...req.body };
+    if (req.body.name) {
+      const newSlug = generateSlug(req.body.name);
+      const slugConflict = await Product.findOne({ slug: newSlug, _id: { $ne: req.params.id } });
+      if (!slugConflict) updateData.slug = newSlug;
+    }
+
+    const updated = await Product.findByIdAndUpdate(req.params.id, updateData, {
+      new: true, runValidators: true,
     });
 
     res.json({ success: true, message: 'Product updated', product: updated });
@@ -128,7 +148,7 @@ exports.deleteProduct = async (req, res) => {
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ success: false, error: 'Product not found' });
 
-    if (product.vendor?.toString() !== req.user.id) {
+    if (product.vendor?.toString() !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, error: 'Not authorized' });
     }
 

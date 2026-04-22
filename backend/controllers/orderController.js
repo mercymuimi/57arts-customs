@@ -185,7 +185,9 @@ exports.createOrder = async (req, res) => {
         category: item.category || product.category,
         quantity: item.quantity,
         price:    item.price    || product.price,
-        ...(item.vendor ? { vendor: item.vendor } : {}),
+        // ✅ FIX: pull vendor from the resolved DB product — not from frontend cart.
+        // Cart items don't carry vendorId reliably, but product.vendor is always correct.
+        ...(product.vendor ? { vendor: product.vendor } : {}),
       });
     }
 
@@ -294,7 +296,13 @@ exports.cancelOrder = async (req, res) => {
 // GET /api/orders/vendor/all
 exports.getVendorOrders = async (req, res) => {
   try {
-    const orders = await Order.find({ 'items.vendor': req.user._id })
+    // ✅ FIX: items.vendor stores the Vendor _id (not the User _id).
+    // We must look up the Vendor document first, then query by vendor._id.
+    const Vendor = require('../models/Vendor');
+    const vendor = await Vendor.findOne({ user: req.user._id });
+    if (!vendor) return res.status(404).json({ message: 'Vendor profile not found' });
+
+    const orders = await Order.find({ 'items.vendor': vendor._id })
       .populate('user', 'name email')
       .populate('items.product', 'name images')
       .sort({ createdAt: -1 });
@@ -308,7 +316,7 @@ exports.getVendorOrders = async (req, res) => {
 exports.updateOrderStatus = async (req, res) => {
   try {
     const { status } = req.body;
-    const validStatuses = ['confirmed', 'processing', 'shipped', 'delivered'];
+    const validStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
 
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ message: 'Invalid status' });
@@ -318,7 +326,10 @@ exports.updateOrderStatus = async (req, res) => {
       req.params.id,
       {
         orderStatus: status,
-        ...(status === 'delivered' && { deliveredAt: new Date(), paymentStatus: 'paid' }),
+        ...(status === 'delivered'  && { deliveredAt:  new Date(), paymentStatus: 'paid' }),
+        ...(status === 'cancelled'  && { cancelledAt:  new Date() }),
+        ...(status === 'processing' && { processedAt:  new Date() }),
+        ...(status === 'shipped'    && { shippedAt:    new Date() }),
       },
       { new: true }
     ).populate('user', 'name email');

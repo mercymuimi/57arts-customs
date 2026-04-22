@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 
-// ── DESIGN TOKENS ─────────────────────────────────────────────────────────────
+const BASE = 'http://localhost:5000/api';
+
 const C = {
   bg: '#0a0a0a', surface: '#111111', border: '#1c1c1c', bHov: '#2e2e2e',
   faint: '#242424', cream: '#f0ece4', muted: '#606060', dim: '#333333',
@@ -18,25 +21,25 @@ const s = {
 };
 
 const tiers = [
-  { name: 'Starter', commission: '5%',  threshold: 'KES 0 — open to all',     featured: false },
-  { name: 'Silver',  commission: '8%',  threshold: 'KES 50,000 / mo referred', featured: true  },
-  { name: 'Gold',    commission: '12%', threshold: 'KES 200,000 / mo referred',featured: false },
+  { name: 'Starter', commission: '5%',  threshold: 'KES 0 — open to all',      featured: false },
+  { name: 'Silver',  commission: '8%',  threshold: 'KES 50,000 / mo referred',  featured: true  },
+  { name: 'Gold',    commission: '12%', threshold: 'KES 200,000 / mo referred', featured: false },
 ];
 
 const howItWorks = [
-  { num: '01', icon: '🔗', title: 'Get your link',    desc: 'Receive a unique referral link after approval.' },
-  { num: '02', icon: '📣', title: 'Share it',         desc: 'Post on social media, blogs, YouTube, newsletters.' },
-  { num: '03', icon: '🛍', title: 'Buyer purchases',  desc: '30-day cookie tracks all purchases from your referral.' },
-  { num: '04', icon: '💰', title: 'Get paid',         desc: 'Monthly payouts via M-Pesa or bank transfer.' },
+  { num: '01', icon: '🔗', title: 'Get your link',   desc: 'Receive a unique referral link instantly on approval.' },
+  { num: '02', icon: '📣', title: 'Share it',        desc: 'Post on social media, blogs, YouTube, newsletters.' },
+  { num: '03', icon: '🛍', title: 'Buyer purchases', desc: '30-day cookie tracks all purchases from your referral.' },
+  { num: '04', icon: '💰', title: 'Get paid',        desc: 'Monthly payouts via M-Pesa or bank transfer.' },
 ];
 
 const whoJoins = [
-  { type: 'Content Creators',          desc: 'Fashion, lifestyle, and interior design creators who want to monetise their audience authentically.' },
-  { type: 'Bloggers & Writers',        desc: 'Writers covering African culture, design, and craft who want to earn from their content.' },
-  { type: 'Event Planners',            desc: 'Planners who regularly source handmade décor and gifts for clients.' },
-  { type: 'Diaspora Community Leaders',desc: 'Community organisers connecting African diaspora members with authentic crafts from home.' },
-  { type: 'Interior Designers',        desc: 'Designers who source unique artisan pieces for client projects.' },
-  { type: 'Gift Curators',             desc: 'Anyone who regularly recommends gifts and lifestyle products to their network.' },
+  { type: 'Content Creators',           desc: 'Fashion, lifestyle, and interior design creators who want to monetise their audience authentically.' },
+  { type: 'Bloggers & Writers',         desc: 'Writers covering African culture, design, and craft who want to earn from their content.' },
+  { type: 'Event Planners',             desc: 'Planners who regularly source handmade décor and gifts for clients.' },
+  { type: 'Diaspora Community Leaders', desc: 'Community organisers connecting African diaspora members with authentic crafts from home.' },
+  { type: 'Interior Designers',         desc: 'Designers who source unique artisan pieces for client projects.' },
+  { type: 'Gift Curators',              desc: 'Anyone who regularly recommends gifts and lifestyle products to their network.' },
 ];
 
 const Footer = () => (
@@ -60,18 +63,56 @@ const Footer = () => (
 );
 
 const AffiliateLanding = () => {
-  const [form, setForm]         = useState({ name: '', email: '', channel: '', audience: '', why: '' });
+  const { user } = useAuth();
+  const navigate  = useNavigate();
+
+  const [form, setForm]       = useState({ name: user?.name || '', email: user?.email || '', channel: '', audience: '', why: '' });
   const [submitted, setSubmitted] = useState(false);
-  const [errors, setErrors]     = useState({});
+  const [affiliateCode, setAffiliateCode] = useState('');
+  const [errors, setErrors]   = useState({});
+  const [submitting, setSubmitting] = useState(false);
+  const [apiError, setApiError]   = useState('');
 
   const validate = () => {
     const e = {};
-    if (!form.name.trim()) e.name = 'Required';
-    if (!form.email.trim()) e.email = 'Required';
-    if (!form.channel) e.channel = 'Required';
+    if (!form.name.trim())  e.name    = 'Required';
+    if (!form.email.trim()) e.email   = 'Required';
+    if (!form.channel)      e.channel = 'Required';
     if (!form.why.trim() || form.why.length < 20) e.why = 'Tell us a bit more (min 20 chars)';
     setErrors(e);
     return Object.keys(e).length === 0;
+  };
+
+  const handleSubmit = async () => {
+    if (!validate()) return;
+    if (!user) {
+      // Not logged in — redirect to register page
+      navigate('/register?role=affiliate');
+      return;
+    }
+
+    setSubmitting(true);
+    setApiError('');
+    try {
+      const token = localStorage.getItem('token');
+      const { data } = await axios.post(
+        `${BASE}/affiliates/register`,
+        { channel: form.channel, audience: form.audience, why: form.why },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setAffiliateCode(data.affiliate.affiliateCode);
+      setSubmitted(true);
+    } catch (err) {
+      const msg = err.response?.data?.message || err.response?.data?.error || 'Failed to register. Please try again.';
+      // If already registered, just redirect to dashboard
+      if (err.response?.status === 400 && msg.includes('already')) {
+        navigate('/affiliate/dashboard');
+        return;
+      }
+      setApiError(msg);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const inputStyle = (field) => ({ ...s.input, borderColor: errors[field] ? C.err : C.border });
@@ -81,13 +122,22 @@ const AffiliateLanding = () => {
       <div style={{ backgroundColor: C.bg, color: C.cream, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ maxWidth: 440, width: '100%', textAlign: 'center', padding: '0 24px' }}>
           <div style={{ width: 72, height: 72, borderRadius: '50%', backgroundColor: C.gold, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', fontSize: 26 }}>✦</div>
-          <h1 style={{ color: C.cream, fontWeight: 900, fontSize: 28, textTransform: 'uppercase', marginBottom: 12 }}>Application Submitted!</h1>
+          <h1 style={{ color: C.cream, fontWeight: 900, fontSize: 28, textTransform: 'uppercase', marginBottom: 12 }}>You're In!</h1>
+          <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.8, marginBottom: 10 }}>
+            Welcome, <span style={{ color: C.gold, fontWeight: 900 }}>{form.name}</span>! Your affiliate account is active.
+          </p>
+          {affiliateCode && (
+            <div style={{ backgroundColor: C.faint, border: `1px solid ${C.border}`, borderRadius: 12, padding: '16px 24px', marginBottom: 20 }}>
+              <p style={{ color: C.muted, fontSize: 11, marginBottom: 6 }}>YOUR AFFILIATE CODE</p>
+              <p style={{ color: C.gold, fontWeight: 900, fontSize: 22, letterSpacing: '0.1em' }}>{affiliateCode}</p>
+            </div>
+          )}
           <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.8, marginBottom: 28 }}>
-            Thanks <span style={{ color: C.gold, fontWeight: 900 }}>{form.name}</span>! We'll send your affiliate link and dashboard access to <span style={{ color: C.gold }}>{form.email}</span> within 24 hours.
+            Your dashboard and referral links are ready. Start sharing and earning today!
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
             <Link to="/" style={s.btnGhost}>Back to Home</Link>
-            <Link to="/affiliate/dashboard" style={s.btnGold}>View Dashboard →</Link>
+            <Link to="/affiliate/dashboard" style={s.btnGold}>Go to Dashboard →</Link>
           </div>
         </div>
       </div>
@@ -145,9 +195,7 @@ const AffiliateLanding = () => {
             {tiers.map(tier => (
               <div key={tier.name} style={{ ...s.card, padding: 28, position: 'relative', border: `2px solid ${tier.featured ? C.gold : C.border}`, backgroundColor: tier.featured ? 'rgba(201,168,76,0.05)' : C.surface }}>
                 {tier.featured && (
-                  <div style={{ position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)', backgroundColor: C.gold, color: '#000', fontSize: 10, fontWeight: 900, padding: '4px 14px', borderRadius: 100, whiteSpace: 'nowrap', letterSpacing: '0.08em' }}>
-                    Most common
-                  </div>
+                  <div style={{ position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)', backgroundColor: C.gold, color: '#000', fontSize: 10, fontWeight: 900, padding: '4px 14px', borderRadius: 100, whiteSpace: 'nowrap', letterSpacing: '0.08em' }}>Most common</div>
                 )}
                 <p style={{ color: tier.featured ? C.gold : C.muted, fontWeight: 900, fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 10 }}>{tier.name}</p>
                 <p style={{ color: C.cream, fontWeight: 900, fontSize: 44, lineHeight: 1, marginBottom: 4 }}>{tier.commission}</p>
@@ -197,16 +245,21 @@ const AffiliateLanding = () => {
           <div style={{ padding: '24px 28px', borderBottom: `1px solid ${C.border}` }}>
             <p style={s.eyebrow}>Apply to join</p>
             <h2 style={{ color: C.cream, fontWeight: 900, fontSize: 20 }}>Join the Affiliate Programme</h2>
-            <p style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>Free to join · Instant link on approval · No minimum traffic required</p>
+            <p style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>
+              {user ? 'You\'re logged in — your account will be activated instantly.' : 'Free to join · Instant link on approval · No minimum traffic required'}
+            </p>
           </div>
           <div style={{ padding: 28, display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               {[['Full Name', 'name', 'text', 'Your name'], ['Email', 'email', 'email', 'hello@yourchannel.com']].map(([label, field, type, ph]) => (
                 <div key={field}>
                   <label style={s.label}>{label}</label>
-                  <input type={type} value={form[field]} placeholder={ph} onChange={e => setForm({ ...form, [field]: e.target.value })}
-                    style={inputStyle(field)}
-                    onFocus={e => e.target.style.borderColor = C.bHov} onBlur={e => e.target.style.borderColor = errors[field] ? C.err : C.border} />
+                  <input type={type} value={form[field]} placeholder={ph}
+                    onChange={e => setForm({ ...form, [field]: e.target.value })}
+                    disabled={!!user && (field === 'name' || field === 'email')}
+                    style={{ ...inputStyle(field), opacity: user && (field === 'name' || field === 'email') ? 0.6 : 1 }}
+                    onFocus={e => e.target.style.borderColor = C.bHov}
+                    onBlur={e => e.target.style.borderColor = errors[field] ? C.err : C.border} />
                   {errors[field] && <p style={{ color: C.err, fontSize: 11, marginTop: 4 }}>{errors[field]}</p>}
                 </div>
               ))}
@@ -235,12 +288,28 @@ const AffiliateLanding = () => {
               <textarea value={form.why} onChange={e => setForm({ ...form, why: e.target.value })} rows={4}
                 placeholder="Tell us about your audience, how you plan to promote 57 Arts & Customs, and why you're a good fit..."
                 style={{ ...inputStyle('why'), resize: 'none', lineHeight: 1.7 }}
-                onFocus={e => e.target.style.borderColor = C.bHov} onBlur={e => e.target.style.borderColor = errors.why ? C.err : C.border} />
+                onFocus={e => e.target.style.borderColor = C.bHov}
+                onBlur={e => e.target.style.borderColor = errors.why ? C.err : C.border} />
               {errors.why && <p style={{ color: C.err, fontSize: 11, marginTop: 4 }}>{errors.why}</p>}
             </div>
-            <button onClick={() => { if (validate()) setSubmitted(true); }}
-              style={{ ...s.btnGold, width: '100%', padding: '14px', borderRadius: 10, textAlign: 'center', boxSizing: 'border-box', fontSize: 12, letterSpacing: '0.08em' }}>
-              Join the Affiliate Programme — Free →
+
+            {apiError && (
+              <div style={{ backgroundColor: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 8, padding: '10px 14px' }}>
+                <p style={{ color: C.err, fontSize: 12 }}>{apiError}</p>
+              </div>
+            )}
+
+            {!user && (
+              <div style={{ backgroundColor: 'rgba(201,168,76,0.08)', border: `1px solid rgba(201,168,76,0.2)`, borderRadius: 8, padding: '12px 16px' }}>
+                <p style={{ color: C.gold, fontSize: 12 }}>
+                  ✦ You need to be logged in to join. <Link to="/register" style={{ color: C.gold, fontWeight: 900 }}>Create an account</Link> or <Link to="/login" style={{ color: C.gold, fontWeight: 900 }}>log in</Link> first.
+                </p>
+              </div>
+            )}
+
+            <button onClick={handleSubmit} disabled={submitting}
+              style={{ ...s.btnGold, width: '100%', padding: '14px', borderRadius: 10, textAlign: 'center', boxSizing: 'border-box', fontSize: 12, letterSpacing: '0.08em', opacity: submitting ? 0.7 : 1, cursor: submitting ? 'not-allowed' : 'pointer' }}>
+              {submitting ? 'Joining…' : 'Join the Affiliate Programme — Free →'}
             </button>
           </div>
         </div>

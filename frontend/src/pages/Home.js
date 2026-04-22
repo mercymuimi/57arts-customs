@@ -1,55 +1,28 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { aiAPI } from '../services/api';
 import { useCart } from '../context/CartContext';
 
-// ─── Static Data ──────────────────────────────────────────────────────────────
+const BASE_URL = 'http://localhost:5000/api';
 
-const featuredProducts = [
-  {
-    id: 'obsidian-throne-v2',
-    name: 'Obsidian Throne v.2',
-    label: 'Featured Custom',
-    price: 12000,
-    category: 'Furniture',
-    slug: 'obsidian-throne-v2',
-    img: 'https://images.unsplash.com/photo-1592078615290-033ee584e267?w=800',
-  },
-  {
-    id: 'midnight-denim-jacket',
-    name: 'Midnight Denim Jacket',
-    label: 'Limited Drop',
-    price: 1500,
-    category: 'Fashion',
-    slug: 'midnight-denim-jacket',
-    img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=800',
-  },
-  {
-    id: 'gold-pulse-beads',
-    name: 'Gold Pulse Beads',
-    label: 'Heritage Craft',
-    price: 2500,
-    category: 'Beads',
-    slug: 'gold-pulse-beads',
-    img: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800',
-  },
-  {
-    id: 'monarch-carry-all',
-    name: 'Monarch Carry-all',
-    label: 'Bespoke Only',
-    price: 22000,
-    category: 'Fashion',
-    slug: 'monarch-carry-all',
-    img: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=800',
-  },
+// ─── Fallback Static Data (used if API is down) ───────────────────────────────
+
+const FALLBACK_FEATURED = [
+  { id: 'obsidian-throne-v2', name: 'Obsidian Throne v.2', label: 'Featured Custom', price: 12000, category: 'Furniture', slug: 'obsidian-throne-v2', img: 'https://images.unsplash.com/photo-1592078615290-033ee584e267?w=800' },
+  { id: 'midnight-denim-jacket', name: 'Midnight Denim Jacket', label: 'Limited Drop', price: 1500, category: 'Fashion', slug: 'midnight-denim-jacket', img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=800' },
+  { id: 'gold-pulse-beads', name: 'Gold Pulse Beads', label: 'Heritage Craft', price: 2500, category: 'Beads', slug: 'gold-pulse-beads', img: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800' },
+  { id: 'monarch-carry-all', name: 'Monarch Carry-all', label: 'Bespoke Only', price: 2000, category: 'Fashion', slug: 'monarch-carry-all', img: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=800' },
 ];
 
-const trending = [
-  { id: 'distressed-denim-trouser',    name: 'Distressed Denim Trouser',    price: 'KSH 3,000',  category: 'Fashion',   tag: 'Hot',     slug: 'distressed-denim-trouser',     img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=500' },
-  { id: 'vanguard-teak-chair',         name: 'Vanguard Teak Chair',         price: 'KSH 12,000', category: 'Furniture', tag: 'Custom',  slug: 'vanguard-teak-chair',           img: 'https://images.unsplash.com/photo-1592078615290-033ee584e267?w=500' },
-  { id: 'gold-infused-obsidian-beads', name: 'Gold-Infused Obsidian Beads', price: 'KSH 2,500',  category: 'Beads',     tag: 'New',     slug: 'gold-infused-obsidian-beads',   img: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=500' },
-  { id: 'midnight-velvet-blazer',      name: 'Midnight Velvet Blazer',      price: 'KSH 2,000',  category: 'Fashion',   tag: 'Limited', slug: 'midnight-velvet-blazer',        img: 'https://images.unsplash.com/photo-1551537482-f2075a1d41f2?w=500' },
+const FALLBACK_TRENDING = [
+  { id: 'distressed-denim-trouser', name: 'Distressed Denim Trouser', price: 3000, category: 'Fashion', tag: 'Hot', slug: 'distressed-denim-trouser', img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=500' },
+  { id: 'vanguard-teak-chair', name: 'Vanguard Teak Chair', price: 12000, category: 'Furniture', tag: 'Custom', slug: 'vanguard-teak-chair', img: 'https://images.unsplash.com/photo-1592078615290-033ee584e267?w=500' },
+  { id: 'gold-infused-obsidian-beads', name: 'Gold-Infused Obsidian Beads', price: 2500, category: 'Beads', tag: 'New', slug: 'gold-infused-obsidian-beads', img: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=500' },
+  { id: 'midnight-velvet-blazer', name: 'Midnight Velvet Blazer', price: 2000, category: 'Fashion', tag: 'Limited', slug: 'midnight-velvet-blazer', img: 'https://images.unsplash.com/photo-1551537482-f2075a1d41f2?w=500' },
 ];
+
+// ─── Static Data (never changes) ──────────────────────────────────────────────
 
 const categories = [
   { name: 'Fashion',         desc: 'Street luxury & bespoke apparel', path: '/fashion',   count: '1,200+ pieces', img: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=700' },
@@ -95,35 +68,58 @@ const s = {
   btnGold:    { backgroundColor: C.gold, color: '#000', padding: '13px 26px', borderRadius: 10, fontWeight: 900, fontSize: 12, textDecoration: 'none', letterSpacing: '0.04em', display: 'inline-block', border: 'none', cursor: 'pointer' },
   card:       { backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 16 },
 };
+
+const CATEGORY_FALLBACKS = {
+  fashion:   'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=500',
+  furniture: 'https://images.unsplash.com/photo-1592078615290-033ee584e267?w=500',
+  beads:     'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=500',
+  jewelry:   'https://images.unsplash.com/photo-1611085583191-a3b181a88401?w=500',
+  default:   'https://images.unsplash.com/photo-1542272604-787c3835535d?w=500',
+};
+
+const resolveImage = (product) => {
+  const candidates = [
+    product.img, product.image, product.imageUrl, product.thumbnail,
+    product.images?.[0],
+    product.images?.[0]?.url,
+    product.productImage, product.coverImage,
+  ];
+  const found = candidates.find(c => c && typeof c === 'string' && c.startsWith('http'));
+  if (found) return found;
+  const cat = (product.category || '').toLowerCase();
+  return CATEGORY_FALLBACKS[cat] || CATEGORY_FALLBACKS.default;
+};
+
 const normalizeProduct = (product) => {
   const rawPrice = typeof product.price === 'string'
     ? Number(product.price.replace(/[^0-9.]/g, ''))
     : product.price;
-
   return {
     ...product,
-    id:    product.id || product._id || product.slug,
+    id:    product.id    || product._id  || product.slug,
+    slug:  product.slug  || product._id  || product.id,
+    label: product.label || product.tag  || 'Artisan Pick',
     price: rawPrice,
-    img:   product.images?.[0] || product.image || product.img || '',
+    img:   resolveImage(product),
   };
+};
+
+const normalizeList = (data) => {
+  const arr = Array.isArray(data) ? data : (data?.products || data?.data || []);
+  return arr.map(normalizeProduct);
 };
 
 // ─── AI Recommendation Cache ──────────────────────────────────────────────────
 
 const recCache = new Map();
 const CACHE_TTL = 60_000;
-
 function getCached(key) {
   const entry = recCache.get(key);
   if (!entry) return null;
   if (Date.now() - entry.ts > CACHE_TTL) { recCache.delete(key); return null; }
   return entry.data;
 }
-function setCached(key, data) {
-  recCache.set(key, { data, ts: Date.now() });
-}
-
-// ─── Constants ────────────────────────────────────────────────────────────────
+function setCached(key, data) { recCache.set(key, { data, ts: Date.now() }); }
 
 const ITEMS_PER_PAGE = 6;
 const STRATEGY_LABELS = {
@@ -131,15 +127,6 @@ const STRATEGY_LABELS = {
   content_based:           'Based on Category',
   popularity_based:        'Trending on 57 Arts',
 };
-
-const FALLBACK_IMAGES = [
-  'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=500',
-  'https://images.unsplash.com/photo-1592078615290-033ee584e267?w=500',
-  'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=500',
-  'https://images.unsplash.com/photo-1542272604-787c3835535d?w=500',
-  'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=500',
-  'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=500',
-];
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -154,42 +141,35 @@ const SkeletonCard = () => (
   </div>
 );
 
+// Skeleton for hero card while featured products load
+const HeroSkeleton = () => (
+  <div style={{ ...s.card }}>
+    <div style={{ height: 310, background: `linear-gradient(90deg, ${C.faint} 25%, ${C.border} 50%, ${C.faint} 75%)`, backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite', borderRadius: '16px 16px 0 0' }} />
+    <div style={{ padding: 20 }}>
+      <div style={{ height: 10, width: '30%', backgroundColor: C.faint, borderRadius: 4, marginBottom: 10 }} />
+      <div style={{ height: 16, width: '60%', backgroundColor: C.faint, borderRadius: 4, marginBottom: 16 }} />
+      <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ flex: 1, height: 38, backgroundColor: C.faint, borderRadius: 9 }} />
+        <div style={{ flex: 1, height: 38, backgroundColor: C.faint, borderRadius: 9 }} />
+      </div>
+    </div>
+  </div>
+);
+
 const RecCard = ({ item, isWishlisted, onToggleWish, onView, onCart, alreadyInCart }) => {
   const [hov, setHov] = useState(false);
-  const imgSrc = item.images?.[0] || item.image || item.img
-    || FALLBACK_IMAGES[Math.abs((item.name || '').length) % FALLBACK_IMAGES.length];
-
   return (
-    <div
-      onClick={onView}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-      style={{
-        backgroundColor: C.surface,
-        border: `1px solid ${hov ? C.bHov : C.border}`,
-        borderRadius: 14, overflow: 'hidden', cursor: 'pointer',
-        transform: hov ? 'translateY(-3px)' : 'none',
-        transition: 'all 0.22s ease',
-        boxShadow: hov ? '0 8px 32px rgba(0,0,0,0.4)' : 'none',
-      }}
-    >
-      <div style={{ height: 200, position: 'relative', overflow: 'hidden' }}>
-        <img
-          src={imgSrc}
-          alt={item.name}
-          loading="lazy"
-          onError={e => { e.target.onerror = null; e.target.src = FALLBACK_IMAGES[0]; }}
-          style={{ width: '100%', height: '100%', objectFit: 'cover', transform: hov ? 'scale(1.06)' : 'scale(1)', transition: 'transform 0.5s ease' }}
-        />
+    <div onClick={onView} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ backgroundColor: C.surface, border: `1px solid ${hov ? C.bHov : C.border}`, borderRadius: 14, overflow: 'hidden', cursor: 'pointer', transform: hov ? 'translateY(-3px)' : 'none', transition: 'all 0.22s ease', boxShadow: hov ? '0 8px 32px rgba(0,0,0,0.4)' : 'none' }}>
+      <div style={{ height: 200, position: 'relative', overflow: 'hidden', backgroundColor: C.faint }}>
+        <img src={item.img} alt={item.name} loading="lazy"
+          onError={e => { e.target.onerror = null; const cat = (item.category || '').toLowerCase(); e.target.src = CATEGORY_FALLBACKS[cat] || CATEGORY_FALLBACKS.default; }}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', transform: hov ? 'scale(1.06)' : 'scale(1)', transition: 'transform 0.5s ease' }} />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 55%)' }} />
-        <span style={{ position: 'absolute', top: 11, left: 11, backgroundColor: 'rgba(201,168,76,0.15)', color: C.gold, fontSize: 9, fontWeight: 900, padding: '4px 10px', borderRadius: 100, letterSpacing: '0.12em', textTransform: 'uppercase', border: `1px solid ${C.gold}` }}>
-          ✦ AI Pick
-        </span>
+        <span style={{ position: 'absolute', top: 11, left: 11, backgroundColor: 'rgba(201,168,76,0.15)', color: C.gold, fontSize: 9, fontWeight: 900, padding: '4px 10px', borderRadius: 100, letterSpacing: '0.12em', textTransform: 'uppercase', border: `1px solid ${C.gold}` }}>✦ AI Pick</span>
         {item.tag && <span style={{ position: 'absolute', top: 11, right: 44, ...s.tag }}>{item.tag}</span>}
-        <button
-          onClick={e => { e.stopPropagation(); onToggleWish(); }}
-          style={{ position: 'absolute', bottom: 11, right: 11, width: 30, height: 30, borderRadius: '50%', backgroundColor: 'rgba(0,0,0,0.5)', border: `1px solid ${C.border}`, cursor: 'pointer', color: isWishlisted ? '#e05c5c' : C.cream, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        >
+        <button onClick={e => { e.stopPropagation(); onToggleWish(); }}
+          style={{ position: 'absolute', bottom: 11, right: 11, width: 30, height: 30, borderRadius: '50%', backgroundColor: 'rgba(0,0,0,0.5)', border: `1px solid ${C.border}`, cursor: 'pointer', color: isWishlisted ? '#e05c5c' : C.cream, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {isWishlisted ? '♥' : '♡'}
         </button>
       </div>
@@ -198,21 +178,11 @@ const RecCard = ({ item, isWishlisted, onToggleWish, onView, onCart, alreadyInCa
         <h3 style={{ color: C.cream, fontWeight: 900, fontSize: 14, marginBottom: 5, letterSpacing: '-0.01em' }}>{item.name}</h3>
         <p style={{ color: C.muted, fontSize: 11, fontStyle: 'italic', marginBottom: 12, lineHeight: 1.4 }}>{item.reason}</p>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <p style={{ color: C.gold, fontWeight: 900, fontSize: 15 }}>KSH {item.price?.toLocaleString() || item.price}</p>
-          {/* ✅ FIX 2: shows "In Cart" when already added, prevents re-adding */}
-          <button
-            onClick={e => { e.stopPropagation(); if (!alreadyInCart) onCart(item); }}
-            style={{
-              backgroundColor: alreadyInCart ? '#1a3d28' : C.faint,
-              border: `1px solid ${alreadyInCart ? '#2d6b46' : C.border}`,
-              color: alreadyInCart ? '#5cc98a' : C.cream,
-              fontSize: 10, fontWeight: 900, padding: '6px 12px', borderRadius: 7,
-              cursor: alreadyInCart ? 'default' : 'pointer',
-              letterSpacing: '0.04em', transition: 'background 0.15s',
-            }}
+          <p style={{ color: C.gold, fontWeight: 900, fontSize: 15 }}>KSH {Number(item.price).toLocaleString()}</p>
+          <button onClick={e => { e.stopPropagation(); if (!alreadyInCart) onCart(item); }}
+            style={{ backgroundColor: alreadyInCart ? '#1a3d28' : C.faint, border: `1px solid ${alreadyInCart ? '#2d6b46' : C.border}`, color: alreadyInCart ? '#5cc98a' : C.cream, fontSize: 10, fontWeight: 900, padding: '6px 12px', borderRadius: 7, cursor: alreadyInCart ? 'default' : 'pointer', letterSpacing: '0.04em', transition: 'background 0.15s' }}
             onMouseEnter={e => { if (!alreadyInCart) e.currentTarget.style.backgroundColor = C.bHov; }}
-            onMouseLeave={e => { if (!alreadyInCart) e.currentTarget.style.backgroundColor = C.faint; }}
-          >
+            onMouseLeave={e => { if (!alreadyInCart) e.currentTarget.style.backgroundColor = C.faint; }}>
             {alreadyInCart ? '✓ In Cart' : '+ Cart'}
           </button>
         </div>
@@ -225,21 +195,23 @@ const RecCard = ({ item, isWishlisted, onToggleWish, onView, onCart, alreadyInCa
 
 const Home = () => {
   const navigate = useNavigate();
-  const { addToCart, isInCart } = useCart(); 
+  const { addToCart, isInCart } = useCart();
 
-  // Hero carousel
-  const [current, setCurrent] = useState(0);
-  const [fading, setFading]   = useState(false);
-
-  // UI state
+  const [current, setCurrent]             = useState(0);
+  const [fading, setFading]               = useState(false);
   const [wishlist, setWishlist]           = useState([]);
-  const [heroCartAdded, setHeroCartAdded] = useState({}); // ✅ per-product flash state
+  const [heroCartAdded, setHeroCartAdded] = useState({});
   const [activeTesti, setActiveTesti]     = useState(0);
   const [email, setEmail]                 = useState('');
   const [subscribed, setSubscribed]       = useState(false);
   const [searchQuery, setSearchQuery]     = useState('');
 
-  // AI recommendations state
+  // ── Live product state (fetched from DB) ──
+  const [featuredProducts, setFeaturedProducts] = useState(FALLBACK_FEATURED);
+  const [trending, setTrending]                 = useState(FALLBACK_TRENDING);
+  const [featuredLoading, setFeaturedLoading]   = useState(true);
+
+  // ── AI recs state ──
   const [allRecs, setAllRecs]               = useState([]);
   const [aiLoading, setAiLoading]           = useState(true);
   const [aiError, setAiError]               = useState(false);
@@ -250,22 +222,45 @@ const Home = () => {
   const totalPages = Math.ceil(allRecs.length / ITEMS_PER_PAGE);
   const pageRecs   = allRecs.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  // ── Auto-advance hero carousel ──
+  // ── Fetch featured + trending from real DB ──
   useEffect(() => {
+    const fetchFeatured = axios.get(`${BASE_URL}/products?featured=true&limit=4`)
+      .then(res => {
+        const products = normalizeList(res.data);
+        if (products.length > 0) setFeaturedProducts(products);
+      })
+      .catch(() => {}); // silently keep fallback
+
+    const fetchTrending = axios.get(`${BASE_URL}/products?trending=true&limit=4`)
+      .then(res => {
+        const products = normalizeList(res.data);
+        if (products.length > 0) setTrending(products);
+      })
+      .catch(() => {}); // silently keep fallback
+
+    Promise.allSettled([fetchFeatured, fetchTrending])
+      .finally(() => setFeaturedLoading(false));
+  }, []);
+
+  // Reset carousel index if products change (e.g. from 4 fallback to real products)
+  useEffect(() => {
+    setCurrent(0);
+  }, [featuredProducts.length]);
+
+  useEffect(() => {
+    if (featuredProducts.length === 0) return;
     const t = setInterval(() => {
       setFading(true);
       setTimeout(() => { setCurrent(p => (p + 1) % featuredProducts.length); setFading(false); }, 350);
     }, 4500);
     return () => clearInterval(t);
-  }, []);
+  }, [featuredProducts.length]);
 
-  // ── Auto-advance testimonials ──
   useEffect(() => {
     const t = setInterval(() => setActiveTesti(p => (p + 1) % testimonials.length), 5500);
     return () => clearInterval(t);
   }, []);
 
-  // ── Fetch AI recommendations ──
   const fetchRecs = useCallback(async (category) => {
     const cacheKey = `home:${category}`;
     const cached = getCached(cacheKey);
@@ -276,10 +271,8 @@ const Home = () => {
       setAiError(false);
       return;
     }
-
     setAiLoading(true);
     setAiError(false);
-
     try {
       const params = { n: 12 };
       if (category !== 'All') params.category = category;
@@ -310,19 +303,17 @@ const Home = () => {
 
   const addHeroToCart = (product) => {
     const normalized = normalizeProduct(product);
-    if (isInCart(normalized.id)) return; // already in cart — do nothing
+    if (isInCart(normalized.id)) return;
     addToCart(normalized, 1);
     recordInteraction(normalized.id, 'cart');
     setHeroCartAdded(prev => ({ ...prev, [normalized.id]: true }));
     setTimeout(() => setHeroCartAdded(prev => ({ ...prev, [normalized.id]: false })), 2000);
   };
 
-  // same for recommendation cards
   const addRecToCart = (product) => {
-    const normalized = normalizeProduct(product);
-    if (isInCart(normalized.id)) return;
-    addToCart(normalized, 1);
-    recordInteraction(normalized.id || normalized.slug, 'cart');
+    if (isInCart(product.id)) return;
+    addToCart(product, 1);
+    recordInteraction(product.id || product.slug, 'cart');
   };
 
   const doSearch    = (e) => { e.preventDefault(); if (searchQuery.trim()) navigate(`/search?q=${encodeURIComponent(searchQuery)}`); };
@@ -333,9 +324,10 @@ const Home = () => {
     document.getElementById('ai-recommendations-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  const fp          = featuredProducts[current];
-  const heroInCart  = isInCart(fp.id);
-  const heroJustAdded = heroCartAdded[fp.id];
+  // Guard: don't render hero card until we have products
+  const fp          = featuredProducts[current] || featuredProducts[0];
+  const heroInCart  = fp ? isInCart(fp.id) : false;
+  const heroJustAdded = fp ? heroCartAdded[fp.id] : false;
 
   return (
     <div style={{ backgroundColor: C.bg, color: C.cream, minHeight: '100vh' }}>
@@ -355,7 +347,6 @@ const Home = () => {
       <section style={{ backgroundColor: C.bg, minHeight: 'calc(100vh - 32px - 65px)', display: 'flex', alignItems: 'center', padding: '80px 0', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: 1, backgroundColor: C.border, pointerEvents: 'none' }} />
         <div style={{ ...s.section, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center', position: 'relative', zIndex: 1 }}>
-
           {/* Left: Copy */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28 }}>
@@ -391,74 +382,60 @@ const Home = () => {
 
           {/* Right: Featured product card */}
           <div style={{ position: 'relative' }}>
-            <div style={{ ...s.card, opacity: fading ? 0 : 1, transition: 'opacity 0.35s ease' }}>
-              <div
-                style={{ height: 310, position: 'relative', overflow: 'hidden', cursor: 'pointer', borderRadius: '16px 16px 0 0' }}
-                onClick={() => navigate(`/product/${fp.slug}`)}
-              >
-                <img src={fp.img} alt={fp.name} loading="eager"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.7s ease' }}
-                  onMouseEnter={e => e.target.style.transform = 'scale(1.04)'}
-                  onMouseLeave={e => e.target.style.transform = 'scale(1)'} />
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 55%)' }} />
-                <span style={{ position: 'absolute', top: 14, left: 14, ...s.tag }}>{fp.label}</span>
-                <button
-                  onClick={e => { e.stopPropagation(); toggleWish(fp.slug); }}
-                  style={{ position: 'absolute', top: 14, right: 14, width: 34, height: 34, borderRadius: '50%', backgroundColor: 'rgba(0,0,0,0.45)', border: `1px solid ${C.border}`, cursor: 'pointer', color: wishlist.includes(fp.slug) ? '#e05c5c' : C.cream, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  {wishlist.includes(fp.slug) ? '♥' : '♡'}
-                </button>
-                <div style={{ position: 'absolute', bottom: 14, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 5 }}>
-                  {featuredProducts.map((_, i) => (
-                    <button key={i} onClick={e => { e.stopPropagation(); goTo(i); }}
-                      style={{ height: 3, width: i === current ? 18 : 5, borderRadius: 2, backgroundColor: i === current ? C.gold : 'rgba(255,255,255,0.25)', border: 'none', cursor: 'pointer', padding: 0, transition: 'all 0.3s' }} />
-                  ))}
-                </div>
-              </div>
-              <div style={{ padding: 20 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-                  <div>
-                    <p style={{ color: C.muted, fontSize: 10, fontWeight: 900, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 4 }}>{fp.category}</p>
-                    <h3 style={{ color: C.cream, fontWeight: 900, fontSize: 17, letterSpacing: '-0.01em', cursor: 'pointer' }} onClick={() => navigate(`/product/${fp.slug}`)}>{fp.name}</h3>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <p style={{ color: C.muted, fontSize: 10, marginBottom: 2 }}>Starting at</p>
-                    <p style={{ color: C.gold, fontWeight: 900, fontSize: 18 }}>KSH {fp.price.toLocaleString()}</p>
+            {featuredLoading || !fp ? <HeroSkeleton /> : (
+              <div style={{ ...s.card, opacity: fading ? 0 : 1, transition: 'opacity 0.35s ease' }}>
+                <div style={{ height: 310, position: 'relative', overflow: 'hidden', cursor: 'pointer', borderRadius: '16px 16px 0 0' }}
+                  onClick={() => navigate(`/product/${fp.slug}`)}>
+                  <img src={fp.img} alt={fp.name} loading="eager"
+                    onError={e => { e.target.onerror = null; const cat = (fp.category || '').toLowerCase(); e.target.src = CATEGORY_FALLBACKS[cat] || CATEGORY_FALLBACKS.default; }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.7s ease' }}
+                    onMouseEnter={e => e.target.style.transform = 'scale(1.04)'}
+                    onMouseLeave={e => e.target.style.transform = 'scale(1)'} />
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 55%)' }} />
+                  <span style={{ position: 'absolute', top: 14, left: 14, ...s.tag }}>{fp.label || fp.tag}</span>
+                  <button onClick={e => { e.stopPropagation(); toggleWish(fp.slug); }}
+                    style={{ position: 'absolute', top: 14, right: 14, width: 34, height: 34, borderRadius: '50%', backgroundColor: 'rgba(0,0,0,0.45)', border: `1px solid ${C.border}`, cursor: 'pointer', color: wishlist.includes(fp.slug) ? '#e05c5c' : C.cream, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {wishlist.includes(fp.slug) ? '♥' : '♡'}
+                  </button>
+                  <div style={{ position: 'absolute', bottom: 14, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 5 }}>
+                    {featuredProducts.map((_, i) => (
+                      <button key={i} onClick={e => { e.stopPropagation(); goTo(i); }}
+                        style={{ height: 3, width: i === current ? 18 : 5, borderRadius: 2, backgroundColor: i === current ? C.gold : 'rgba(255,255,255,0.25)', border: 'none', cursor: 'pointer', padding: 0, transition: 'all 0.3s' }} />
+                    ))}
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button
-                    onClick={() => navigate(`/product/${fp.slug}`)}
-                    style={{ flex: 1, padding: 11, borderRadius: 9, border: `1px solid ${C.border}`, backgroundColor: 'transparent', color: C.cream, fontWeight: 900, fontSize: 12, cursor: 'pointer' }}
-                  >
-                    View Details
-                  </button>
-                  {/* ✅ FIX 1+2: hero cart button — prevents re-add, shows correct state */}
-                  <button
-                    onClick={() => addHeroToCart(fp)}
-                    disabled={heroInCart}
-                    style={{
-                      flex: 1, padding: 11, borderRadius: 9, border: 'none',
-                      backgroundColor: heroInCart ? '#1a3d28' : heroJustAdded ? '#1a3d28' : C.cream,
-                      color: (heroInCart || heroJustAdded) ? '#5cc98a' : '#000',
-                      fontWeight: 900, fontSize: 12,
-                      cursor: heroInCart ? 'default' : 'pointer',
-                      transition: 'all 0.25s',
-                    }}
-                  >
-                    {heroInCart ? '✓ In Cart' : heroJustAdded ? '✓ Added' : 'Add to Cart'}
-                  </button>
+                <div style={{ padding: 20 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+                    <div>
+                      <p style={{ color: C.muted, fontSize: 10, fontWeight: 900, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 4 }}>{fp.category}</p>
+                      <h3 style={{ color: C.cream, fontWeight: 900, fontSize: 17, letterSpacing: '-0.01em', cursor: 'pointer' }} onClick={() => navigate(`/product/${fp.slug}`)}>{fp.name}</h3>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <p style={{ color: C.muted, fontSize: 10, marginBottom: 2 }}>Starting at</p>
+                      <p style={{ color: C.gold, fontWeight: 900, fontSize: 18 }}>KSH {Number(fp.price).toLocaleString()}</p>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => navigate(`/product/${fp.slug}`)}
+                      style={{ flex: 1, padding: 11, borderRadius: 9, border: `1px solid ${C.border}`, backgroundColor: 'transparent', color: C.cream, fontWeight: 900, fontSize: 12, cursor: 'pointer' }}>
+                      View Details
+                    </button>
+                    <button onClick={() => addHeroToCart(fp)} disabled={heroInCart}
+                      style={{ flex: 1, padding: 11, borderRadius: 9, border: 'none', backgroundColor: heroInCart ? '#1a3d28' : heroJustAdded ? '#1a3d28' : C.cream, color: (heroInCart || heroJustAdded) ? '#5cc98a' : '#000', fontWeight: 900, fontSize: 12, cursor: heroInCart ? 'default' : 'pointer', transition: 'all 0.25s' }}>
+                      {heroInCart ? '✓ In Cart' : heroJustAdded ? '✓ Added' : 'Add to Cart'}
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
             {/* Next product thumbnail */}
-            <div
-              onClick={() => goTo((current + 1) % featuredProducts.length)}
-              style={{ position: 'absolute', bottom: -10, right: -10, width: 68, height: 68, borderRadius: 10, overflow: 'hidden', border: `1px solid ${C.bHov}`, cursor: 'pointer', zIndex: 2 }}
-            >
-              <img src={featuredProducts[(current + 1) % featuredProducts.length].img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 18, fontWeight: 900 }}>›</div>
-            </div>
+            {!featuredLoading && featuredProducts.length > 1 && (
+              <div onClick={() => goTo((current + 1) % featuredProducts.length)}
+                style={{ position: 'absolute', bottom: -10, right: -10, width: 68, height: 68, borderRadius: 10, overflow: 'hidden', border: `1px solid ${C.bHov}`, cursor: 'pointer', zIndex: 2 }}>
+                <img src={featuredProducts[(current + 1) % featuredProducts.length].img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 18, fontWeight: 900 }}>›</div>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -483,30 +460,29 @@ const Home = () => {
             <Link to="/gallery" style={{ color: C.muted, fontSize: 12, fontWeight: 700, textDecoration: 'none', letterSpacing: '0.06em', paddingBottom: 2, borderBottom: `1px solid ${C.border}` }}>View All →</Link>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 18 }}>
-            {trending.map(p => (
-              <div key={p.slug} onClick={() => navigate(`/product/${p.slug}`)} style={{ cursor: 'pointer' }}>
-                <div
-                  style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', height: 260, backgroundColor: C.surface, border: `1px solid ${C.border}`, marginBottom: 14, transition: 'border-color 0.2s' }}
+            {trending.map((p, idx) => (
+              <div key={p.slug || idx} onClick={() => navigate(`/product/${p.slug}`)} style={{ cursor: 'pointer' }}>
+                <div style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', height: 260, backgroundColor: C.surface, border: `1px solid ${C.border}`, marginBottom: 14, transition: 'border-color 0.2s' }}
                   onMouseEnter={e => e.currentTarget.style.borderColor = C.bHov}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
-                >
+                  onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
                   <img src={p.img} alt={p.name} loading="lazy"
+                    onError={e => { e.target.onerror = null; const cat = (p.category || '').toLowerCase(); e.target.src = CATEGORY_FALLBACKS[cat] || CATEGORY_FALLBACKS.default; }}
                     style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }}
                     onMouseEnter={e => e.target.style.transform = 'scale(1.05)'}
                     onMouseLeave={e => e.target.style.transform = 'scale(1)'} />
                   <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.6), transparent 55%)' }} />
                   <span style={{ position: 'absolute', top: 11, left: 11, ...s.tag }}>{p.tag}</span>
-                  <button
-                    onClick={e => { e.stopPropagation(); toggleWish(p.slug); }}
-                    style={{ position: 'absolute', top: 11, right: 11, width: 30, height: 30, borderRadius: '50%', backgroundColor: 'rgba(0,0,0,0.45)', border: `1px solid ${C.border}`, cursor: 'pointer', color: wishlist.includes(p.slug) ? '#e05c5c' : C.cream, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                  >
+                  <button onClick={e => { e.stopPropagation(); toggleWish(p.slug); }}
+                    style={{ position: 'absolute', top: 11, right: 11, width: 30, height: 30, borderRadius: '50%', backgroundColor: 'rgba(0,0,0,0.45)', border: `1px solid ${C.border}`, cursor: 'pointer', color: wishlist.includes(p.slug) ? '#e05c5c' : C.cream, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {wishlist.includes(p.slug) ? '♥' : '♡'}
                   </button>
                 </div>
                 <p style={{ color: C.cream, fontWeight: 800, fontSize: 13, marginBottom: 5, letterSpacing: '-0.01em' }}>{p.name}</p>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <p style={{ color: C.muted, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{p.category}</p>
-                  <p style={{ color: C.gold, fontWeight: 900, fontSize: 13 }}>{p.price}</p>
+                  <p style={{ color: C.gold, fontWeight: 900, fontSize: 13 }}>
+                    {typeof p.price === 'number' ? `KSH ${p.price.toLocaleString()}` : p.price}
+                  </p>
                 </div>
               </div>
             ))}
@@ -525,14 +501,10 @@ const Home = () => {
             {aiStrategy && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, backgroundColor: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 100, padding: '6px 14px' }}>
                 <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: C.gold }} />
-                <span style={{ color: C.gold, fontSize: 10, fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                  {aiStrategy.replace(/_/g, ' ')}
-                </span>
+                <span style={{ color: C.gold, fontSize: 10, fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase' }}>{aiStrategy.replace(/_/g, ' ')}</span>
               </div>
             )}
           </div>
-
-          {/* Category filter tabs */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 32 }}>
             {['All', 'Fashion', 'Furniture', 'Beads'].map(cat => (
               <button key={cat} onClick={() => setActiveCategory(cat)}
@@ -549,8 +521,6 @@ const Home = () => {
               </div>
             )}
           </div>
-
-          {/* Cards grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, minHeight: 440 }}>
             {aiLoading ? (
               Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
@@ -559,24 +529,19 @@ const Home = () => {
                 <span style={{ fontSize: 32 }}>⚡</span>
                 <p style={{ color: C.muted, fontSize: 13 }}>
                   AI service is starting up.{' '}
-                  <button onClick={() => fetchRecs(activeCategory)} style={{ color: C.gold, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 900, fontSize: 13 }}>
-                    Retry
-                  </button>
+                  <button onClick={() => fetchRecs(activeCategory)} style={{ color: C.gold, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 900, fontSize: 13 }}>Retry</button>
                 </p>
               </div>
             ) : pageRecs.length > 0 ? (
               pageRecs.map((item, i) => {
                 const normalized = normalizeProduct(item);
                 return (
-                  <RecCard
-                    key={`${normalized.id}-${i}`}
-                    item={normalized}
+                  <RecCard key={`${normalized.id}-${i}`} item={normalized}
                     isWishlisted={wishlist.includes(normalized.slug)}
                     onToggleWish={() => toggleWish(normalized.slug)}
                     onView={() => { recordInteraction(normalized.id, 'view'); navigate(`/product/${normalized.slug}`); }}
                     onCart={addRecToCart}
-                    alreadyInCart={isInCart(normalized.id)}
-                  />
+                    alreadyInCart={isInCart(normalized.id)} />
                 );
               })
             ) : (
@@ -585,24 +550,22 @@ const Home = () => {
               </div>
             )}
           </div>
-
-          {/* Pagination */}
           {!aiLoading && totalPages > 1 && (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 40 }}>
               <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1}
-                style={{ width: 38, height: 38, borderRadius: 9, border: `1px solid ${currentPage === 1 ? C.faint : C.border}`, backgroundColor: 'transparent', color: currentPage === 1 ? C.dim : C.cream, fontSize: 14, cursor: currentPage === 1 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
+                style={{ width: 38, height: 38, borderRadius: 9, border: `1px solid ${currentPage === 1 ? C.faint : C.border}`, backgroundColor: 'transparent', color: currentPage === 1 ? C.dim : C.cream, fontSize: 14, cursor: currentPage === 1 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 onMouseEnter={e => { if (currentPage !== 1) e.currentTarget.style.borderColor = C.bHov; }}
                 onMouseLeave={e => { if (currentPage !== 1) e.currentTarget.style.borderColor = C.border; }}>‹</button>
               {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
                 <button key={page} onClick={() => goToPage(page)}
-                  style={{ width: 38, height: 38, borderRadius: 9, border: `1px solid ${page === currentPage ? C.gold : C.border}`, backgroundColor: page === currentPage ? C.gold : 'transparent', color: page === currentPage ? '#000' : C.muted, fontSize: 12, fontWeight: 900, cursor: 'pointer', transition: 'all 0.15s' }}
+                  style={{ width: 38, height: 38, borderRadius: 9, border: `1px solid ${page === currentPage ? C.gold : C.border}`, backgroundColor: page === currentPage ? C.gold : 'transparent', color: page === currentPage ? '#000' : C.muted, fontSize: 12, fontWeight: 900, cursor: 'pointer' }}
                   onMouseEnter={e => { if (page !== currentPage) { e.currentTarget.style.borderColor = C.bHov; e.currentTarget.style.color = C.cream; } }}
                   onMouseLeave={e => { if (page !== currentPage) { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.muted; } }}>
                   {page}
                 </button>
               ))}
               <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages}
-                style={{ width: 38, height: 38, borderRadius: 9, border: `1px solid ${currentPage === totalPages ? C.faint : C.border}`, backgroundColor: 'transparent', color: currentPage === totalPages ? C.dim : C.cream, fontSize: 14, cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
+                style={{ width: 38, height: 38, borderRadius: 9, border: `1px solid ${currentPage === totalPages ? C.faint : C.border}`, backgroundColor: 'transparent', color: currentPage === totalPages ? C.dim : C.cream, fontSize: 14, cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 onMouseEnter={e => { if (currentPage !== totalPages) e.currentTarget.style.borderColor = C.bHov; }}
                 onMouseLeave={e => { if (currentPage !== totalPages) e.currentTarget.style.borderColor = C.border; }}>›</button>
             </div>
@@ -623,11 +586,9 @@ const Home = () => {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
             {categories.map(cat => (
               <Link key={cat.name} to={cat.path} style={{ textDecoration: 'none' }}>
-                <div
-                  style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', height: 250, border: `1px solid ${C.border}`, cursor: 'pointer', transition: 'border-color 0.2s' }}
+                <div style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', height: 250, border: `1px solid ${C.border}`, cursor: 'pointer', transition: 'border-color 0.2s' }}
                   onMouseEnter={e => e.currentTarget.style.borderColor = C.bHov}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
-                >
+                  onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
                   <img src={cat.img} alt={cat.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.65)' }} />
                   <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -655,11 +616,9 @@ const Home = () => {
             {howItWorks.map((step, i) => (
               <div key={step.step} style={{ position: 'relative' }}>
                 {i < 3 && <div style={{ position: 'absolute', top: 27, left: '75%', width: '52%', height: 1, borderTop: `1px dashed ${C.faint}`, zIndex: 0 }} />}
-                <div
-                  style={{ position: 'relative', zIndex: 1, ...s.card, padding: 22, margin: '0 2px', transition: 'border-color 0.2s' }}
+                <div style={{ position: 'relative', zIndex: 1, ...s.card, padding: 22, margin: '0 2px', transition: 'border-color 0.2s' }}
                   onMouseEnter={e => e.currentTarget.style.borderColor = C.bHov}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
-                >
+                  onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
                     <div style={{ width: 40, height: 40, borderRadius: 9, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <span style={{ color: C.gold, fontSize: 12, fontWeight: 900 }}>{step.step}</span>
@@ -692,10 +651,10 @@ const Home = () => {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             {[
-              { n: '01', title: 'Smart Recommendations', desc: 'AI suggests products tailored to your taste',       path: '/shop' },
-              { n: '02', title: 'Visual Search',          desc: 'Upload any image to find similar artisan pieces',  path: '/search' },
-              { n: '03', title: 'AI Chatbot',             desc: 'Instant styling advice and product help, 24/7',    path: '/artisan-chat' },
-              { n: '04', title: 'Dynamic Pricing',        desc: 'Fair, market-driven prices updated in real time',  path: '/shop' },
+              { n: '01', title: 'Smart Recommendations', desc: 'AI suggests products tailored to your taste',      path: '/shop' },
+              { n: '02', title: 'Visual Search',          desc: 'Upload any image to find similar artisan pieces', path: '/search' },
+              { n: '03', title: 'AI Chatbot',             desc: 'Instant styling advice and product help, 24/7',   path: '/artisan-chat' },
+              { n: '04', title: 'Dynamic Pricing',        desc: 'Fair, market-driven prices updated in real time', path: '/shop' },
             ].map(f => (
               <Link key={f.title} to={f.path} style={{ textDecoration: 'none', display: 'block', backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 13, padding: 20, transition: 'border-color 0.2s' }}
                 onMouseEnter={e => e.currentTarget.style.borderColor = C.bHov}
@@ -732,7 +691,7 @@ const Home = () => {
                     <p style={{ color: C.cream, fontWeight: 900, fontSize: 12 }}>{t.name}</p>
                     <p style={{ color: C.muted, fontSize: 10, letterSpacing: '0.04em' }}>{t.location}</p>
                   </div>
-                  <span style={{ color: C.muted, fontSize: 10, fontWeight: 700, borderLeft: `1px solid ${C.border}`, paddingLeft: 12, letterSpacing: '0.02em' }}>{t.product}</span>
+                  <span style={{ color: C.muted, fontSize: 10, fontWeight: 700, borderLeft: `1px solid ${C.border}`, paddingLeft: 12 }}>{t.product}</span>
                 </div>
               </div>
             ))}
@@ -750,23 +709,10 @@ const Home = () => {
       <section style={{ backgroundColor: C.surface, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, padding: '96px 0' }}>
         <div style={{ ...s.section, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
           {[
-            {
-              icon: <svg width={17} height={17} fill="none" stroke={C.cream} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>,
-              title: 'Become a Vendor',
-              desc: 'Join 340+ artisans selling on 57 Arts & Customs. Get your own storefront, AI-powered analytics, and access to thousands of customers across Africa.',
-              perks: ['Free storefront setup', 'AI pricing recommendations', 'M-Pesa monthly payouts', 'Real-time sales analytics'],
-              cta: 'Start Selling →', path: '/vendor', btnStyle: s.btnPrimary,
-            },
-            {
-              icon: <svg width={17} height={17} fill="none" stroke={C.cream} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-              title: 'Affiliate Program',
-              desc: 'Earn up to 12% commission referring customers. Real-time tracking, monthly M-Pesa payouts, and a full marketing kit included.',
-              perks: ['Up to 12% per sale', 'Real-time commission tracking', 'Monthly M-Pesa payouts', 'Marketing kit & referral links'],
-              cta: 'Join Affiliate Program →', path: '/affiliate', btnStyle: s.btnGhost,
-            },
+            { icon: <svg width={17} height={17} fill="none" stroke={C.cream} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>, title: 'Become a Vendor', desc: 'Join 340+ artisans selling on 57 Arts & Customs. Get your own storefront, AI-powered analytics, and access to thousands of customers across Africa.', perks: ['Free storefront setup', 'AI pricing recommendations', 'M-Pesa monthly payouts', 'Real-time sales analytics'], cta: 'Start Selling →', path: '/vendor', btnStyle: s.btnPrimary },
+            { icon: <svg width={17} height={17} fill="none" stroke={C.cream} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>, title: 'Affiliate Program', desc: 'Earn up to 12% commission referring customers. Real-time tracking, monthly M-Pesa payouts, and a full marketing kit included.', perks: ['Up to 12% per sale', 'Real-time commission tracking', 'Monthly M-Pesa payouts', 'Marketing kit & referral links'], cta: 'Join Affiliate Program →', path: '/affiliate', btnStyle: s.btnGhost },
           ].map(card => (
-            <div key={card.title}
-              style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 18, padding: 38, transition: 'border-color 0.2s' }}
+            <div key={card.title} style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 18, padding: 38, transition: 'border-color 0.2s' }}
               onMouseEnter={e => e.currentTarget.style.borderColor = C.bHov}
               onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
               <div style={{ width: 42, height: 42, borderRadius: 9, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 22 }}>{card.icon}</div>
@@ -848,7 +794,7 @@ const Home = () => {
             <div>
               <h4 style={{ color: C.cream, fontWeight: 900, fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 18 }}>Shop</h4>
               {[['Fashion', '/fashion'], ['Furniture', '/furniture'], ['Beads & Jewelry', '/beads'], ['Custom Orders', '/custom-order'], ['Gallery', '/gallery'], ['New Arrivals', '/shop']].map(([label, path]) => (
-                <Link key={label} to={path} style={{ display: 'block', color: C.muted, fontSize: 13, marginBottom: 9, textDecoration: 'none', transition: 'color 0.2s' }}
+                <Link key={label} to={path} style={{ display: 'block', color: C.muted, fontSize: 13, marginBottom: 9, textDecoration: 'none' }}
                   onMouseEnter={e => e.target.style.color = C.cream}
                   onMouseLeave={e => e.target.style.color = C.muted}>{label}</Link>
               ))}
@@ -856,7 +802,7 @@ const Home = () => {
             <div>
               <h4 style={{ color: C.cream, fontWeight: 900, fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 18 }}>Company</h4>
               {[['About Us', '/about'], ['Vendor Program', '/vendor'], ['Affiliate', '/affiliate'], ['Artisan Chat', '/artisan-chat'], ['Contact', '/contact'], ['Order Tracking', '/order-tracking']].map(([label, path]) => (
-                <Link key={label} to={path} style={{ display: 'block', color: C.muted, fontSize: 13, marginBottom: 9, textDecoration: 'none', transition: 'color 0.2s' }}
+                <Link key={label} to={path} style={{ display: 'block', color: C.muted, fontSize: 13, marginBottom: 9, textDecoration: 'none' }}
                   onMouseEnter={e => e.target.style.color = C.cream}
                   onMouseLeave={e => e.target.style.color = C.muted}>{label}</Link>
               ))}
@@ -866,7 +812,7 @@ const Home = () => {
             <p style={{ color: C.muted, fontSize: 11 }}>© 2024 57 Arts & Customs. All rights reserved. Nairobi, Kenya.</p>
             <div style={{ display: 'flex', gap: 22 }}>
               {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map(label => (
-                <Link key={label} to="/contact" style={{ color: C.muted, fontSize: 11, textDecoration: 'none', transition: 'color 0.2s' }}
+                <Link key={label} to="/contact" style={{ color: C.muted, fontSize: 11, textDecoration: 'none' }}
                   onMouseEnter={e => e.target.style.color = C.cream}
                   onMouseLeave={e => e.target.style.color = C.muted}>{label}</Link>
               ))}
