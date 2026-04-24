@@ -17,6 +17,8 @@ const productSchema = new mongoose.Schema({
   deliveryTime:  { type: String, default: '3-5 Business Days' },
   customizationOptions: { colors: [String], sizes: [String] },
   inStock:       { type: Boolean, default: true },
+  stock:         { type: Number, default: 0, min: 0 },
+  status:        { type: String, enum: ['active', 'out_of_stock', 'draft'], default: 'active' },
   featured:      { type: Boolean, default: false },
   trending:      { type: Boolean, default: false },
 }, { timestamps: true });

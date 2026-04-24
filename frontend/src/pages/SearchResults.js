@@ -1,5 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { productAPI } from '../services/api';
 
 // ── DESIGN TOKENS (matches Home.js) ──────────────────────────────────────────
 const C = {
@@ -14,25 +15,24 @@ const C = {
 };
 
 // ── DATA ──────────────────────────────────────────────────────────────────────
-const allProducts = [
-  { id: 1,  name: 'Distressed Artisanal Denim', price: 'KSH 58,000',  desc: 'Hand-painted Limited Edition',   category: 'Fashion',   tag: 'Custom Order', img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=500',  slug: 'distressed-artisanal-denim'  },
-  { id: 2,  name: 'Linen Riviera Set',           price: 'KSH 42,000',  desc: 'Heritage Collection',            category: 'Fashion',   tag: 'Ready-Made',   img: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=500', slug: 'linen-riviera-set'            },
-  { id: 3,  name: 'Gold-Infused Obsidian Beads', price: 'KSH 24,000',  desc: 'Hand-threaded Jewelry',          category: 'Beads',     tag: 'Artisanal',    img: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=500',  slug: 'gold-infused-obsidian-beads' },
-  { id: 4,  name: 'Vanguard Teak Chair',         price: 'KSH 138,000', desc: 'Bespoke Furniture Line',         category: 'Furniture', tag: 'Custom Order', img: 'https://images.unsplash.com/photo-1592078615290-033ee584e267?w=500',  slug: 'vanguard-teak-chair'         },
-  { id: 5,  name: 'Midnight Velvet Blazer',      price: 'KSH 72,000',  desc: 'Premium After-hours Wear',       category: 'Fashion',   tag: 'Limited',      img: 'https://images.unsplash.com/photo-1551537482-f2075a1d41f2?w=500',    slug: 'midnight-velvet-blazer'      },
-  { id: 6,  name: 'Monarch Carry-all',           price: 'KSH 98,000',  desc: 'Full-grain Leather Accessory',   category: 'Fashion',   tag: 'Bespoke Only', img: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=500',    slug: 'monarch-carry-all'           },
-  { id: 7,  name: 'Ancestral Pulse Bracelet',    price: 'KSH 12,500',  desc: 'Heritage Beadwork',              category: 'Beads',     tag: 'Artisanal',    img: 'https://images.unsplash.com/photo-1573408301185-9519f94816b5?w=500',  slug: 'gold-infused-obsidian-beads' },
-  { id: 8,  name: 'Obsidian Throne Chair',       price: 'KSH 108,000', desc: 'Matte Carbon / Brass',           category: 'Furniture', tag: 'Limited',      img: 'https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?w=500',  slug: 'vanguard-teak-chair'         },
-  { id: 9,  name: 'Solar Flare Side Table',      price: 'KSH 85,000',  desc: 'Sculpted Resin / Yellow',        category: 'furniture', tag: '',             img: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=500',    slug: 'vanguard-teak-chair'         },
-  { id: 10, name: 'Kente Bead Stack',            price: 'KSH 18,000',  desc: 'Handwoven Heritage Piece',       category: 'Beads',     tag: 'New',          img: 'https://images.unsplash.com/photo-1611085583191-a3b181a88401?w=500',  slug: 'gold-infused-obsidian-beads' },
-  { id: 11, name: 'Old Money Camel Overcoat',    price: 'KSH 42,000',  desc: 'Understated Luxury',             category: 'Fashion',   tag: 'Ready-Made',   img: 'https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=500',  slug: 'distressed-artisanal-denim'  },
-  { id: 12, name: 'Magma Coffee Table',          price: 'KSH 96,000',  desc: 'Cast Iron & Reclaimed Wood',     category: 'Furniture', tag: 'Custom Order', img: 'https://images.unsplash.com/photo-1493106819501-8f9e5ce02e5d?w=500',  slug: 'vanguard-teak-chair'         },
-];
-
 const aiRecommended = [1, 3, 5, 11]; // IDs of AI-recommended products
 const categories  = ['All', 'Fashion', 'Furniture', 'Beads'];
 const sortOptions = ['Latest Drop', 'Price: Low to High', 'Price: High to Low', 'Most Popular', 'AI Recommended'];
 const popularTags = ['Denim', 'Custom Order', 'Beads', 'Furniture', 'Old Money', 'Limited Edition'];
+const fallbackImage = 'https://images.unsplash.com/photo-1592078615290-033ee584e267?w=500';
+
+const normalizeProduct = (product) => ({
+  id: product._id,
+  name: product.name,
+  price: `KSH ${Number(product.price || 0).toLocaleString()}`,
+  priceNum: Number(product.price || 0),
+  desc: product.description || 'Artisanal piece',
+  category: product.category,
+  tag: product.tag || (product.status === 'draft' ? 'Draft' : product.status === 'out_of_stock' ? 'Out of Stock' : 'Ready-Made'),
+  img: product.images?.[0] || fallbackImage,
+  slug: product.slug,
+  inStock: product.inStock !== false,
+});
 
 // ── COMPONENT ─────────────────────────────────────────────────────────────────
 const SearchResults = () => {
@@ -52,6 +52,21 @@ const SearchResults = () => {
   const [isAnalyzing, setIsAnalyzing]       = useState(false);
   const [showAIBadge, setShowAIBadge]       = useState(false);
   const [availability, setAvailability]     = useState({ readyMade: true, customOrders: true });
+  const [products, setProducts]             = useState([]);
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const res = await productAPI.getAll(query ? { search: query } : {});
+        setProducts((res.data?.products || []).map(normalizeProduct));
+      } catch {
+        setProducts([]);
+      }
+    };
+
+    loadProducts();
+    setCurrentPage(1);
+  }, [query]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -87,12 +102,14 @@ const SearchResults = () => {
   };
 
   // Filter
-  const priceToNum = (p) => parseInt(p.replace(/[^0-9]/g, ''), 10);
-  const filtered = allProducts.filter(p => {
+  const priceToNum = (p) => typeof p === 'number' ? p : parseInt(String(p).replace(/[^0-9]/g, ''), 10);
+  const filtered = products.filter(p => {
     const matchQ    = query === '' || p.name.toLowerCase().includes(query.toLowerCase()) || p.category.toLowerCase().includes(query.toLowerCase()) || p.desc.toLowerCase().includes(query.toLowerCase());
     const matchCat  = activeCategory === 'All' || p.category.toLowerCase() === activeCategory.toLowerCase();
     const matchPrice= priceToNum(p.price) <= priceMax;
-    const matchAvail= (availability.readyMade && p.tag !== 'Custom Order' && p.tag !== 'Bespoke Only') || (availability.customOrders && (p.tag === 'Custom Order' || p.tag === 'Bespoke Only')) || (availability.readyMade && availability.customOrders);
+    const isCustom  = p.tag === 'Custom Order' || p.tag === 'Bespoke Only';
+    const isReady   = p.inStock && !isCustom;
+    const matchAvail= (availability.readyMade && isReady) || (availability.customOrders && isCustom);
     return matchQ && matchCat && matchPrice && matchAvail;
   });
 

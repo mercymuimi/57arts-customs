@@ -4,6 +4,7 @@ import { AuthProvider }   from './context/AuthContext';
 import { DraftProvider }  from './context/DraftContext';
 import { CartProvider }   from './context/CartContext';
 import ProtectedRoute     from './components/ProtectedRoute';
+import AffiliateTracker   from './components/AffiliateTracker';
 import Navbar             from './components/layout/Navbar';
 
 // ── Pages ─────────────────────────────────────────────────────────────────────
@@ -40,6 +41,7 @@ function App() {
       <CartProvider>
         <DraftProvider>
           <Router>
+            <AffiliateTracker />
             <Navbar />
             <Routes>
 

@@ -1,8 +1,27 @@
 const Product = require('../models/Product');
+const Vendor = require('../models/Vendor');
 
 // Helper to generate slug
 const generateSlug = (name) =>
   name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+const generateUniqueSlug = async (name, excludeId = null) => {
+  const baseSlug = generateSlug(name);
+  let slug = baseSlug;
+  let counter = 1;
+
+  while (true) {
+    const existing = await Product.findOne({
+      slug,
+      ...(excludeId ? { _id: { $ne: excludeId } } : {}),
+    }).select('_id');
+
+    if (!existing) return slug;
+
+    counter += 1;
+    slug = `${baseSlug}-${counter}`;
+  }
+};
 
 // GET /api/products
 exports.getProducts = async (req, res) => {
@@ -82,17 +101,18 @@ exports.addProduct = async (req, res) => {
       name, description, price, originalPrice,
       category, tag, images, sizes, materials,
       deliveryTime, customizationOptions,
-      inStock, featured, trending, stock,
+      inStock, featured, trending, stock, status,
     } = req.body;
 
-    const slug = generateSlug(name);
+    const vendorProfile = await Vendor.findOne({ user: req.user.id });
+    if (!vendorProfile) {
+      return res.status(404).json({ success: false, error: 'Vendor profile not found' });
+    }
 
-    // Check for duplicate slug
-    const existing = await Product.findOne({ slug });
-    if (existing) return res.status(400).json({ success: false, error: 'Product name too similar to existing product' });
+    const slug = await generateUniqueSlug(name);
 
     const product = await Product.create({
-      vendor: req.user.id,   // ✅ Always links product to the logged-in vendor
+      vendor: vendorProfile._id,
       name, description, price,
       originalPrice: originalPrice || price,
       category, tag, images: images || [],
@@ -102,6 +122,7 @@ exports.addProduct = async (req, res) => {
       customizationOptions: customizationOptions || { colors: [], sizes: [] },
       inStock: inStock !== undefined ? inStock : true,
       stock:   stock   || 0,
+      status:  status  || 'active',
       featured: featured || false,
       trending: trending || false,
       slug,
@@ -119,17 +140,17 @@ exports.updateProduct = async (req, res) => {
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ success: false, error: 'Product not found' });
 
+    const vendorProfile = await Vendor.findOne({ user: req.user.id });
+
     // Only the owning vendor (or admin) can update
-    if (product.vendor?.toString() !== req.user.id && req.user.role !== 'admin') {
+    if (product.vendor?.toString() !== vendorProfile?._id?.toString() && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, error: 'Not authorized' });
     }
 
     // ✅ Regenerate slug if name changed
     const updateData = { ...req.body };
     if (req.body.name) {
-      const newSlug = generateSlug(req.body.name);
-      const slugConflict = await Product.findOne({ slug: newSlug, _id: { $ne: req.params.id } });
-      if (!slugConflict) updateData.slug = newSlug;
+      updateData.slug = await generateUniqueSlug(req.body.name, req.params.id);
     }
 
     const updated = await Product.findByIdAndUpdate(req.params.id, updateData, {
@@ -148,7 +169,9 @@ exports.deleteProduct = async (req, res) => {
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ success: false, error: 'Product not found' });
 
-    if (product.vendor?.toString() !== req.user.id && req.user.role !== 'admin') {
+    const vendorProfile = await Vendor.findOne({ user: req.user.id });
+
+    if (product.vendor?.toString() !== vendorProfile?._id?.toString() && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, error: 'Not authorized' });
     }
 

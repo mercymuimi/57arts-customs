@@ -9,7 +9,7 @@ const C = { bg: '#0a0a0a', gold: '#c9a84c', cream: '#f0ece4', muted: '#606060' }
 // Usage (role): <ProtectedRoute role="vendor"><VendorDashboard /></ProtectedRoute>
 
 const ProtectedRoute = ({ children, role }) => {
-  const { isLoggedIn, isVendor, isAdmin, ready } = useAuth();
+  const { isLoggedIn, isVendor, isAffiliate, isAdmin, ready } = useAuth();
   const location = useLocation();
 
   // Wait until AuthContext has checked localStorage
@@ -36,6 +36,11 @@ const ProtectedRoute = ({ children, role }) => {
 
   // Role check — admin only
   if (role === 'admin' && !isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  // Role check — affiliate only
+  if (role === 'affiliate' && !isAffiliate && !isAdmin) {
     return <Navigate to="/" replace />;
   }
 

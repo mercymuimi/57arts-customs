@@ -766,6 +766,7 @@ const Checkout = () => {
   const [stkSent,            setStkSent]            = useState(false);
   const [stkLoading,         setStkLoading]         = useState(false);
   const [checkoutRequestId,  setCheckoutRequestId]  = useState('');
+  const [paymentData,        setPaymentData]        = useState(null);
   const [cardForm,           setCardForm]           = useState({ number: '', expiry: '', cvv: '', holder: '' });
 
   /* verify */
@@ -832,6 +833,7 @@ const Checkout = () => {
         orderId: `TEMP${Date.now()}`,
       });
       setCheckoutRequestId(data.checkoutRequestId);
+      setPaymentData(null);
       setStkSent(true);
     } catch (err) {
       setVerifyError(err.response?.data?.message || 'Failed to send STK push. Try again.');
@@ -857,6 +859,7 @@ const Checkout = () => {
         const { data } = await api.post('/payments/mpesa/query', { checkoutRequestId });
         if (data.paid) {
           clearInterval(pollRef.current);
+          setPaymentData(data.data || null);
           setVerified(true);
           setVerifying(false);
           setVerifyError('');
@@ -878,7 +881,12 @@ const Checkout = () => {
       }
       try {
         const { data } = await api.post('/payments/mpesa/query', { checkoutRequestId });
-        if (data.paid) { setVerified(true); setVerifying(false); return; }
+        if (data.paid) {
+          setPaymentData(data.data || null);
+          setVerified(true);
+          setVerifying(false);
+          return;
+        }
       } catch { /* fall through to polling */ }
       startPolling();
       return;
@@ -939,7 +947,7 @@ const Checkout = () => {
         shippingPrice:      shipping,
         totalPrice:         total,
         notes:              form.notes,
-        mpesaTransactionId: checkoutRequestId || '',
+        mpesaTransactionId: paymentData?.transactionId || checkoutRequestId || '',
       });
 
       clearCart();

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { authAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -92,8 +92,13 @@ const StrengthBar = ({ password }) => {
 
 /* ─── Main component ─────────────────────────────────────────────────────────── */
 const Register = () => {
+  const location                            = useLocation();
+  const preselectedRole                     = useMemo(() => {
+    const role = new URLSearchParams(location.search).get('role');
+    return ['buyer', 'vendor', 'affiliate'].includes(role) ? role : 'buyer';
+  }, [location.search]);
   const [step, setStep]                     = useState('register'); // 'register' | 'verify'
-  const [form, setForm]                     = useState({ name: '', email: '', password: '', confirm: '', role: 'buyer' });
+  const [form, setForm]                     = useState({ name: '', email: '', password: '', confirm: '', role: preselectedRole });
   const [otp, setOtp]                       = useState(['', '', '', '', '', '']);
   const [pendingEmail, setPendingEmail]     = useState('');
   const [devOtp, setDevOtp]                 = useState('');
@@ -374,10 +379,11 @@ const Register = () => {
           {/* Role selector */}
           <div style={{ marginBottom: 24 }}>
             <p style={{ color: C.muted, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>I am joining as</p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
               {[
                 { key: 'buyer',  label: 'Buyer',           desc: 'Shop & commission pieces' },
                 { key: 'vendor', label: 'Artisan / Vendor', desc: 'Sell my craft'            },
+                { key: 'affiliate', label: 'Affiliate', desc: 'Share links and earn commission' },
               ].map(({ key, label, desc }) => (
                 <button
                   key={key}
@@ -395,6 +401,16 @@ const Register = () => {
                 </button>
               ))}
             </div>
+            {form.role === 'vendor' && (
+              <p style={{ color: C.muted, fontSize: 11, lineHeight: 1.6, marginTop: 10 }}>
+                Vendor accounts finish storefront setup after email verification.
+              </p>
+            )}
+            {form.role === 'affiliate' && (
+              <p style={{ color: C.muted, fontSize: 11, lineHeight: 1.6, marginTop: 10 }}>
+                Affiliate accounts finish activation after email verification and a quick profile setup.
+              </p>
+            )}
           </div>
 
           {apiError && (

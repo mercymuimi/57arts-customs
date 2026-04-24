@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import axios from 'axios';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-
-const BASE = 'http://localhost:5000/api';
+import { affiliateAPI } from '../services/api';
 
 const C = {
   bg: '#0a0a0a', surface: '#111111', border: '#1c1c1c', bHov: '#2e2e2e',
@@ -47,7 +45,6 @@ const Spinner = () => (
 const AffiliateDashboard = () => {
   const { user } = useAuth();
   const navigate  = useNavigate();
-  const location  = useLocation();
 
   const [activeTab, setActiveTab]         = useState('overview');
   const [stats, setStats]                 = useState(null);
@@ -66,24 +63,14 @@ const AffiliateDashboard = () => {
   const [payoutSaved, setPayoutSaved]         = useState(false);
 
   // ── Track click if ?ref= is in URL (when affiliate visits their own link) ──
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const ref = params.get('ref');
-    if (ref) {
-      axios.post(`${BASE}/affiliates/track-click`, { affiliateCode: ref }).catch(() => {});
-    }
-  }, [location.search]);
-
   // ── Fetch dashboard data ──────────────────────────────────────────────────
   const loadData = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const token = localStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
       const [statsRes, profileRes] = await Promise.all([
-        axios.get(`${BASE}/affiliates/stats`,   { headers }),
-        axios.get(`${BASE}/affiliates/profile`, { headers }),
+        affiliateAPI.getStats(),
+        affiliateAPI.getProfile(),
       ]);
       setStats(statsRes.data.stats);
       setProfile(profileRes.data.affiliate);
@@ -108,15 +95,16 @@ const AffiliateDashboard = () => {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const code     = stats?.affiliateCode || '';
-  const baseLink = `http://localhost:3000?ref=${code}`;
+  const origin   = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+  const baseLink = `${origin}/?ref=${code}`;
 
   const linkTemplates = [
-    { label: 'Full site',     url: `http://localhost:3000?ref=${code}`,                desc: 'Link to the homepage'  },
-    { label: 'Shop',          url: `http://localhost:3000/shop?ref=${code}`,            desc: 'Link to all products'  },
-    { label: 'Fashion',       url: `http://localhost:3000/fashion?ref=${code}`,         desc: 'Fashion category'      },
-    { label: 'Furniture',     url: `http://localhost:3000/furniture?ref=${code}`,       desc: 'Furniture category'    },
-    { label: 'Beads',         url: `http://localhost:3000/beads?ref=${code}`,           desc: 'Beads & jewellery'     },
-    { label: 'Custom Orders', url: `http://localhost:3000/custom-order?ref=${code}`,   desc: 'Custom order studio'   },
+    { label: 'Full site',     url: `${origin}/?ref=${code}`,             desc: 'Link to the homepage'  },
+    { label: 'Shop',          url: `${origin}/shop?ref=${code}`,         desc: 'Link to all products'  },
+    { label: 'Fashion',       url: `${origin}/fashion?ref=${code}`,      desc: 'Fashion category'      },
+    { label: 'Furniture',     url: `${origin}/furniture?ref=${code}`,    desc: 'Furniture category'    },
+    { label: 'Beads',         url: `${origin}/beads?ref=${code}`,        desc: 'Beads & jewellery'     },
+    { label: 'Custom Orders', url: `${origin}/custom-order?ref=${code}`, desc: 'Custom order studio'   },
   ];
 
   const copy = (text, key) => {
@@ -131,17 +119,16 @@ const AffiliateDashboard = () => {
   };
   const generateProductLink = () => {
     if (!customProduct.trim()) return;
-    setGeneratedLink(`http://localhost:3000/product/${customProduct.toLowerCase().replace(/\s+/g, '-')}?ref=${code}`);
+    setGeneratedLink(`${origin}/product/${customProduct.toLowerCase().replace(/\s+/g, '-')}?ref=${code}`);
   };
 
   const savePayoutDetails = async () => {
     setPayoutSaving(true);
     try {
-      const token = localStorage.getItem('token');
-      await axios.put(`${BASE}/affiliates/payout-details`, {
+      await affiliateAPI.updatePayoutDetails({
         payoutMethod: payoutForm.method === 'M-Pesa' ? 'mpesa' : payoutForm.method === 'PayPal' ? 'paypal' : 'bank',
         mpesaNumber:  payoutForm.method === 'M-Pesa' ? payoutForm.number : '',
-      }, { headers: { Authorization: `Bearer ${token}` } });
+      });
       setPayoutSaved(true);
       setTimeout(() => { setPayoutSaved(false); setShowPayoutModal(false); }, 1500);
     } catch { alert('Failed to save payout details'); }

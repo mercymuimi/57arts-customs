@@ -69,10 +69,11 @@ export const vendorAPI = {
 
 // ── AFFILIATES ────────────────────────────────────────────────────────────────
 export const affiliateAPI = {
-  register:   (data)          => api.post('/affiliates/register', data),
-  getProfile: ()              => api.get('/affiliates/profile'),
-  getStats:   ()              => api.get('/affiliates/stats'),
-  trackClick: (affiliateCode) => api.post('/affiliates/track-click', { affiliateCode }),
+  register:            (data)          => api.post('/affiliates/register', data),
+  getProfile:          ()              => api.get('/affiliates/profile'),
+  getStats:            ()              => api.get('/affiliates/stats'),
+  trackClick:          (affiliateCode) => api.post('/affiliates/track-click', { affiliateCode }),
+  updatePayoutDetails: (data)          => api.put('/affiliates/payout-details', data),
 };
 
 // ── REVIEWS ───────────────────────────────────────────────────────────────────

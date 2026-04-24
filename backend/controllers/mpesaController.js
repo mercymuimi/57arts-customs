@@ -2,6 +2,7 @@ const axios = require('axios');
 
 // In-memory store for confirmed payments (use Redis in production)
 const confirmedPayments = new Map();
+const CALLBACK_PATH = '/api/payments/mpesa/callback';
 
 const getAccessToken = async () => {
   const auth = Buffer.from(
@@ -19,6 +20,17 @@ const getTimestamp = () =>
 
 const generatePassword = (timestamp) =>
   Buffer.from(`${process.env.MPESA_SHORTCODE}${process.env.MPESA_PASSKEY}${timestamp}`).toString('base64');
+
+const buildCallbackUrl = () => {
+  const raw = (process.env.MPESA_CALLBACK_URL || '').trim().replace(/\/+$/, '');
+  if (!raw) {
+    throw new Error('MPESA_CALLBACK_URL is not configured');
+  }
+
+  if (raw.endsWith(CALLBACK_PATH)) return raw;
+  if (raw.endsWith('/api/payments/callback')) return raw.replace(/\/api\/payments\/callback$/, CALLBACK_PATH);
+  return `${raw}${CALLBACK_PATH}`;
+};
 
 const formatPhone = (phone) => {
   const cleaned = phone.replace(/\s+/g, '').replace(/^\+/, '');
@@ -40,7 +52,7 @@ exports.stkPush = async (req, res) => {
     const timestamp      = getTimestamp();
     const password       = generatePassword(timestamp);
     const formattedPhone = formatPhone(phone);
-    const callbackUrl    = `${process.env.MPESA_CALLBACK_URL}/api/payments/mpesa/callback`;
+    const callbackUrl    = buildCallbackUrl();
 
     // ✅ Use real amount — sandbox accepts any integer amount
     const stkAmount = Math.ceil(Number(amount));
@@ -104,10 +116,47 @@ exports.querySTK = async (req, res) => {
       });
     }
 
-    res.json({ success: true, paid: false, message: 'Payment not yet confirmed' });
+    const token = await getAccessToken();
+    const timestamp = getTimestamp();
+    const password = generatePassword(timestamp);
+
+    const { data } = await axios.post(
+      'https://sandbox.safaricom.co.ke/mpesa/stkpushquery/v1/query',
+      {
+        BusinessShortCode: process.env.MPESA_SHORTCODE,
+        Password: password,
+        Timestamp: timestamp,
+        CheckoutRequestID: checkoutRequestId,
+      },
+      { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
+    );
+
+    if (data?.ResultCode === '0' || data?.ResultCode === 0) {
+      const paymentData = {
+        transactionId: data.MpesaReceiptNumber || '',
+        amount: data.Amount || null,
+        phone: data.PhoneNumber || '',
+        confirmedAt: new Date(),
+        source: 'stk-query',
+      };
+      confirmedPayments.set(checkoutRequestId, paymentData);
+
+      return res.json({
+        success: true,
+        paid: true,
+        message: data.ResultDesc || 'Payment confirmed',
+        data: paymentData,
+      });
+    }
+
+    res.json({
+      success: true,
+      paid: false,
+      message: data?.ResultDesc || 'Payment not yet confirmed',
+    });
 
   } catch (err) {
-    console.error('❌ Query error:', err.message);
+    console.error('❌ Query error:', err.response?.data || err.message);
     res.status(500).json({ success: false, message: 'Could not check payment status' });
   }
 };

@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
-
-const BASE = 'http://localhost:5000/api';
+import { affiliateAPI } from '../services/api';
 
 const C = {
   bg: '#0a0a0a', surface: '#111111', border: '#1c1c1c', bHov: '#2e2e2e',
@@ -63,7 +61,7 @@ const Footer = () => (
 );
 
 const AffiliateLanding = () => {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const navigate  = useNavigate();
 
   const [form, setForm]       = useState({ name: user?.name || '', email: user?.email || '', channel: '', audience: '', why: '' });
@@ -94,18 +92,19 @@ const AffiliateLanding = () => {
     setSubmitting(true);
     setApiError('');
     try {
-      const token = localStorage.getItem('token');
-      const { data } = await axios.post(
-        `${BASE}/affiliates/register`,
-        { channel: form.channel, audience: form.audience, why: form.why },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const { data } = await affiliateAPI.register({
+        channel: form.channel,
+        audience: form.audience,
+        why: form.why,
+      });
+      await refreshUser();
       setAffiliateCode(data.affiliate.affiliateCode);
       setSubmitted(true);
     } catch (err) {
       const msg = err.response?.data?.message || err.response?.data?.error || 'Failed to register. Please try again.';
       // If already registered, just redirect to dashboard
       if (err.response?.status === 400 && msg.includes('already')) {
+        await refreshUser();
         navigate('/affiliate/dashboard');
         return;
       }
@@ -302,7 +301,7 @@ const AffiliateLanding = () => {
             {!user && (
               <div style={{ backgroundColor: 'rgba(201,168,76,0.08)', border: `1px solid rgba(201,168,76,0.2)`, borderRadius: 8, padding: '12px 16px' }}>
                 <p style={{ color: C.gold, fontSize: 12 }}>
-                  ✦ You need to be logged in to join. <Link to="/register" style={{ color: C.gold, fontWeight: 900 }}>Create an account</Link> or <Link to="/login" style={{ color: C.gold, fontWeight: 900 }}>log in</Link> first.
+                  ✦ You need to be logged in to join. <Link to="/register?role=affiliate" style={{ color: C.gold, fontWeight: 900 }}>Create an affiliate account</Link> or <Link to="/login" style={{ color: C.gold, fontWeight: 900 }}>log in</Link> first.
                 </p>
               </div>
             )}

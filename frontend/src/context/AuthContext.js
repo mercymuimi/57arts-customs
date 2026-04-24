@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authAPI } from '../services/api';
+import { authAPI, vendorAPI, affiliateAPI } from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -8,12 +8,31 @@ export const STORAGE_KEYS = {
   user:  '57arts_user',
 };
 
-// ✅ Where each role lands after login
-const ROLE_REDIRECTS = {
-  admin:     '/admin',
-  vendor:    '/vendor/dashboard',
-  affiliate: '/affiliate/dashboard',
-  buyer:     '/',
+const resolvePostLoginRoute = async (userData) => {
+  if (userData.role === 'admin') return '/admin';
+  if (userData.role === 'buyer') return '/';
+
+  if (userData.role === 'vendor') {
+    try {
+      await vendorAPI.getProfile();
+      return '/vendor/dashboard';
+    } catch (error) {
+      if (error.response?.status === 404) return '/vendor';
+      return '/vendor/dashboard';
+    }
+  }
+
+  if (userData.role === 'affiliate') {
+    try {
+      await affiliateAPI.getProfile();
+      return '/affiliate/dashboard';
+    } catch (error) {
+      if (error.response?.status === 404) return '/affiliate';
+      return '/affiliate/dashboard';
+    }
+  }
+
+  return '/';
 };
 
 export const AuthProvider = ({ children }) => {
@@ -39,15 +58,14 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // Login — stores credentials and redirects by role
-  const login = (userData, authToken, navigate) => {
+  const login = async (userData, authToken, navigate) => {
     setUser(userData);
     setToken(authToken);
     localStorage.setItem(STORAGE_KEYS.token, authToken);
     localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(userData));
 
-    // ✅ Role-based redirect if navigate function provided
     if (navigate) {
-      const redirect = ROLE_REDIRECTS[userData.role] || '/';
+      const redirect = await resolvePostLoginRoute(userData);
       navigate(redirect);
     }
   };

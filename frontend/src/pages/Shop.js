@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { productAPI } from '../services/api';
 
 // ── DESIGN TOKENS (matches Home.js exactly) ───────────────────────────────────
 const C = {
@@ -27,18 +28,20 @@ const s = {
 };
 
 // ── DATA ──────────────────────────────────────────────────────────────────────
-const allProducts = [
-  { name: 'Vintage Denim Jacket',    price: 'KSH 18,250', priceNum: 18250, desc: 'Heritage Street Wear',          category: 'Fashion',   tag: 'LIMITED',      img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=600', slug: 'distressed-artisanal-denim' },
-  { name: 'Raw Silk Polo',           price: 'KSH 13,140', priceNum: 13140, desc: 'Old Money Collection',          category: 'Fashion',   tag: '',             img: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=600', slug: 'linen-riviera-set' },
-  { name: 'Handcrafted Stool',       price: 'KSH 32,850', priceNum: 32850, desc: 'Artisanal Furniture',           category: 'Furniture', tag: 'CUSTOM',       img: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600', slug: 'handcrafted-stool' },
-  { name: 'Traditional Bead Set',    price: 'KSH 8,760',  priceNum: 8760,  desc: 'Heritage Jewelry',             category: 'Beads',     tag: '',             img: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600', slug: 'traditional-bead-set' },
-  { name: 'The Sculptor Chair',      price: 'KSH 43,800', priceNum: 43800, desc: 'Statement Furniture Art',       category: 'Furniture', tag: 'BESPOKE',      img: 'https://images.unsplash.com/photo-1592078615290-033ee584e267?w=600', slug: 'the-sculptor-chair' },
-  { name: 'Kente Bead Stack',        price: 'KSH 6,205',  priceNum: 6205,  desc: 'Modern African Heritage',       category: 'Beads',     tag: '',             img: 'https://images.unsplash.com/photo-1611085583191-a3b181a88401?w=600', slug: 'kente-bead-stack' },
-  { name: 'Midnight Velvet Blazer',  price: 'KSH 43,070', priceNum: 43070, desc: 'Premium After-hours Wear',      category: 'Fashion',   tag: 'LIMITED',      img: 'https://images.unsplash.com/photo-1551537482-f2075a1d41f2?w=600', slug: 'midnight-velvet-blazer' },
-  { name: 'Monarch Carry-all',       price: 'KSH 56,940', priceNum: 56940, desc: 'Full-grain Leather Accessory',  category: 'Fashion',   tag: 'BESPOKE ONLY', img: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=600', slug: 'monarch-carry-all' },
-];
-
 const categories = ['ALL', 'FASHION', 'FURNITURE', 'BEADS'];
+const fallbackImage = 'https://images.unsplash.com/photo-1592078615290-033ee584e267?w=600';
+
+const normalizeProduct = (product) => ({
+  name: product.name,
+  price: `KSH ${Number(product.price || 0).toLocaleString()}`,
+  priceNum: Number(product.price || 0),
+  desc: product.description || 'Artisanal piece',
+  category: product.category,
+  tag: product.tag || (product.status === 'out_of_stock' ? 'OUT OF STOCK' : ''),
+  img: product.images?.[0] || fallbackImage,
+  slug: product.slug,
+  inStock: product.inStock !== false,
+});
 
 // ── SHARED FOOTER ─────────────────────────────────────────────────────────────
 const Footer = () => (
@@ -95,6 +98,20 @@ const Shop = () => {
   const [vsImage, setVsImage] = useState(null);
   const [vsSearching, setVsSearching] = useState(false);
   const [vsResults, setVsResults] = useState([]);
+  const [products, setProducts] = useState([]);
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const res = await productAPI.getAll();
+        setProducts((res.data?.products || []).map(normalizeProduct));
+      } catch {
+        setProducts([]);
+      }
+    };
+
+    loadProducts();
+  }, []);
 
   const toggleWishlist = (e, slug) => {
     e.stopPropagation();
@@ -115,13 +132,13 @@ const Shop = () => {
     setVsResults([]);
     // Simulate AI matching — returns random products as "visually similar"
     setTimeout(() => {
-      const shuffled = [...allProducts].sort(() => Math.random() - 0.5).slice(0, 4);
+      const shuffled = [...products].sort(() => Math.random() - 0.5).slice(0, 4);
       setVsResults(shuffled);
       setVsSearching(false);
     }, 2000);
   };
 
-  const filtered = allProducts
+  const filtered = products
     .filter(p => activeCategory === 'ALL' || p.category.toUpperCase() === activeCategory)
     .sort((a, b) => {
       if (sortBy === 'Price: Low') return a.priceNum - b.priceNum;

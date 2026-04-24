@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { vendorAPI, authAPI } from '../services/api';
+import { vendorAPI } from '../services/api';
 
 const C = {
   bg: '#0a0a0a', surface: '#111111', border: '#1c1c1c', bHov: '#2e2e2e',
@@ -52,7 +52,7 @@ const Footer = () => (
 );
 
 const VendorLanding = () => {
-  const { isLoggedIn, user, login, refreshUser } = useAuth();
+  const { isLoggedIn, user, refreshUser } = useAuth();
   const navigate = useNavigate();
 
   const [form, setForm]         = useState({ name: '', email: '', password: '', craft: '', phone: '', instagram: '', story: '' });
@@ -76,22 +76,18 @@ const VendorLanding = () => {
   const inputStyle = (field) => ({ ...s.input, borderColor: errors[field] ? C.err : C.border });
 
   const handleSubmit = async () => {
+    if (!isLoggedIn) {
+      navigate('/register?role=vendor');
+      return;
+    }
+
     if (!validate()) return;
     setSubmitting(true);
     setApiError('');
     try {
-      let token = localStorage.getItem('57arts_token');
-
-      // If not logged in, register + login first
-      if (!isLoggedIn) {
-        const regRes = await authAPI.register({ name: form.name, email: form.email, password: form.password, phone: form.phone });
-        token = regRes.data.token;
-        login(regRes.data.user, token);
-      }
-
       // Register vendor profile
       await vendorAPI.register({
-        storeName: isLoggedIn ? (user.name + "'s Studio") : form.name + "'s Studio",
+        storeName: user.name + "'s Studio",
         storeDescription: form.story,
         category: craftToCategory(form.craft),
       });
@@ -298,7 +294,7 @@ const VendorLanding = () => {
 
             <button onClick={handleSubmit} disabled={submitting}
               style={{ ...s.btnGold, width: '100%', padding: '14px', borderRadius: 10, textAlign: 'center', boxSizing: 'border-box', letterSpacing: '0.08em', opacity: submitting ? 0.7 : 1 }}>
-              {submitting ? 'Submitting...' : 'Submit Application — Free →'}
+              {submitting ? 'Submitting...' : isLoggedIn ? 'Submit Application — Free →' : 'Create Account to Apply — Free →'}
             </button>
 
             {!isLoggedIn && (

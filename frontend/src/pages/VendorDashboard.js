@@ -90,6 +90,7 @@ const VendorDashboard = () => {
   const [orders,     setOrders]     = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState('');
+  const [needsRegistration, setNeedsRegistration] = useState(false);
 
   // Product modal
   const [showModal,      setShowModal]      = useState(false);
@@ -108,26 +109,25 @@ const VendorDashboard = () => {
   const loadAll = useCallback(async () => {
     setLoading(true);
     setError('');
+    setNeedsRegistration(false);
     try {
-      const [profileRes, statsRes, ordersRes] = await Promise.all([
-        vendorAPI.getProfile(),
-        vendorAPI.getStats(),
-        orderAPI.getVendorOrders(),
-      ]);
+      const profileRes = await vendorAPI.getProfile();
 
       const v = profileRes.data?.vendor || profileRes.data;
       setVendor(v);
-      setStats(statsRes.data?.stats || statsRes.data);
-
-      // ✅ Fix: safely extract orders from any response shape
-      const rawOrders = toArray(ordersRes.data);
-      setOrders(rawOrders);
-
       setShopSettings({
         storeName:        v?.storeName        || '',
         storeDescription: v?.storeDescription || '',
         category:         v?.category         || 'fashion',
       });
+
+      const [statsRes, ordersRes] = await Promise.all([
+        vendorAPI.getStats(),
+        orderAPI.getVendorOrders(),
+      ]);
+
+      setStats(statsRes.data?.stats || statsRes.data);
+      setOrders(toArray(ordersRes.data));
 
       // Load vendor's products
       if (v?._id) {
@@ -135,7 +135,16 @@ const VendorDashboard = () => {
         setProducts(toArray(prodRes.data));
       }
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Failed to load dashboard');
+      if (err.response?.status === 404) {
+        setNeedsRegistration(true);
+        setVendor(null);
+        setStats(null);
+        setProducts([]);
+        setOrders([]);
+        setError(err.response?.data?.message || 'Vendor profile not found');
+      } else {
+        setError(err.response?.data?.message || err.message || 'Failed to load dashboard');
+      }
     } finally {
       setLoading(false);
     }
@@ -169,6 +178,7 @@ const VendorDashboard = () => {
   const saveProduct = async () => {
     if (!productForm.name.trim()) { setFormError('Product name is required'); return; }
     if (!productForm.price)       { setFormError('Price is required'); return; }
+    if (!productForm.description.trim()) { setFormError('Description is required'); return; }
     setSaving(true); setFormError('');
     try {
       const imageArr = productForm.images
@@ -241,7 +251,7 @@ const VendorDashboard = () => {
   const maxRev = Math.max(...chartData.map(d => d.total), 1);
 
   // ── Error / not registered guard ─────────────────────────────────────────
-  if (!loading && error) {
+  if (!loading && needsRegistration) {
     return (
       <div style={{ backgroundColor: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center', padding: 40, maxWidth: 400 }}>
@@ -251,6 +261,21 @@ const VendorDashboard = () => {
           <Link to="/vendor" style={{ ...s.btnGold, textDecoration: 'none', display: 'inline-block' }}>
             Register as Vendor →
           </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (!loading && error) {
+    return (
+      <div style={{ backgroundColor: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center', padding: 40, maxWidth: 400 }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>!</div>
+          <h2 style={{ color: C.cream, fontWeight: 900, fontSize: 20, marginBottom: 8 }}>Dashboard Unavailable</h2>
+          <p style={{ color: C.muted, fontSize: 13, marginBottom: 24, lineHeight: 1.7 }}>{error}</p>
+          <button onClick={loadAll} style={s.btnGold}>
+            Try Again
+          </button>
         </div>
       </div>
     );
