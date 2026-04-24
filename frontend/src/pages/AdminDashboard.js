@@ -1,32 +1,182 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { adminAPI } from '../services/api';
 
-const sideLinks = ['Dashboard', 'Vendors', 'Orders', 'Products', 'Affiliates', 'User Management', 'Platform Settings'];
+// ── Design tokens ─────────────────────────────────────────────────────────────
+const C = {
+  bg:      '#0d0d00',
+  surface: '#1a1a00',
+  border:  '#2a2a00',
+  hover:   '#222200',
+  gold:    '#c9a84c',
+  goldDim: 'rgba(201,168,76,0.15)',
+  cream:   '#f0ece4',
+  muted:   '#606060',
+  green:   '#4caf50',
+  red:     '#e05c5c',
+  blue:    '#4a9eff',
+  yellow:  '#f59e0b',
+};
 
-// ── Reusable badge ────────────────────────────────────────────────────────────
+const sideLinks = [
+  { id: 'Dashboard',         icon: '▦',  group: 'main' },
+  { id: 'Vendors',           icon: '🏪', group: 'main' },
+  { id: 'Orders',            icon: '📦', group: 'main' },
+  { id: 'Products',          icon: '🛍️', group: 'manage' },
+  { id: 'Affiliates',        icon: '🔗', group: 'manage' },
+  { id: 'User Management',   icon: '👥', group: 'manage' },
+  { id: 'Platform Settings', icon: '⚙️', group: 'manage' },
+];
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const orderStatusColor = s => ({ pending: 'yellow', processing: 'blue', shipped: 'blue', delivered: 'green', cancelled: 'red' }[s] || 'gray');
+
 const Badge = ({ text, color }) => {
-  const styles = {
-    green:  'bg-green-900 text-green-400',
-    red:    'bg-red-900 text-red-400',
-    yellow: 'bg-yellow-900 text-yellow-400',
-    blue:   'bg-blue-900 text-blue-400',
-    gray:   'bg-gray-800 text-gray-400',
+  const map = {
+    green:  { bg: 'rgba(76,175,80,0.15)',   text: '#4caf50',  border: 'rgba(76,175,80,0.3)'   },
+    red:    { bg: 'rgba(224,92,92,0.15)',   text: '#e05c5c',  border: 'rgba(224,92,92,0.3)'   },
+    yellow: { bg: 'rgba(245,158,11,0.15)',  text: '#f59e0b',  border: 'rgba(245,158,11,0.3)'  },
+    blue:   { bg: 'rgba(74,158,255,0.15)',  text: '#4a9eff',  border: 'rgba(74,158,255,0.3)'  },
+    gray:   { bg: 'rgba(96,96,96,0.15)',    text: '#606060',  border: 'rgba(96,96,96,0.3)'    },
   };
+  const s = map[color] || map.gray;
   return (
-    <span className={`text-xs font-black px-2 py-0.5 rounded ${styles[color] || styles.gray}`}>
+    <span style={{
+      backgroundColor: s.bg, color: s.text,
+      border: `1px solid ${s.border}`,
+      fontSize: 10, fontWeight: 800,
+      padding: '2px 8px', borderRadius: 100,
+      letterSpacing: '0.05em', textTransform: 'uppercase',
+    }}>
       {text}
     </span>
   );
 };
 
-// ── Status color helper ───────────────────────────────────────────────────────
-const orderStatusColor = (s) => ({ pending:'yellow', processing:'blue', shipped:'blue', delivered:'green', cancelled:'red' }[s] || 'gray');
+const SearchBar = ({ value, onChange, placeholder }) => (
+  <div style={{ position: 'relative' }}>
+    <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: C.muted, fontSize: 13 }}>🔍</span>
+    <input
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      placeholder={placeholder}
+      style={{
+        backgroundColor: C.bg, border: `1px solid ${C.border}`,
+        borderRadius: 10, padding: '9px 14px 9px 36px',
+        color: C.cream, fontSize: 13, outline: 'none', width: 260,
+      }}
+    />
+  </div>
+);
+
+const FilterSelect = ({ value, onChange, options }) => (
+  <select
+    value={value}
+    onChange={e => onChange(e.target.value)}
+    style={{
+      backgroundColor: C.bg, border: `1px solid ${C.border}`,
+      borderRadius: 10, padding: '9px 14px',
+      color: C.cream, fontSize: 13, outline: 'none', cursor: 'pointer',
+    }}
+  >
+    {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+  </select>
+);
+
+const Table = ({ cols, children, empty }) => (
+  <div style={{ borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden', backgroundColor: C.surface }}>
+    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+      <thead>
+        <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+          {cols.map(c => (
+            <th key={c} style={{ textAlign: 'left', padding: '12px 16px', color: C.muted, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              {c}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>{children || <tr><td colSpan={cols.length} style={{ padding: 24, color: C.muted, fontSize: 13, textAlign: 'center' }}>{empty}</td></tr>}</tbody>
+    </table>
+  </div>
+);
+
+const Tr = ({ children, onClick }) => (
+  <tr
+    onClick={onClick}
+    style={{ borderBottom: `1px solid ${C.border}`, transition: 'background 0.15s', cursor: onClick ? 'pointer' : 'default' }}
+    onMouseEnter={e => e.currentTarget.style.backgroundColor = C.hover}
+    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+  >
+    {children}
+  </tr>
+);
+
+const Td = ({ children, style = {} }) => (
+  <td style={{ padding: '12px 16px', color: C.cream, ...style }}>{children}</td>
+);
+
+const Btn = ({ onClick, variant = 'default', children, disabled }) => {
+  const variants = {
+    default: { bg: C.goldDim,               color: C.gold,  border: `1px solid rgba(201,168,76,0.3)` },
+    danger:  { bg: 'rgba(224,92,92,0.1)',   color: C.red,   border: `1px solid rgba(224,92,92,0.3)`  },
+    success: { bg: 'rgba(76,175,80,0.1)',   color: C.green, border: `1px solid rgba(76,175,80,0.3)`  },
+    ghost:   { bg: 'transparent',           color: C.muted, border: `1px solid ${C.border}`          },
+  };
+  const v = variants[variant];
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        backgroundColor: v.bg, color: v.color, border: v.border,
+        borderRadius: 8, padding: '5px 12px',
+        fontSize: 11, fontWeight: 800, cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.5 : 1, transition: 'opacity 0.15s',
+      }}
+    >
+      {children}
+    </button>
+  );
+};
+
+const PageHeader = ({ title, subtitle, right }) => (
+  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+    <div>
+      <h1 style={{ color: C.cream, fontWeight: 900, fontSize: 22, marginBottom: 4 }}>{title}</h1>
+      {subtitle && <p style={{ color: C.muted, fontSize: 13 }}>{subtitle}</p>}
+    </div>
+    {right && <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>{right}</div>}
+  </div>
+);
+
+const StatCard = ({ label, value, icon, sub }) => (
+  <div style={{
+    backgroundColor: C.surface, border: `1px solid ${C.border}`,
+    borderRadius: 14, padding: 20,
+  }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div>
+        <p style={{ color: C.muted, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>{label}</p>
+        <p style={{ color: C.cream, fontWeight: 900, fontSize: 24 }}>{value}</p>
+        {sub && <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>{sub}</p>}
+      </div>
+      <span style={{ fontSize: 22 }}>{icon}</span>
+    </div>
+  </div>
+);
+
+// ── Loading / Empty states ────────────────────────────────────────────────────
+const Loading = ({ text = 'Loading…' }) => (
+  <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: C.muted, fontSize: 13, padding: 32 }}>
+    <span style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>⟳</span>
+    {text}
+  </div>
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // DASHBOARD PAGE
 // ═══════════════════════════════════════════════════════════════════════════════
 const DashboardPage = () => {
-  const [stats, setStats] = useState(null);
+  const [stats, setStats]     = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -36,72 +186,87 @@ const DashboardPage = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <p className="text-gray-500 text-sm">Loading stats…</p>;
-  if (!stats)  return <p className="text-red-400 text-sm">Failed to load stats.</p>;
+  if (loading) return <Loading text="Loading platform stats…" />;
+  if (!stats)  return <p style={{ color: C.red, fontSize: 13 }}>Failed to load stats.</p>;
 
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const maxRev = Math.max(...(stats.revenueData.map(d => d.total)), 1);
+  const months  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const revData = stats.revenueData || [];
+  const maxRev  = Math.max(...revData.map(d => d.total), 1);
 
   return (
     <>
-      <div className="mb-6">
-        <h1 className="text-2xl font-black">Platform Overview</h1>
-        <p className="text-gray-500 text-sm">Real-time tracking of 57 Arts & Customs business health.</p>
-      </div>
+      <PageHeader
+        title="Platform Overview"
+        subtitle="Real-time tracking of 57 Arts & Customs business health."
+      />
 
       {/* Stat cards */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        {[
-          { label: 'Total Revenue',    value: `KES ${stats.totalRevenue.toLocaleString()}`, icon: '💰' },
-          { label: 'Active Vendors',   value: stats.totalVendors,   icon: '🏪' },
-          { label: 'Total Orders',     value: stats.totalOrders,    icon: '📦' },
-          { label: 'Total Users',      value: stats.totalUsers,     icon: '👥' },
-          { label: 'Total Products',   value: stats.totalProducts,  icon: '🛍️' },
-          { label: 'Total Affiliates', value: stats.totalAffiliates,icon: '🔗' },
-        ].map(s => (
-          <div key={s.label} className="rounded-2xl p-5 border border-gray-800" style={{ backgroundColor: '#1a1a00' }}>
-            <span className="text-2xl">{s.icon}</span>
-            <p className="text-white font-black text-2xl mt-2">{s.value}</p>
-            <p className="text-gray-500 text-xs mt-1">{s.label}</p>
-          </div>
-        ))}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 28 }}>
+        <StatCard label="Total Revenue"    value={`KES ${(stats.totalRevenue || 0).toLocaleString()}`} icon="💰" sub="All time" />
+        <StatCard label="Active Vendors"   value={stats.totalVendors   || 0} icon="🏪" />
+        <StatCard label="Total Orders"     value={stats.totalOrders    || 0} icon="📦" />
+        <StatCard label="Total Users"      value={stats.totalUsers     || 0} icon="👥" />
+        <StatCard label="Total Products"   value={stats.totalProducts  || 0} icon="🛍️" />
+        <StatCard label="Total Affiliates" value={stats.totalAffiliates|| 0} icon="🔗" />
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
         {/* Revenue chart */}
-        <div className="rounded-2xl p-6 border border-gray-800" style={{ backgroundColor: '#1a1a00' }}>
-          <h2 className="font-black text-sm uppercase tracking-wide mb-5">Revenue by Month</h2>
-          <div className="flex items-end gap-2 h-28">
-            {stats.revenueData.length > 0 ? stats.revenueData.map((d, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                <div className="w-full rounded-t bg-yellow-400 bg-opacity-80"
-                  style={{ height: `${(d.total / maxRev) * 100}%` }}></div>
-                <span className="text-gray-600 text-xs">{months[d._id - 1]}</span>
+        <div style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: 22 }}>
+          <p style={{ color: C.cream, fontWeight: 900, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 20 }}>
+            Revenue by Month
+          </p>
+          {revData.length === 0 ? (
+            <p style={{ color: C.muted, fontSize: 12, textAlign: 'center', padding: '32px 0' }}>No revenue data yet</p>
+          ) : (
+            <>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 120, marginBottom: 8 }}>
+                {revData.map((d, i) => (
+                  <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, height: '100%', justifyContent: 'flex-end' }}>
+                    <span style={{ color: C.muted, fontSize: 9 }}>
+                      {d.total >= 1000 ? `${(d.total/1000).toFixed(0)}k` : d.total}
+                    </span>
+                    <div
+                      title={`KES ${d.total.toLocaleString()}`}
+                      style={{
+                        width: '100%', borderRadius: '4px 4px 0 0',
+                        background: `linear-gradient(to top, ${C.gold}, rgba(201,168,76,0.4))`,
+                        height: `${Math.max((d.total / maxRev) * 100, 4)}%`,
+                        transition: 'height 0.3s ease',
+                      }}
+                    />
+                    <span style={{ color: C.muted, fontSize: 9 }}>{months[(d._id || 1) - 1]}</span>
+                  </div>
+                ))}
               </div>
-            )) : (
-              <p className="text-gray-600 text-xs self-center mx-auto">No revenue data yet</p>
-            )}
-          </div>
+            </>
+          )}
         </div>
 
         {/* Recent orders */}
-        <div className="rounded-2xl p-6 border border-gray-800" style={{ backgroundColor: '#1a1a00' }}>
-          <h2 className="font-black text-sm uppercase tracking-wide mb-5">Recent Orders</h2>
-          {stats.recentOrders.length === 0
-            ? <p className="text-gray-600 text-xs">No orders yet</p>
-            : stats.recentOrders.map(o => (
-              <div key={o._id} className="flex justify-between items-center mb-3 pb-3 border-b border-gray-800 last:border-0">
+        <div style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: 22 }}>
+          <p style={{ color: C.cream, fontWeight: 900, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 16 }}>
+            Recent Orders
+          </p>
+          {(stats.recentOrders || []).length === 0 ? (
+            <p style={{ color: C.muted, fontSize: 12, textAlign: 'center', padding: '32px 0' }}>No orders yet</p>
+          ) : (
+            (stats.recentOrders || []).map(o => (
+              <div key={o._id} style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '10px 0', borderBottom: `1px solid ${C.border}`,
+              }}>
                 <div>
-                  <p className="text-white text-xs font-black">{o.orderNumber}</p>
-                  <p className="text-gray-500 text-xs">{o.user?.name || 'Unknown'}</p>
+                  <p style={{ color: C.cream, fontSize: 12, fontWeight: 800 }}>{o.orderNumber}</p>
+                  <p style={{ color: C.muted, fontSize: 11 }}>{o.user?.name || 'Unknown'}</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <p className="text-yellow-400 text-xs font-black">KES {o.totalPrice}</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <p style={{ color: C.gold, fontSize: 12, fontWeight: 800 }}>KES {o.totalPrice}</p>
                   <Badge text={o.orderStatus} color={orderStatusColor(o.orderStatus)} />
                 </div>
               </div>
             ))
-          }
+          )}
         </div>
       </div>
     </>
@@ -112,67 +277,92 @@ const DashboardPage = () => {
 // VENDORS PAGE
 // ═══════════════════════════════════════════════════════════════════════════════
 const VendorsPage = () => {
-  const [vendors, setVendors] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [vendors, setVendors]   = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [search,  setSearch]    = useState('');
+  const [filter,  setFilter]    = useState('all');
 
   const load = useCallback(() => {
     setLoading(true);
-    adminAPI.getVendors().then(r => setVendors(r.data)).catch(console.error).finally(() => setLoading(false));
+    adminAPI.getVendors()
+      .then(r => setVendors(r.data))
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const approve = async (id) => { await adminAPI.approveVendor(id); load(); };
-  const reject  = async (id) => { await adminAPI.rejectVendor(id);  load(); };
+  const approve = async id => { await adminAPI.approveVendor(id); load(); };
+  const reject  = async id => { await adminAPI.rejectVendor(id);  load(); };
 
-  if (loading) return <p className="text-gray-500 text-sm">Loading vendors…</p>;
+  const filtered = useMemo(() => vendors.filter(v => {
+    const name  = (v.businessName || v.storeName || v.user?.name || '').toLowerCase();
+    const email = (v.user?.email || '').toLowerCase();
+    const q     = search.toLowerCase();
+    const matchSearch = !q || name.includes(q) || email.includes(q);
+    const status = v.isApproved ? 'approved' : v.status === 'suspended' ? 'suspended' : 'pending';
+    const matchFilter = filter === 'all' || filter === status;
+    return matchSearch && matchFilter;
+  }), [vendors, search, filter]);
+
+  if (loading) return <Loading text="Loading vendors…" />;
+
+  const counts = {
+    all:       vendors.length,
+    pending:   vendors.filter(v => !v.isApproved && v.status !== 'suspended').length,
+    approved:  vendors.filter(v => v.isApproved).length,
+    suspended: vendors.filter(v => v.status === 'suspended').length,
+  };
 
   return (
     <>
-      <h1 className="text-2xl font-black mb-6">Vendor Management</h1>
-      <div className="rounded-2xl border border-gray-800 overflow-hidden" style={{ backgroundColor: '#1a1a00' }}>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-800 text-gray-500 text-xs uppercase">
-              <th className="text-left p-4">Vendor</th>
-              <th className="text-left p-4">Email</th>
-              <th className="text-left p-4">Status</th>
-              <th className="text-left p-4">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {vendors.length === 0
-              ? <tr><td colSpan={4} className="p-4 text-gray-600 text-xs">No vendors yet</td></tr>
-              : vendors.map(v => (
-                <tr key={v._id} className="border-b border-gray-800 last:border-0 hover:bg-white hover:bg-opacity-5">
-                  <td className="p-4 text-white font-semibold">{v.businessName || v.user?.name}</td>
-                  <td className="p-4 text-gray-400">{v.user?.email}</td>
-                  <td className="p-4">
-                    <Badge
-                      text={v.isApproved ? 'Approved' : v.status === 'suspended' ? 'Rejected' : 'Pending'}
-                      color={v.isApproved ? 'green' : v.status === 'suspended' ? 'red' : 'yellow'}
-                    />
-                  </td>
-                  <td className="p-4 flex gap-2">
-                    {!v.isApproved && v.status !== 'suspended' && (
-                      <button onClick={() => approve(v._id)}
-                        className="bg-yellow-400 text-black text-xs font-black px-3 py-1 rounded-lg hover:bg-yellow-500">
-                        Approve
-                      </button>
-                    )}
-                    {v.isApproved && (
-                      <button onClick={() => reject(v._id)}
-                        className="bg-red-800 text-red-300 text-xs font-black px-3 py-1 rounded-lg hover:bg-red-700">
-                        Suspend
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))
-            }
-          </tbody>
-        </table>
-      </div>
+      <PageHeader
+        title="Vendor Management"
+        subtitle={`${counts.pending} pending approval`}
+        right={
+          <>
+            <SearchBar value={search} onChange={setSearch} placeholder="Search vendors…" />
+            <FilterSelect
+              value={filter}
+              onChange={setFilter}
+              options={[
+                { value: 'all',       label: `All (${counts.all})`           },
+                { value: 'pending',   label: `Pending (${counts.pending})`   },
+                { value: 'approved',  label: `Approved (${counts.approved})` },
+                { value: 'suspended', label: `Suspended (${counts.suspended})`},
+              ]}
+            />
+          </>
+        }
+      />
+
+      <Table cols={['Vendor', 'Email', 'Category', 'Status', 'Actions']} empty="No vendors found">
+        {filtered.map(v => {
+          const status = v.isApproved ? 'approved' : v.status === 'suspended' ? 'suspended' : 'pending';
+          const color  = { approved: 'green', suspended: 'red', pending: 'yellow' }[status];
+          return (
+            <Tr key={v._id}>
+              <Td><span style={{ fontWeight: 700 }}>{v.businessName || v.storeName || v.user?.name || '—'}</span></Td>
+              <Td style={{ color: C.muted }}>{v.user?.email || '—'}</Td>
+              <Td style={{ color: C.muted, textTransform: 'capitalize' }}>{v.category || '—'}</Td>
+              <Td><Badge text={status} color={color} /></Td>
+              <Td>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {!v.isApproved && status !== 'suspended' && (
+                    <Btn onClick={() => approve(v._id)} variant="success">Approve</Btn>
+                  )}
+                  {v.isApproved && (
+                    <Btn onClick={() => reject(v._id)} variant="danger">Suspend</Btn>
+                  )}
+                  {status === 'suspended' && (
+                    <Btn onClick={() => approve(v._id)} variant="default">Reinstate</Btn>
+                  )}
+                </div>
+              </Td>
+            </Tr>
+          );
+        })}
+      </Table>
     </>
   );
 };
@@ -181,12 +371,18 @@ const VendorsPage = () => {
 // ORDERS PAGE
 // ═══════════════════════════════════════════════════════════════════════════════
 const OrdersPage = () => {
-  const [orders, setOrders]   = useState([]);
+  const [orders,  setOrders]  = useState([]);
   const [loading, setLoading] = useState(true);
+  const [search,  setSearch]  = useState('');
+  const [filter,  setFilter]  = useState('all');
+  const [payment, setPayment] = useState('all');
 
   const load = useCallback(() => {
     setLoading(true);
-    adminAPI.getOrders().then(r => setOrders(r.data)).catch(console.error).finally(() => setLoading(false));
+    adminAPI.getOrders()
+      .then(r => setOrders(r.data))
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -196,49 +392,80 @@ const OrdersPage = () => {
     load();
   };
 
-  if (loading) return <p className="text-gray-500 text-sm">Loading orders…</p>;
+  const filtered = useMemo(() => orders.filter(o => {
+    const q = search.toLowerCase();
+    const matchSearch = !q ||
+      (o.orderNumber || '').toLowerCase().includes(q) ||
+      (o.user?.name  || '').toLowerCase().includes(q);
+    const matchStatus  = filter  === 'all' || o.orderStatus  === filter;
+    const matchPayment = payment === 'all' || o.paymentStatus === payment;
+    return matchSearch && matchStatus && matchPayment;
+  }), [orders, search, filter, payment]);
+
+  if (loading) return <Loading text="Loading orders…" />;
+
+  const total = filtered.reduce((s, o) => s + (o.totalPrice || 0), 0);
 
   return (
     <>
-      <h1 className="text-2xl font-black mb-6">Order Management</h1>
-      <div className="rounded-2xl border border-gray-800 overflow-hidden" style={{ backgroundColor: '#1a1a00' }}>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-800 text-gray-500 text-xs uppercase">
-              <th className="text-left p-4">Order #</th>
-              <th className="text-left p-4">Customer</th>
-              <th className="text-left p-4">Amount</th>
-              <th className="text-left p-4">Payment</th>
-              <th className="text-left p-4">Status</th>
-              <th className="text-left p-4">Update Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.length === 0
-              ? <tr><td colSpan={6} className="p-4 text-gray-600 text-xs">No orders yet</td></tr>
-              : orders.map(o => (
-                <tr key={o._id} className="border-b border-gray-800 last:border-0 hover:bg-white hover:bg-opacity-5">
-                  <td className="p-4 text-white font-black text-xs">{o.orderNumber}</td>
-                  <td className="p-4 text-gray-400 text-xs">{o.user?.name || 'Unknown'}</td>
-                  <td className="p-4 text-yellow-400 font-black text-xs">KES {o.totalPrice}</td>
-                  <td className="p-4"><Badge text={o.paymentStatus} color={o.paymentStatus === 'paid' ? 'green' : 'yellow'} /></td>
-                  <td className="p-4"><Badge text={o.orderStatus} color={orderStatusColor(o.orderStatus)} /></td>
-                  <td className="p-4">
-                    <select
-                      value={o.orderStatus}
-                      onChange={e => changeStatus(o._id, e.target.value)}
-                      className="bg-gray-900 border border-gray-700 text-white text-xs px-2 py-1 rounded focus:outline-none">
-                      {['pending','processing','shipped','delivered','cancelled'].map(s => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
-                    </select>
-                  </td>
-                </tr>
-              ))
-            }
-          </tbody>
-        </table>
-      </div>
+      <PageHeader
+        title="Order Management"
+        subtitle={`${filtered.length} orders · KES ${total.toLocaleString()} total`}
+        right={
+          <>
+            <SearchBar value={search} onChange={setSearch} placeholder="Search order / customer…" />
+            <FilterSelect
+              value={filter}
+              onChange={setFilter}
+              options={[
+                { value: 'all',        label: 'All Statuses'  },
+                { value: 'pending',    label: 'Pending'       },
+                { value: 'processing', label: 'Processing'    },
+                { value: 'shipped',    label: 'Shipped'       },
+                { value: 'delivered',  label: 'Delivered'     },
+                { value: 'cancelled',  label: 'Cancelled'     },
+              ]}
+            />
+            <FilterSelect
+              value={payment}
+              onChange={setPayment}
+              options={[
+                { value: 'all',     label: 'All Payments' },
+                { value: 'paid',    label: 'Paid'         },
+                { value: 'pending', label: 'Unpaid'       },
+                { value: 'failed',  label: 'Failed'       },
+              ]}
+            />
+          </>
+        }
+      />
+
+      <Table cols={['Order #', 'Customer', 'Amount', 'Payment', 'Status', 'Update']} empty="No orders found">
+        {filtered.map(o => (
+          <Tr key={o._id}>
+            <Td><span style={{ fontWeight: 800, fontFamily: 'monospace', fontSize: 11 }}>{o.orderNumber}</span></Td>
+            <Td style={{ color: C.muted }}>{o.user?.name || 'Unknown'}</Td>
+            <Td><span style={{ color: C.gold, fontWeight: 800 }}>KES {(o.totalPrice || 0).toLocaleString()}</span></Td>
+            <Td><Badge text={o.paymentStatus} color={o.paymentStatus === 'paid' ? 'green' : o.paymentStatus === 'failed' ? 'red' : 'yellow'} /></Td>
+            <Td><Badge text={o.orderStatus} color={orderStatusColor(o.orderStatus)} /></Td>
+            <Td>
+              <select
+                value={o.orderStatus}
+                onChange={e => changeStatus(o._id, e.target.value)}
+                style={{
+                  backgroundColor: C.bg, border: `1px solid ${C.border}`,
+                  color: C.cream, fontSize: 11, padding: '4px 8px',
+                  borderRadius: 7, outline: 'none', cursor: 'pointer',
+                }}
+              >
+                {['pending','processing','shipped','delivered','cancelled'].map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </Td>
+          </Tr>
+        ))}
+      </Table>
     </>
   );
 };
@@ -248,60 +475,93 @@ const OrdersPage = () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 const ProductsPage = () => {
   const [products, setProducts] = useState([]);
-  const [loading, setLoading]   = useState(true);
+  const [loading,  setLoading]  = useState(true);
+  const [search,   setSearch]   = useState('');
+  const [category, setCategory] = useState('all');
+  const [stock,    setStock]    = useState('all');
 
   const load = useCallback(() => {
     setLoading(true);
-    adminAPI.getProducts().then(r => setProducts(r.data)).catch(console.error).finally(() => setLoading(false));
+    adminAPI.getProducts()
+      .then(r => setProducts(r.data))
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const remove = async (id) => {
-    if (!window.confirm('Delete this product?')) return;
+  const remove = async id => {
+    if (!window.confirm('Delete this product? This cannot be undone.')) return;
     await adminAPI.deleteProduct(id);
     load();
   };
 
-  if (loading) return <p className="text-gray-500 text-sm">Loading products…</p>;
+  const filtered = useMemo(() => products.filter(p => {
+    const q = search.toLowerCase();
+    const matchSearch   = !q || (p.name || '').toLowerCase().includes(q);
+    const matchCategory = category === 'all' || (p.category || '').toLowerCase() === category;
+    const matchStock    = stock === 'all' || (stock === 'in' ? p.stock > 0 : p.stock === 0);
+    return matchSearch && matchCategory && matchStock;
+  }), [products, search, category, stock]);
+
+  if (loading) return <Loading text="Loading products…" />;
 
   return (
     <>
-      <h1 className="text-2xl font-black mb-6">Product Management</h1>
-      <div className="rounded-2xl border border-gray-800 overflow-hidden" style={{ backgroundColor: '#1a1a00' }}>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-800 text-gray-500 text-xs uppercase">
-              <th className="text-left p-4">Product</th>
-              <th className="text-left p-4">Vendor</th>
-              <th className="text-left p-4">Category</th>
-              <th className="text-left p-4">Price</th>
-              <th className="text-left p-4">Stock</th>
-              <th className="text-left p-4">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.length === 0
-              ? <tr><td colSpan={6} className="p-4 text-gray-600 text-xs">No products yet</td></tr>
-              : products.map(p => (
-                <tr key={p._id} className="border-b border-gray-800 last:border-0 hover:bg-white hover:bg-opacity-5">
-                  <td className="p-4 text-white font-semibold">{p.name}</td>
-                  <td className="p-4 text-gray-400 text-xs">{p.vendor?.businessName || 'N/A'}</td>
-                  <td className="p-4 text-gray-400 text-xs capitalize">{p.category}</td>
-                  <td className="p-4 text-yellow-400 font-black text-xs">KES {p.price}</td>
-                  <td className="p-4"><Badge text={p.stock > 0 ? `${p.stock} left` : 'Out'} color={p.stock > 0 ? 'green' : 'red'} /></td>
-                  <td className="p-4">
-                    <button onClick={() => remove(p._id)}
-                      className="bg-red-900 text-red-400 text-xs font-black px-3 py-1 rounded-lg hover:bg-red-800">
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))
-            }
-          </tbody>
-        </table>
-      </div>
+      <PageHeader
+        title="Product Management"
+        subtitle={`${filtered.length} of ${products.length} products`}
+        right={
+          <>
+            <SearchBar value={search} onChange={setSearch} placeholder="Search products…" />
+            <FilterSelect
+              value={category}
+              onChange={setCategory}
+              options={[
+                { value: 'all',       label: 'All Categories' },
+                { value: 'fashion',   label: 'Fashion'        },
+                { value: 'furniture', label: 'Furniture'      },
+                { value: 'beads',     label: 'Beads'          },
+                { value: 'antiques',  label: 'Antiques'       },
+              ]}
+            />
+            <FilterSelect
+              value={stock}
+              onChange={setStock}
+              options={[
+                { value: 'all', label: 'All Stock'    },
+                { value: 'in',  label: 'In Stock'     },
+                { value: 'out', label: 'Out of Stock' },
+              ]}
+            />
+          </>
+        }
+      />
+
+      <Table cols={['Product', 'Vendor', 'Category', 'Price', 'Stock', 'Action']} empty="No products found">
+        {filtered.map(p => (
+          <Tr key={p._id}>
+            <Td>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                {p.images?.[0] && (
+                  <img src={p.images[0]} alt={p.name} style={{ width: 36, height: 36, borderRadius: 7, objectFit: 'cover' }} />
+                )}
+                <span style={{ fontWeight: 700 }}>{p.name}</span>
+              </div>
+            </Td>
+            <Td style={{ color: C.muted }}>{p.vendor?.businessName || p.vendor?.storeName || 'N/A'}</Td>
+            <Td style={{ color: C.muted, textTransform: 'capitalize' }}>{p.category}</Td>
+            <Td><span style={{ color: C.gold, fontWeight: 800 }}>KES {(p.price || 0).toLocaleString()}</span></Td>
+            <Td>
+              <Badge
+                text={p.stock > 0 ? `${p.stock} left` : 'Out of stock'}
+                color={p.stock > 10 ? 'green' : p.stock > 0 ? 'yellow' : 'red'}
+              />
+            </Td>
+            <Td><Btn onClick={() => remove(p._id)} variant="danger">Delete</Btn></Td>
+          </Tr>
+        ))}
+      </Table>
     </>
   );
 };
@@ -311,44 +571,86 @@ const ProductsPage = () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 const AffiliatesPage = () => {
   const [affiliates, setAffiliates] = useState([]);
-  const [loading, setLoading]       = useState(true);
+  const [loading,    setLoading]    = useState(true);
+  const [search,     setSearch]     = useState('');
+  const [sort,       setSort]       = useState('earned');
 
   useEffect(() => {
-    adminAPI.getAffiliates().then(r => setAffiliates(r.data)).catch(console.error).finally(() => setLoading(false));
+    adminAPI.getAffiliates()
+      .then(r => setAffiliates(r.data))
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <p className="text-gray-500 text-sm">Loading affiliates…</p>;
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    return [...affiliates]
+      .filter(a => !q || (a.user?.name || '').toLowerCase().includes(q) || (a.user?.email || '').toLowerCase().includes(q))
+      .sort((a, b) => {
+        if (sort === 'earned')  return (b.totalEarned  || 0) - (a.totalEarned  || 0);
+        if (sort === 'clicks')  return (b.totalClicks  || 0) - (a.totalClicks  || 0);
+        if (sort === 'orders')  return (b.totalOrders  || 0) - (a.totalOrders  || 0);
+        return 0;
+      });
+  }, [affiliates, search, sort]);
+
+  if (loading) return <Loading text="Loading affiliates…" />;
+
+  const totalEarned = affiliates.reduce((s, a) => s + (a.totalEarned || 0), 0);
+  const totalClicks = affiliates.reduce((s, a) => s + (a.totalClicks || 0), 0);
 
   return (
     <>
-      <h1 className="text-2xl font-black mb-6">Affiliate Management</h1>
-      <div className="rounded-2xl border border-gray-800 overflow-hidden" style={{ backgroundColor: '#1a1a00' }}>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-800 text-gray-500 text-xs uppercase">
-              <th className="text-left p-4">Name</th>
-              <th className="text-left p-4">Email</th>
-              <th className="text-left p-4">Code</th>
-              <th className="text-left p-4">Earnings</th>
-              <th className="text-left p-4">Clicks</th>
-            </tr>
-          </thead>
-          <tbody>
-            {affiliates.length === 0
-              ? <tr><td colSpan={5} className="p-4 text-gray-600 text-xs">No affiliates yet</td></tr>
-              : affiliates.map(a => (
-                <tr key={a._id} className="border-b border-gray-800 last:border-0 hover:bg-white hover:bg-opacity-5">
-                  <td className="p-4 text-white font-semibold">{a.user?.name}</td>
-                  <td className="p-4 text-gray-400 text-xs">{a.user?.email}</td>
-                  <td className="p-4 text-yellow-400 font-black text-xs">{a.affiliateCode}</td>
-                  <td className="p-4 text-green-400 font-black text-xs">KES {a.totalEarnings || 0}</td>
-                  <td className="p-4 text-gray-400 text-xs">{a.totalClicks || 0}</td>
-                </tr>
-              ))
-            }
-          </tbody>
-        </table>
-      </div>
+      <PageHeader
+        title="Affiliate Management"
+        subtitle={`KES ${totalEarned.toLocaleString()} total earned · ${totalClicks.toLocaleString()} total clicks`}
+        right={
+          <>
+            <SearchBar value={search} onChange={setSearch} placeholder="Search affiliates…" />
+            <FilterSelect
+              value={sort}
+              onChange={setSort}
+              options={[
+                { value: 'earned', label: 'Sort: Earnings' },
+                { value: 'clicks', label: 'Sort: Clicks'   },
+                { value: 'orders', label: 'Sort: Orders'   },
+              ]}
+            />
+          </>
+        }
+      />
+
+      <Table cols={['Affiliate', 'Code', 'Clicks', 'Orders', 'Conversion', 'Earnings', 'Status']} empty="No affiliates yet">
+        {filtered.map(a => {
+          const conv = a.totalClicks > 0 ? ((a.totalOrders / a.totalClicks) * 100).toFixed(1) : '0.0';
+          return (
+            <Tr key={a._id}>
+              <Td>
+                <div>
+                  <p style={{ fontWeight: 700 }}>{a.user?.name || '—'}</p>
+                  <p style={{ color: C.muted, fontSize: 11 }}>{a.user?.email || '—'}</p>
+                </div>
+              </Td>
+              <Td>
+                <span style={{ fontFamily: 'monospace', color: C.gold, fontWeight: 800, fontSize: 12 }}>
+                  {a.affiliateCode}
+                </span>
+              </Td>
+              <Td style={{ color: C.muted }}>{(a.totalClicks || 0).toLocaleString()}</Td>
+              <Td style={{ color: C.muted }}>{(a.totalOrders || 0).toLocaleString()}</Td>
+              <Td>
+                <span style={{ color: Number(conv) > 5 ? C.green : C.muted }}>{conv}%</span>
+              </Td>
+              <Td>
+                <span style={{ color: C.green, fontWeight: 800 }}>
+                  KES {(a.totalEarned || 0).toLocaleString()}
+                </span>
+              </Td>
+              <Td><Badge text={a.status || 'active'} color={a.status === 'suspended' ? 'red' : 'green'} /></Td>
+            </Tr>
+          );
+        })}
+      </Table>
     </>
   );
 };
@@ -357,68 +659,107 @@ const AffiliatesPage = () => {
 // USER MANAGEMENT PAGE
 // ═══════════════════════════════════════════════════════════════════════════════
 const UsersPage = () => {
-  const [users, setUsers]     = useState([]);
+  const [users,   setUsers]   = useState([]);
   const [loading, setLoading] = useState(true);
+  const [search,  setSearch]  = useState('');
+  const [role,    setRole]    = useState('all');
+  const [status,  setStatus]  = useState('all');
 
   const load = useCallback(() => {
     setLoading(true);
-    adminAPI.getUsers().then(r => setUsers(r.data)).catch(console.error).finally(() => setLoading(false));
+    adminAPI.getUsers()
+      .then(r => setUsers(r.data))
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const toggle  = async (id) => { await adminAPI.toggleUser(id); load(); };
-  const remove  = async (id) => { if (!window.confirm('Delete user?')) return; await adminAPI.deleteUser(id); load(); };
-  const setRole = async (id, role) => { await adminAPI.updateUserRole(id, role); load(); };
+  const toggle    = async id   => { await adminAPI.toggleUser(id);            load(); };
+  const remove    = async id   => { if (!window.confirm('Delete this user? This cannot be undone.')) return; await adminAPI.deleteUser(id); load(); };
+  const updateRole = async (id, r) => { await adminAPI.updateUserRole(id, r); load(); };
 
-  if (loading) return <p className="text-gray-500 text-sm">Loading users…</p>;
+  const filtered = useMemo(() => users.filter(u => {
+    const q = search.toLowerCase();
+    const matchSearch = !q || (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q);
+    const matchRole   = role   === 'all' || u.role === role;
+    const matchStatus = status === 'all' || (status === 'active' ? u.isActive : !u.isActive);
+    return matchSearch && matchRole && matchStatus;
+  }), [users, search, role, status]);
+
+  if (loading) return <Loading text="Loading users…" />;
 
   return (
     <>
-      <h1 className="text-2xl font-black mb-6">User Management</h1>
-      <div className="rounded-2xl border border-gray-800 overflow-hidden" style={{ backgroundColor: '#1a1a00' }}>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-800 text-gray-500 text-xs uppercase">
-              <th className="text-left p-4">Name</th>
-              <th className="text-left p-4">Email</th>
-              <th className="text-left p-4">Role</th>
-              <th className="text-left p-4">Status</th>
-              <th className="text-left p-4">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.length === 0
-              ? <tr><td colSpan={5} className="p-4 text-gray-600 text-xs">No users yet</td></tr>
-              : users.map(u => (
-                <tr key={u._id} className="border-b border-gray-800 last:border-0 hover:bg-white hover:bg-opacity-5">
-                  <td className="p-4 text-white font-semibold">{u.name}</td>
-                  <td className="p-4 text-gray-400 text-xs">{u.email}</td>
-                  <td className="p-4">
-                    <select value={u.role} onChange={e => setRole(u._id, e.target.value)}
-                      className="bg-gray-900 border border-gray-700 text-white text-xs px-2 py-1 rounded focus:outline-none">
-                      {['buyer','vendor','affiliate','admin'].map(r => <option key={r} value={r}>{r}</option>)}
-                    </select>
-                  </td>
-                  <td className="p-4">
-                    <Badge text={u.isActive ? 'Active' : 'Inactive'} color={u.isActive ? 'green' : 'red'} />
-                  </td>
-                  <td className="p-4 flex gap-2">
-                    <button onClick={() => toggle(u._id)}
-                      className={`text-xs font-black px-3 py-1 rounded-lg ${u.isActive ? 'bg-yellow-900 text-yellow-400 hover:bg-yellow-800' : 'bg-green-900 text-green-400 hover:bg-green-800'}`}>
-                      {u.isActive ? 'Deactivate' : 'Activate'}
-                    </button>
-                    <button onClick={() => remove(u._id)}
-                      className="bg-red-900 text-red-400 text-xs font-black px-3 py-1 rounded-lg hover:bg-red-800">
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))
-            }
-          </tbody>
-        </table>
-      </div>
+      <PageHeader
+        title="User Management"
+        subtitle={`${filtered.length} of ${users.length} users`}
+        right={
+          <>
+            <SearchBar value={search} onChange={setSearch} placeholder="Search name / email…" />
+            <FilterSelect
+              value={role}
+              onChange={setRole}
+              options={[
+                { value: 'all',       label: 'All Roles'   },
+                { value: 'buyer',     label: 'Buyers'      },
+                { value: 'vendor',    label: 'Vendors'     },
+                { value: 'affiliate', label: 'Affiliates'  },
+                { value: 'admin',     label: 'Admins'      },
+              ]}
+            />
+            <FilterSelect
+              value={status}
+              onChange={setStatus}
+              options={[
+                { value: 'all',      label: 'All Status' },
+                { value: 'active',   label: 'Active'     },
+                { value: 'inactive', label: 'Inactive'   },
+              ]}
+            />
+          </>
+        }
+      />
+
+      <Table cols={['User', 'Role', 'Status', 'Joined', 'Actions']} empty="No users found">
+        {filtered.map(u => (
+          <Tr key={u._id}>
+            <Td>
+              <div>
+                <p style={{ fontWeight: 700 }}>{u.name}</p>
+                <p style={{ color: C.muted, fontSize: 11 }}>{u.email}</p>
+              </div>
+            </Td>
+            <Td>
+              <select
+                value={u.role}
+                onChange={e => updateRole(u._id, e.target.value)}
+                style={{
+                  backgroundColor: C.bg, border: `1px solid ${C.border}`,
+                  color: C.cream, fontSize: 11, padding: '4px 8px',
+                  borderRadius: 7, outline: 'none', cursor: 'pointer',
+                }}
+              >
+                {['buyer','vendor','affiliate','admin'].map(r => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
+            </Td>
+            <Td><Badge text={u.isActive ? 'Active' : 'Inactive'} color={u.isActive ? 'green' : 'red'} /></Td>
+            <Td style={{ color: C.muted, fontSize: 11 }}>
+              {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}
+            </Td>
+            <Td>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <Btn onClick={() => toggle(u._id)} variant={u.isActive ? 'ghost' : 'success'}>
+                  {u.isActive ? 'Deactivate' : 'Activate'}
+                </Btn>
+                <Btn onClick={() => remove(u._id)} variant="danger">Delete</Btn>
+              </div>
+            </Td>
+          </Tr>
+        ))}
+      </Table>
     </>
   );
 };
@@ -428,13 +769,13 @@ const UsersPage = () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 const SettingsPage = () => {
   const [settings, setSettings] = useState(null);
-  const [saved, setSaved]       = useState(false);
+  const [saved,    setSaved]    = useState(false);
 
   useEffect(() => {
     adminAPI.getSettings().then(r => setSettings(r.data)).catch(console.error);
   }, []);
 
-  const toggle = async (key) => {
+  const toggle = async key => {
     const updated = { ...settings, [key]: !settings[key] };
     setSettings(updated);
     await adminAPI.updateSettings({ [key]: updated[key] });
@@ -442,27 +783,50 @@ const SettingsPage = () => {
     setTimeout(() => setSaved(false), 2000);
   };
 
-  if (!settings) return <p className="text-gray-500 text-sm">Loading settings…</p>;
+  if (!settings) return <Loading text="Loading settings…" />;
 
   const items = [
-    { key: 'maintenanceMode',        label: 'Maintenance Mode',          desc: 'Disable all platform features for users' },
-    { key: 'newVendorRegistrations', label: 'New Vendor Registrations',   desc: 'Allow new vendors to register on the platform' },
+    { key: 'maintenanceMode',        label: 'Maintenance Mode',        desc: 'Disable all platform features for users', danger: true },
+    { key: 'newVendorRegistrations', label: 'New Vendor Registrations', desc: 'Allow new vendors to register on the platform' },
   ];
 
   return (
     <>
-      <h1 className="text-2xl font-black mb-2">Platform Settings</h1>
-      {saved && <p className="text-green-400 text-xs mb-4">✅ Settings saved!</p>}
-      <div className="rounded-2xl border border-gray-800 p-6" style={{ backgroundColor: '#1a1a00' }}>
+      <PageHeader
+        title="Platform Settings"
+        subtitle="Configure global platform behaviour"
+        right={saved && (
+          <span style={{ color: C.green, fontSize: 12, fontWeight: 700 }}>✓ Saved</span>
+        )}
+      />
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {items.map(item => (
-          <div key={item.key} className="flex items-center justify-between mb-6 pb-6 border-b border-gray-800 last:border-0 last:mb-0 last:pb-0">
+          <div key={item.key} style={{
+            backgroundColor: C.surface, border: `1px solid ${item.danger && settings[item.key] ? 'rgba(224,92,92,0.4)' : C.border}`,
+            borderRadius: 14, padding: '20px 24px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            transition: 'border-color 0.2s',
+          }}>
             <div>
-              <p className="text-white font-semibold text-sm">{item.label}</p>
-              <p className="text-gray-500 text-xs mt-1">{item.desc}</p>
+              <p style={{ color: C.cream, fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{item.label}</p>
+              <p style={{ color: C.muted, fontSize: 12 }}>{item.desc}</p>
             </div>
-            <button onClick={() => toggle(item.key)}
-              className={`w-12 h-6 rounded-full relative transition-colors ${settings[item.key] ? 'bg-yellow-400' : 'bg-gray-700'}`}>
-              <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all ${settings[item.key] ? 'right-0.5' : 'left-0.5'}`}></div>
+            <button
+              onClick={() => toggle(item.key)}
+              style={{
+                width: 48, height: 26, borderRadius: 100,
+                backgroundColor: settings[item.key] ? (item.danger ? C.red : C.gold) : C.border,
+                border: 'none', cursor: 'pointer', position: 'relative',
+                transition: 'background-color 0.2s', flexShrink: 0,
+              }}
+            >
+              <div style={{
+                width: 20, height: 20, borderRadius: '50%', backgroundColor: '#fff',
+                position: 'absolute', top: 3,
+                left: settings[item.key] ? 'calc(100% - 23px)' : 3,
+                transition: 'left 0.2s',
+              }} />
             </button>
           </div>
         ))}
@@ -478,64 +842,134 @@ const AdminDashboard = () => {
   const [activePage, setActivePage] = useState('Dashboard');
 
   const pages = {
-    'Dashboard':        <DashboardPage />,
-    'Vendors':          <VendorsPage />,
-    'Orders':           <OrdersPage />,
-    'Products':         <ProductsPage />,
-    'Affiliates':       <AffiliatesPage />,
-    'User Management':  <UsersPage />,
-    'Platform Settings':<SettingsPage />,
+    'Dashboard':         <DashboardPage />,
+    'Vendors':           <VendorsPage />,
+    'Orders':            <OrdersPage />,
+    'Products':          <ProductsPage />,
+    'Affiliates':        <AffiliatesPage />,
+    'User Management':   <UsersPage />,
+    'Platform Settings': <SettingsPage />,
   };
 
-  const mainMenu   = sideLinks.slice(0, 3);
-  const mgmtMenu   = sideLinks.slice(3);
+  const mainLinks   = sideLinks.filter(l => l.group === 'main');
+  const manageLinks = sideLinks.filter(l => l.group === 'manage');
 
   return (
-    <div className="min-h-screen text-white flex" style={{ backgroundColor: '#1a1500' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: C.bg, display: 'flex', color: C.cream }}>
 
-      {/* SIDEBAR */}
-      <div className="w-52 flex-shrink-0 border-r border-gray-800 py-8 px-4" style={{ backgroundColor: '#0d0d00' }}>
-        <div className="flex items-center gap-2 mb-8 px-2">
-          <span className="bg-yellow-400 text-black w-7 h-7 rounded flex items-center justify-center text-xs font-black">57</span>
-          <span className="text-white font-black text-sm">ARTS ADMIN</span>
+      {/* ── SIDEBAR ─────────────────────────────────────────────────────────── */}
+      <div style={{
+        width: 210, flexShrink: 0,
+        backgroundColor: C.surface,
+        borderRight: `1px solid ${C.border}`,
+        display: 'flex', flexDirection: 'column',
+        padding: '24px 12px',
+      }}>
+        {/* Logo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 8px', marginBottom: 32 }}>
+          <div style={{
+            width: 30, height: 30, borderRadius: 8,
+            backgroundColor: C.gold,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontWeight: 900, fontSize: 11, color: '#000',
+          }}>57</div>
+          <span style={{ fontWeight: 900, fontSize: 13, letterSpacing: '0.04em' }}>ARTS ADMIN</span>
         </div>
 
-        <p className="text-gray-600 text-xs uppercase tracking-widest px-2 mb-3">Main Menu</p>
-        <div className="space-y-1 mb-6">
-          {mainMenu.map(link => (
-            <button key={link} onClick={() => setActivePage(link)}
-              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition ${
-                activePage === link ? 'bg-yellow-400 bg-opacity-20 text-yellow-400 font-black' : 'text-gray-500 hover:text-white hover:bg-white hover:bg-opacity-5'
-              }`}>{link}</button>
+        {/* Main menu */}
+        <p style={{ color: C.muted, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', padding: '0 8px', marginBottom: 8 }}>
+          Main Menu
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 24 }}>
+          {mainLinks.map(l => (
+            <button
+              key={l.id}
+              onClick={() => setActivePage(l.id)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '9px 12px', borderRadius: 10, border: 'none',
+                backgroundColor: activePage === l.id ? C.goldDim : 'transparent',
+                color: activePage === l.id ? C.gold : C.muted,
+                fontWeight: activePage === l.id ? 800 : 400,
+                fontSize: 13, cursor: 'pointer', textAlign: 'left',
+                transition: 'all 0.15s',
+              }}
+              onMouseEnter={e => { if (activePage !== l.id) e.currentTarget.style.backgroundColor = C.hover; e.currentTarget.style.color = C.cream; }}
+              onMouseLeave={e => { if (activePage !== l.id) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = C.muted; } }}
+            >
+              <span style={{ fontSize: 15 }}>{l.icon}</span>
+              {l.id}
+            </button>
           ))}
         </div>
 
-        <p className="text-gray-600 text-xs uppercase tracking-widest px-2 mb-3">Management</p>
-        <div className="space-y-1">
-          {mgmtMenu.map(link => (
-            <button key={link} onClick={() => setActivePage(link)}
-              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition ${
-                activePage === link ? 'bg-yellow-400 bg-opacity-20 text-yellow-400 font-black' : 'text-gray-500 hover:text-white hover:bg-white hover:bg-opacity-5'
-              }`}>{link}</button>
+        {/* Management menu */}
+        <p style={{ color: C.muted, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', padding: '0 8px', marginBottom: 8 }}>
+          Management
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {manageLinks.map(l => (
+            <button
+              key={l.id}
+              onClick={() => setActivePage(l.id)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '9px 12px', borderRadius: 10, border: 'none',
+                backgroundColor: activePage === l.id ? C.goldDim : 'transparent',
+                color: activePage === l.id ? C.gold : C.muted,
+                fontWeight: activePage === l.id ? 800 : 400,
+                fontSize: 13, cursor: 'pointer', textAlign: 'left',
+                transition: 'all 0.15s',
+              }}
+              onMouseEnter={e => { if (activePage !== l.id) e.currentTarget.style.backgroundColor = C.hover; e.currentTarget.style.color = C.cream; }}
+              onMouseLeave={e => { if (activePage !== l.id) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = C.muted; } }}
+            >
+              <span style={{ fontSize: 15 }}>{l.icon}</span>
+              {l.id}
+            </button>
           ))}
         </div>
 
-        <div className="mt-auto pt-8">
-          <button onClick={() => { localStorage.removeItem('57arts_token'); localStorage.removeItem('57arts_user'); window.location.href = '/login'; }}
-            className="w-full text-left px-3 py-2 rounded-lg text-sm text-gray-500 hover:text-red-400 hover:bg-red-900 hover:bg-opacity-20 transition">
+        {/* Logout — pushed to bottom */}
+        <div style={{ marginTop: 'auto', paddingTop: 24, borderTop: `1px solid ${C.border}` }}>
+          <button
+            onClick={() => {
+              localStorage.removeItem('57arts_token');
+              localStorage.removeItem('57arts_user');
+              window.location.href = '/login';
+            }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              width: '100%', padding: '9px 12px', borderRadius: 10,
+              border: 'none', backgroundColor: 'transparent',
+              color: C.muted, fontSize: 13, cursor: 'pointer',
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(224,92,92,0.1)'; e.currentTarget.style.color = C.red; }}
+            onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = C.muted; }}
+          >
             🚪 Logout
           </button>
         </div>
       </div>
 
-      {/* MAIN CONTENT */}
-      <div className="flex-1 p-8 overflow-auto">
-        <div className="flex justify-between items-center mb-8">
-          <div className="text-gray-500 text-xs">Admin Panel</div>
-          <div className="flex items-center gap-2">
-            <span className="bg-yellow-400 text-black text-xs font-black px-2 py-0.5 rounded">ADMIN</span>
+      {/* ── MAIN CONTENT ────────────────────────────────────────────────────── */}
+      <div style={{ flex: 1, padding: '32px 36px', overflow: 'auto' }}>
+        {/* Top bar */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
+          <div style={{ color: C.muted, fontSize: 12 }}>
+            Admin Panel › <span style={{ color: C.cream }}>{activePage}</span>
           </div>
+          <span style={{
+            backgroundColor: C.goldDim, color: C.gold,
+            border: `1px solid rgba(201,168,76,0.3)`,
+            fontSize: 10, fontWeight: 800, padding: '4px 10px',
+            borderRadius: 100, letterSpacing: '0.1em',
+          }}>
+            ADMIN
+          </span>
         </div>
+
         {pages[activePage]}
       </div>
     </div>
