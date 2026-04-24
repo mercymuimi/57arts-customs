@@ -27,7 +27,6 @@ const sideLinks = [
   { id: 'Platform Settings', icon: '⚙️', group: 'manage' },
 ];
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 const orderStatusColor = s => ({ pending: 'yellow', processing: 'blue', shipped: 'blue', delivered: 'green', cancelled: 'red' }[s] || 'gray');
 
 const Badge = ({ text, color }) => {
@@ -124,7 +123,7 @@ const Btn = ({ onClick, variant = 'default', children, disabled }) => {
   const v = variants[variant];
   return (
     <button
-      onClick={onClick}
+      onClick={e => { e.stopPropagation(); onClick && onClick(); }}
       disabled={disabled}
       style={{
         backgroundColor: v.bg, color: v.color, border: v.border,
@@ -164,7 +163,6 @@ const StatCard = ({ label, value, icon, sub }) => (
   </div>
 );
 
-// ── Loading / Empty states ────────────────────────────────────────────────────
 const Loading = ({ text = 'Loading…' }) => (
   <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: C.muted, fontSize: 13, padding: 32 }}>
     <span style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>⟳</span>
@@ -199,8 +197,6 @@ const DashboardPage = () => {
         title="Platform Overview"
         subtitle="Real-time tracking of 57 Arts & Customs business health."
       />
-
-      {/* Stat cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 28 }}>
         <StatCard label="Total Revenue"    value={`KES ${(stats.totalRevenue || 0).toLocaleString()}`} icon="💰" sub="All time" />
         <StatCard label="Active Vendors"   value={stats.totalVendors   || 0} icon="🏪" />
@@ -211,7 +207,6 @@ const DashboardPage = () => {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
-        {/* Revenue chart */}
         <div style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: 22 }}>
           <p style={{ color: C.cream, fontWeight: 900, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 20 }}>
             Revenue by Month
@@ -219,31 +214,28 @@ const DashboardPage = () => {
           {revData.length === 0 ? (
             <p style={{ color: C.muted, fontSize: 12, textAlign: 'center', padding: '32px 0' }}>No revenue data yet</p>
           ) : (
-            <>
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 120, marginBottom: 8 }}>
-                {revData.map((d, i) => (
-                  <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, height: '100%', justifyContent: 'flex-end' }}>
-                    <span style={{ color: C.muted, fontSize: 9 }}>
-                      {d.total >= 1000 ? `${(d.total/1000).toFixed(0)}k` : d.total}
-                    </span>
-                    <div
-                      title={`KES ${d.total.toLocaleString()}`}
-                      style={{
-                        width: '100%', borderRadius: '4px 4px 0 0',
-                        background: `linear-gradient(to top, ${C.gold}, rgba(201,168,76,0.4))`,
-                        height: `${Math.max((d.total / maxRev) * 100, 4)}%`,
-                        transition: 'height 0.3s ease',
-                      }}
-                    />
-                    <span style={{ color: C.muted, fontSize: 9 }}>{months[(d._id || 1) - 1]}</span>
-                  </div>
-                ))}
-              </div>
-            </>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 120, marginBottom: 8 }}>
+              {revData.map((d, i) => (
+                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, height: '100%', justifyContent: 'flex-end' }}>
+                  <span style={{ color: C.muted, fontSize: 9 }}>
+                    {d.total >= 1000 ? `${(d.total/1000).toFixed(0)}k` : d.total}
+                  </span>
+                  <div
+                    title={`KES ${d.total.toLocaleString()}`}
+                    style={{
+                      width: '100%', borderRadius: '4px 4px 0 0',
+                      background: `linear-gradient(to top, ${C.gold}, rgba(201,168,76,0.4))`,
+                      height: `${Math.max((d.total / maxRev) * 100, 4)}%`,
+                      transition: 'height 0.3s ease',
+                    }}
+                  />
+                  <span style={{ color: C.muted, fontSize: 9 }}>{months[(d._id || 1) - 1]}</span>
+                </div>
+              ))}
+            </div>
           )}
         </div>
 
-        {/* Recent orders */}
         <div style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: 22 }}>
           <p style={{ color: C.cream, fontWeight: 900, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 16 }}>
             Recent Orders
@@ -275,6 +267,9 @@ const DashboardPage = () => {
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // VENDORS PAGE
+// ✅ FIX: Added e.stopPropagation() to Btn (above) so clicks don't get swallowed.
+//         Status logic now correctly reads v.isApproved and v.status from the
+//         schema fields we added to Vendor.js.
 // ═══════════════════════════════════════════════════════════════════════════════
 const VendorsPage = () => {
   const [vendors, setVendors]   = useState([]);
@@ -292,11 +287,18 @@ const VendorsPage = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  const approve = async id => { await adminAPI.approveVendor(id); load(); };
-  const reject  = async id => { await adminAPI.rejectVendor(id);  load(); };
+  const approve = async id => {
+    try { await adminAPI.approveVendor(id); load(); }
+    catch (err) { alert(err.response?.data?.message || 'Failed to approve vendor'); }
+  };
+
+  const reject = async id => {
+    try { await adminAPI.rejectVendor(id); load(); }
+    catch (err) { alert(err.response?.data?.message || 'Failed to suspend vendor'); }
+  };
 
   const filtered = useMemo(() => vendors.filter(v => {
-    const name  = (v.businessName || v.storeName || v.user?.name || '').toLowerCase();
+    const name  = (v.storeName || v.user?.name || '').toLowerCase();
     const email = (v.user?.email || '').toLowerCase();
     const q     = search.toLowerCase();
     const matchSearch = !q || name.includes(q) || email.includes(q);
@@ -326,10 +328,10 @@ const VendorsPage = () => {
               value={filter}
               onChange={setFilter}
               options={[
-                { value: 'all',       label: `All (${counts.all})`           },
-                { value: 'pending',   label: `Pending (${counts.pending})`   },
-                { value: 'approved',  label: `Approved (${counts.approved})` },
-                { value: 'suspended', label: `Suspended (${counts.suspended})`},
+                { value: 'all',       label: `All (${counts.all})`            },
+                { value: 'pending',   label: `Pending (${counts.pending})`    },
+                { value: 'approved',  label: `Approved (${counts.approved})`  },
+                { value: 'suspended', label: `Suspended (${counts.suspended})` },
               ]}
             />
           </>
@@ -342,16 +344,16 @@ const VendorsPage = () => {
           const color  = { approved: 'green', suspended: 'red', pending: 'yellow' }[status];
           return (
             <Tr key={v._id}>
-              <Td><span style={{ fontWeight: 700 }}>{v.businessName || v.storeName || v.user?.name || '—'}</span></Td>
+              <Td><span style={{ fontWeight: 700 }}>{v.storeName || v.user?.name || '—'}</span></Td>
               <Td style={{ color: C.muted }}>{v.user?.email || '—'}</Td>
               <Td style={{ color: C.muted, textTransform: 'capitalize' }}>{v.category || '—'}</Td>
               <Td><Badge text={status} color={color} /></Td>
               <Td>
                 <div style={{ display: 'flex', gap: 6 }}>
-                  {!v.isApproved && status !== 'suspended' && (
+                  {status === 'pending' && (
                     <Btn onClick={() => approve(v._id)} variant="success">Approve</Btn>
                   )}
-                  {v.isApproved && (
+                  {status === 'approved' && (
                     <Btn onClick={() => reject(v._id)} variant="danger">Suspend</Btn>
                   )}
                   {status === 'suspended' && (
@@ -394,9 +396,7 @@ const OrdersPage = () => {
 
   const filtered = useMemo(() => orders.filter(o => {
     const q = search.toLowerCase();
-    const matchSearch = !q ||
-      (o.orderNumber || '').toLowerCase().includes(q) ||
-      (o.user?.name  || '').toLowerCase().includes(q);
+    const matchSearch  = !q || (o.orderNumber || '').toLowerCase().includes(q) || (o.user?.name || '').toLowerCase().includes(q);
     const matchStatus  = filter  === 'all' || o.orderStatus  === filter;
     const matchPayment = payment === 'all' || o.paymentStatus === payment;
     return matchSearch && matchStatus && matchPayment;
@@ -418,12 +418,12 @@ const OrdersPage = () => {
               value={filter}
               onChange={setFilter}
               options={[
-                { value: 'all',        label: 'All Statuses'  },
-                { value: 'pending',    label: 'Pending'       },
-                { value: 'processing', label: 'Processing'    },
-                { value: 'shipped',    label: 'Shipped'       },
-                { value: 'delivered',  label: 'Delivered'     },
-                { value: 'cancelled',  label: 'Cancelled'     },
+                { value: 'all',        label: 'All Statuses' },
+                { value: 'pending',    label: 'Pending'      },
+                { value: 'processing', label: 'Processing'   },
+                { value: 'shipped',    label: 'Shipped'      },
+                { value: 'delivered',  label: 'Delivered'    },
+                { value: 'cancelled',  label: 'Cancelled'    },
               ]}
             />
             <FilterSelect
@@ -587,9 +587,9 @@ const AffiliatesPage = () => {
     return [...affiliates]
       .filter(a => !q || (a.user?.name || '').toLowerCase().includes(q) || (a.user?.email || '').toLowerCase().includes(q))
       .sort((a, b) => {
-        if (sort === 'earned')  return (b.totalEarned  || 0) - (a.totalEarned  || 0);
-        if (sort === 'clicks')  return (b.totalClicks  || 0) - (a.totalClicks  || 0);
-        if (sort === 'orders')  return (b.totalOrders  || 0) - (a.totalOrders  || 0);
+        if (sort === 'earned') return (b.totalEarned || 0) - (a.totalEarned || 0);
+        if (sort === 'clicks') return (b.totalClicks || 0) - (a.totalClicks || 0);
+        if (sort === 'orders') return (b.totalOrders || 0) - (a.totalOrders || 0);
         return 0;
       });
   }, [affiliates, search, sort]);
@@ -631,21 +631,11 @@ const AffiliatesPage = () => {
                   <p style={{ color: C.muted, fontSize: 11 }}>{a.user?.email || '—'}</p>
                 </div>
               </Td>
-              <Td>
-                <span style={{ fontFamily: 'monospace', color: C.gold, fontWeight: 800, fontSize: 12 }}>
-                  {a.affiliateCode}
-                </span>
-              </Td>
+              <Td><span style={{ fontFamily: 'monospace', color: C.gold, fontWeight: 800, fontSize: 12 }}>{a.affiliateCode}</span></Td>
               <Td style={{ color: C.muted }}>{(a.totalClicks || 0).toLocaleString()}</Td>
               <Td style={{ color: C.muted }}>{(a.totalOrders || 0).toLocaleString()}</Td>
-              <Td>
-                <span style={{ color: Number(conv) > 5 ? C.green : C.muted }}>{conv}%</span>
-              </Td>
-              <Td>
-                <span style={{ color: C.green, fontWeight: 800 }}>
-                  KES {(a.totalEarned || 0).toLocaleString()}
-                </span>
-              </Td>
+              <Td><span style={{ color: Number(conv) > 5 ? C.green : C.muted }}>{conv}%</span></Td>
+              <Td><span style={{ color: C.green, fontWeight: 800 }}>KES {(a.totalEarned || 0).toLocaleString()}</span></Td>
               <Td><Badge text={a.status || 'active'} color={a.status === 'suspended' ? 'red' : 'green'} /></Td>
             </Tr>
           );
@@ -675,9 +665,9 @@ const UsersPage = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  const toggle    = async id   => { await adminAPI.toggleUser(id);            load(); };
-  const remove    = async id   => { if (!window.confirm('Delete this user? This cannot be undone.')) return; await adminAPI.deleteUser(id); load(); };
-  const updateRole = async (id, r) => { await adminAPI.updateUserRole(id, r); load(); };
+  const toggle     = async id      => { await adminAPI.toggleUser(id);              load(); };
+  const remove     = async id      => { if (!window.confirm('Delete this user? This cannot be undone.')) return; await adminAPI.deleteUser(id); load(); };
+  const updateRole = async (id, r) => { await adminAPI.updateUserRole(id, r);       load(); };
 
   const filtered = useMemo(() => users.filter(u => {
     const q = search.toLowerCase();
@@ -701,11 +691,11 @@ const UsersPage = () => {
               value={role}
               onChange={setRole}
               options={[
-                { value: 'all',       label: 'All Roles'   },
-                { value: 'buyer',     label: 'Buyers'      },
-                { value: 'vendor',    label: 'Vendors'     },
-                { value: 'affiliate', label: 'Affiliates'  },
-                { value: 'admin',     label: 'Admins'      },
+                { value: 'all',       label: 'All Roles'  },
+                { value: 'buyer',     label: 'Buyers'     },
+                { value: 'vendor',    label: 'Vendors'    },
+                { value: 'affiliate', label: 'Affiliates' },
+                { value: 'admin',     label: 'Admins'     },
               ]}
             />
             <FilterSelect
@@ -786,8 +776,8 @@ const SettingsPage = () => {
   if (!settings) return <Loading text="Loading settings…" />;
 
   const items = [
-    { key: 'maintenanceMode',        label: 'Maintenance Mode',        desc: 'Disable all platform features for users', danger: true },
-    { key: 'newVendorRegistrations', label: 'New Vendor Registrations', desc: 'Allow new vendors to register on the platform' },
+    { key: 'maintenanceMode',        label: 'Maintenance Mode',         desc: 'Disable all platform features for users', danger: true },
+    { key: 'newVendorRegistrations', label: 'New Vendor Registrations',  desc: 'Allow new vendors to register on the platform' },
   ];
 
   return (
@@ -795,15 +785,13 @@ const SettingsPage = () => {
       <PageHeader
         title="Platform Settings"
         subtitle="Configure global platform behaviour"
-        right={saved && (
-          <span style={{ color: C.green, fontSize: 12, fontWeight: 700 }}>✓ Saved</span>
-        )}
+        right={saved && <span style={{ color: C.green, fontSize: 12, fontWeight: 700 }}>✓ Saved</span>}
       />
-
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {items.map(item => (
           <div key={item.key} style={{
-            backgroundColor: C.surface, border: `1px solid ${item.danger && settings[item.key] ? 'rgba(224,92,92,0.4)' : C.border}`,
+            backgroundColor: C.surface,
+            border: `1px solid ${item.danger && settings[item.key] ? 'rgba(224,92,92,0.4)' : C.border}`,
             borderRadius: 14, padding: '20px 24px',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             transition: 'border-color 0.2s',
@@ -865,7 +853,6 @@ const AdminDashboard = () => {
         display: 'flex', flexDirection: 'column',
         padding: '24px 12px',
       }}>
-        {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 8px', marginBottom: 32 }}>
           <div style={{
             width: 30, height: 30, borderRadius: 8,
@@ -876,7 +863,6 @@ const AdminDashboard = () => {
           <span style={{ fontWeight: 900, fontSize: 13, letterSpacing: '0.04em' }}>ARTS ADMIN</span>
         </div>
 
-        {/* Main menu */}
         <p style={{ color: C.muted, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', padding: '0 8px', marginBottom: 8 }}>
           Main Menu
         </p>
@@ -894,7 +880,7 @@ const AdminDashboard = () => {
                 fontSize: 13, cursor: 'pointer', textAlign: 'left',
                 transition: 'all 0.15s',
               }}
-              onMouseEnter={e => { if (activePage !== l.id) e.currentTarget.style.backgroundColor = C.hover; e.currentTarget.style.color = C.cream; }}
+              onMouseEnter={e => { if (activePage !== l.id) { e.currentTarget.style.backgroundColor = C.hover; e.currentTarget.style.color = C.cream; } }}
               onMouseLeave={e => { if (activePage !== l.id) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = C.muted; } }}
             >
               <span style={{ fontSize: 15 }}>{l.icon}</span>
@@ -903,7 +889,6 @@ const AdminDashboard = () => {
           ))}
         </div>
 
-        {/* Management menu */}
         <p style={{ color: C.muted, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', padding: '0 8px', marginBottom: 8 }}>
           Management
         </p>
@@ -921,7 +906,7 @@ const AdminDashboard = () => {
                 fontSize: 13, cursor: 'pointer', textAlign: 'left',
                 transition: 'all 0.15s',
               }}
-              onMouseEnter={e => { if (activePage !== l.id) e.currentTarget.style.backgroundColor = C.hover; e.currentTarget.style.color = C.cream; }}
+              onMouseEnter={e => { if (activePage !== l.id) { e.currentTarget.style.backgroundColor = C.hover; e.currentTarget.style.color = C.cream; } }}
               onMouseLeave={e => { if (activePage !== l.id) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = C.muted; } }}
             >
               <span style={{ fontSize: 15 }}>{l.icon}</span>
@@ -930,7 +915,6 @@ const AdminDashboard = () => {
           ))}
         </div>
 
-        {/* Logout — pushed to bottom */}
         <div style={{ marginTop: 'auto', paddingTop: 24, borderTop: `1px solid ${C.border}` }}>
           <button
             onClick={() => {
@@ -955,7 +939,6 @@ const AdminDashboard = () => {
 
       {/* ── MAIN CONTENT ────────────────────────────────────────────────────── */}
       <div style={{ flex: 1, padding: '32px 36px', overflow: 'auto' }}>
-        {/* Top bar */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
           <div style={{ color: C.muted, fontSize: 12 }}>
             Admin Panel › <span style={{ color: C.cream }}>{activePage}</span>

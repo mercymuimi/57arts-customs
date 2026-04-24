@@ -28,6 +28,17 @@ const vendorSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  // ✅ FIX: Added isApproved and status — these were missing from the schema,
+  // causing Mongoose to silently strip them on every findByIdAndUpdate call.
+  isApproved: {
+    type: Boolean,
+    default: false
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'active', 'suspended'],
+    default: 'pending'
+  },
   totalSales: {
     type: Number,
     default: 0

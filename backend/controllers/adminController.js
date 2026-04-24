@@ -33,7 +33,11 @@ const getDashboardStats = async (req, res) => {
       { $match: { paymentStatus: 'paid' } },
       { $group: { _id: null, total: { $sum: '$totalPrice' } } },
     ]);
-    res.json({ totalUsers, totalVendors, totalOrders, totalProducts, totalAffiliates, totalRevenue: totalRevenue[0]?.total || 0, recentOrders, revenueData });
+    res.json({
+      totalUsers, totalVendors, totalOrders, totalProducts, totalAffiliates,
+      totalRevenue: totalRevenue[0]?.total || 0,
+      recentOrders, revenueData,
+    });
   } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
@@ -63,7 +67,8 @@ const updateUserRole = async (req, res) => {
   try {
     if (!requireAdmin(req, res)) return;
     const { role } = req.body;
-    if (!['buyer','vendor','affiliate','admin'].includes(role)) return res.status(400).json({ message: 'Invalid role' });
+    if (!['buyer', 'vendor', 'affiliate', 'admin'].includes(role))
+      return res.status(400).json({ message: 'Invalid role' });
     const user = await User.findByIdAndUpdate(req.params.id, { role }, { new: true }).select('-password');
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json(user);
@@ -84,28 +89,44 @@ const deleteUser = async (req, res) => {
 const getAllVendors = async (req, res) => {
   try {
     if (!requireAdmin(req, res)) return;
-    const vendors = await Vendor.find().populate('user', 'name email phone isActive').sort({ createdAt: -1 });
+    const vendors = await Vendor.find()
+      .populate('user', 'name email phone isActive')
+      .sort({ createdAt: -1 });
     res.json(vendors);
   } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
 // PUT /api/admin/vendors/:id/approve
+// ✅ FIX: Upgrades user role to 'vendor' only after admin approval
 const approveVendor = async (req, res) => {
   try {
     if (!requireAdmin(req, res)) return;
-    const vendor = await Vendor.findByIdAndUpdate(req.params.id, { isApproved: true, status: 'active' }, { new: true }).populate('user', 'name email');
+    const vendor = await Vendor.findByIdAndUpdate(
+      req.params.id,
+      { isApproved: true, isVerified: true, status: 'active' },
+      { new: true }
+    ).populate('user', 'name email');
     if (!vendor) return res.status(404).json({ message: 'Vendor not found' });
+    // ✅ Now upgrade the user role to 'vendor' — this is the only place this happens
+    await User.findByIdAndUpdate(vendor.user._id, { role: 'vendor' });
     res.json({ message: 'Vendor approved', vendor });
   } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
 // PUT /api/admin/vendors/:id/reject
+// ✅ FIX: Downgrades user role back to 'buyer' when suspended
 const rejectVendor = async (req, res) => {
   try {
     if (!requireAdmin(req, res)) return;
-    const vendor = await Vendor.findByIdAndUpdate(req.params.id, { isApproved: false, status: 'suspended' }, { new: true }).populate('user', 'name email');
+    const vendor = await Vendor.findByIdAndUpdate(
+      req.params.id,
+      { isApproved: false, isVerified: false, status: 'suspended' },
+      { new: true }
+    ).populate('user', 'name email');
     if (!vendor) return res.status(404).json({ message: 'Vendor not found' });
-    res.json({ message: 'Vendor rejected', vendor });
+    // ✅ Downgrade user role back to 'buyer' when suspended
+    await User.findByIdAndUpdate(vendor.user._id, { role: 'buyer' });
+    res.json({ message: 'Vendor suspended', vendor });
   } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
@@ -123,7 +144,8 @@ const updateOrderStatus = async (req, res) => {
   try {
     if (!requireAdmin(req, res)) return;
     const { orderStatus } = req.body;
-    if (!['pending','processing','shipped','delivered','cancelled'].includes(orderStatus)) return res.status(400).json({ message: 'Invalid status' });
+    if (!['pending', 'processing', 'shipped', 'delivered', 'cancelled'].includes(orderStatus))
+      return res.status(400).json({ message: 'Invalid status' });
     const order = await Order.findByIdAndUpdate(req.params.id, { orderStatus }, { new: true });
     if (!order) return res.status(404).json({ message: 'Order not found' });
     res.json(order);

@@ -8,7 +8,6 @@ exports.registerVendor = async (req, res) => {
   try {
     const existing = await Vendor.findOne({ user: req.user._id });
     if (existing) {
-      // Idempotent — if already registered just return the existing profile
       return res.status(200).json({ success: true, vendor: existing, alreadyExists: true });
     }
 
@@ -17,20 +16,23 @@ exports.registerVendor = async (req, res) => {
     if (!storeName) return res.status(400).json({ message: 'Store name is required' });
     if (!category)  return res.status(400).json({ message: 'Category is required' });
 
+    // ✅ FIX: Create vendor with pending status — do NOT upgrade user role yet.
+    // Admin must approve first. Role upgrade now happens in adminController.approveVendor.
     const vendor = await Vendor.create({
       user:             req.user._id,
       storeName,
       storeDescription: storeDescription || '',
       storeLogo:        storeLogo        || '',
       category,
+      isApproved:       false,
+      status:           'pending',
     });
 
-    // Upgrade user role to vendor in DB.
-    // The JWT still says role:buyer until the frontend calls refreshUser()
-    // which hits GET /auth/me and gets a fresh token with role:vendor.
-    await User.findByIdAndUpdate(req.user._id, { role: 'vendor' });
-
-    res.status(201).json({ success: true, message: 'Vendor registered', vendor });
+    res.status(201).json({
+      success: true,
+      message: 'Vendor application submitted. Please wait for admin approval before accessing your dashboard.',
+      vendor,
+    });
   } catch (err) {
     console.error('❌ REGISTER VENDOR ERROR:', err.message);
     res.status(500).json({ success: false, error: err.message });
@@ -49,6 +51,7 @@ exports.getVendorProfile = async (req, res) => {
       });
     }
 
+    // ✅ FIX: Tell the frontend if they're still pending so it can show a waiting screen
     res.json({ success: true, vendor });
   } catch (err) {
     console.error('❌ GET VENDOR PROFILE ERROR:', err.message);
