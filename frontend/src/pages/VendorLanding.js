@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { vendorAPI } from '../services/api';
+import { vendorAPI, authAPI } from '../services/api';
 
 const C = {
   bg: '#0a0a0a', surface: '#111111', border: '#1c1c1c', bHov: '#2e2e2e',
@@ -18,7 +18,6 @@ const s = {
   card:     { backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 16 },
 };
 
-// Map form craft to Vendor model category enum
 const craftToCategory = (craft) => {
   if (!craft) return 'fashion';
   const c = craft.toLowerCase();
@@ -51,16 +50,74 @@ const Footer = () => (
   </footer>
 );
 
+// ── OTP step ──────────────────────────────────────────────────────────────────
+// Verifies email and passes { token, user } back to parent.
+// Parent handles login() + vendorAPI.register() in strict sequence.
+const OTPStep = ({ email, onVerified, onBack, parentSubmitting }) => {
+  const [otp, setOtp]         = useState('');
+  const [error, setError]     = useState('');
+  const [loading, setLoading] = useState(false);
+  const isLoading = loading || parentSubmitting;
+
+  const verify = async () => {
+    if (otp.length !== 6) { setError('Enter the 6-digit code'); return; }
+    setLoading(true); setError('');
+    try {
+      const { data } = await authAPI.verifyEmail({ email, otp });
+      onVerified({ token: data.token, user: data.user });
+    } catch (err) {
+      setError(err.response?.data?.message || 'Invalid code. Try again.');
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ backgroundColor: 'rgba(201,168,76,0.08)', border: `1px solid rgba(201,168,76,0.25)`, borderRadius: 10, padding: '14px 16px' }}>
+        <p style={{ color: C.gold, fontWeight: 900, fontSize: 12, marginBottom: 4 }}>✦ Check your email</p>
+        <p style={{ color: C.muted, fontSize: 12, lineHeight: 1.6 }}>
+          We sent a 6-digit code to <strong style={{ color: C.cream }}>{email}</strong>. Enter it below to verify your account.
+        </p>
+      </div>
+      <div>
+        <label style={s.label}>Verification Code</label>
+        <input type="text" maxLength={6} value={otp}
+          onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
+          placeholder="000000"
+          style={{ ...s.input, fontSize: 24, letterSpacing: '0.3em', textAlign: 'center' }} />
+      </div>
+      {error && (
+        <div style={{ backgroundColor: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 10, padding: '10px 14px' }}>
+          <p style={{ color: C.err, fontSize: 12 }}>{error}</p>
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 10 }}>
+        <button onClick={onBack} disabled={isLoading} style={{ ...s.btnGhost, flex: 1, textAlign: 'center', opacity: isLoading ? 0.5 : 1 }}>← Back</button>
+        <button onClick={verify} disabled={isLoading} style={{ ...s.btnGold, flex: 1, textAlign: 'center', opacity: isLoading ? 0.7 : 1 }}>
+          {isLoading ? 'Please wait...' : 'Verify & Complete →'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const VendorLanding = () => {
-  const { isLoggedIn, user, refreshUser } = useAuth();
+  const { isLoggedIn, user, login, refreshUser } = useAuth();
   const navigate = useNavigate();
 
-  const [form, setForm]         = useState({ name: '', email: '', password: '', craft: '', phone: '', instagram: '', story: '' });
-  const [submitted, setSubmitted] = useState(false);
-  const [openFaq, setOpenFaq]   = useState(null);
-  const [errors, setErrors]     = useState({});
+  const [form, setForm]             = useState({ name: '', email: '', password: '', craft: '', phone: '', instagram: '', story: '' });
+  const [openFaq, setOpenFaq]       = useState(null);
+  const [errors, setErrors]         = useState({});
   const [submitting, setSubmitting] = useState(false);
-  const [apiError, setApiError] = useState('');
+  const [apiError, setApiError]     = useState('');
+
+  // 'form' | 'otp' | 'registering' | 'done'
+  const [step, setStep]                 = useState('form');
+  const [pendingEmail, setPendingEmail] = useState('');
+
+  // Ref so handlers always read the latest form values
+  const formRef = useRef(form);
+  formRef.current = form;
 
   const validate = () => {
     const e = {};
@@ -75,51 +132,81 @@ const VendorLanding = () => {
 
   const inputStyle = (field) => ({ ...s.input, borderColor: errors[field] ? C.err : C.border });
 
-  const handleSubmit = async () => {
-    if (!isLoggedIn) {
-      navigate('/register?role=vendor');
-      return;
-    }
+  const registerVendorProfile = async (vendorName) => {
+    const f = formRef.current;
+    await vendorAPI.register({
+      storeName:        vendorName + "'s Studio",
+      storeDescription: f.story,
+      category:         craftToCategory(f.craft),
+    });
+  };
 
-    if (!validate()) return;
+  // Called by OTPStep after email verified
+  // Sequence: login() → vendorAPI.register() → refreshUser() → navigate()
+  const handleOTPVerified = async ({ token, user: verifiedUser }) => {
     setSubmitting(true);
     setApiError('');
+    setStep('registering');
     try {
-      // Register vendor profile
-      await vendorAPI.register({
-        storeName: user.name + "'s Studio",
-        storeDescription: form.story,
-        category: craftToCategory(form.craft),
-      });
-
-      // Refresh user role to vendor
+      // 1. Store token in localStorage synchronously
+      login(verifiedUser, token);
+      // 2. Create vendor profile — token is now in localStorage for axios
+      await registerVendorProfile(verifiedUser.name);
+      // 3. Get fresh JWT with role:vendor
       await refreshUser();
-      setSubmitted(true);
-
+      // 4. Navigate
+      navigate('/vendor/dashboard');
     } catch (err) {
-      setApiError(err.response?.data?.message || 'Something went wrong. Please try again.');
-    } finally {
+      console.error('Vendor reg error:', err.response?.data || err.message);
+      setApiError(err.response?.data?.message || err.response?.data?.error || 'Vendor registration failed. Please try again.');
+      setStep('form');
       setSubmitting(false);
     }
   };
 
-  if (submitted) {
-    return (
-      <div style={{ backgroundColor: C.bg, color: C.cream, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ maxWidth: 440, width: '100%', textAlign: 'center', padding: '0 24px' }}>
-          <div style={{ width: 72, height: 72, borderRadius: '50%', backgroundColor: C.gold, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', fontSize: 26 }}>✦</div>
-          <h1 style={{ color: C.cream, fontWeight: 900, fontSize: 28, textTransform: 'uppercase', marginBottom: 12 }}>You're a Vendor!</h1>
-          <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.8, marginBottom: 28 }}>
-            Welcome to the 57 Arts vendor community! Your store is now live.
-          </p>
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-            <Link to="/" style={s.btnGhost}>Back to Home</Link>
-            <button onClick={() => navigate('/vendor/dashboard')} style={s.btnGold}>Go to Dashboard →</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const handleSubmit = async () => {
+    if (!validate()) return;
+    setSubmitting(true);
+    setApiError('');
+
+    try {
+      // PATH A: Already logged in
+      if (isLoggedIn) {
+        await registerVendorProfile(user.name);
+        await refreshUser();
+        navigate('/vendor/dashboard');
+        return;
+      }
+
+      // PATH B: New user — register then show OTP
+      const regRes = await authAPI.register({
+        name:     form.name,
+        email:    form.email,
+        password: form.password,
+        phone:    form.phone,
+      });
+
+      if (regRes.data.requiresVerification) {
+        setPendingEmail(form.email);
+        setStep('otp');
+        setSubmitting(false);
+        return;
+      }
+
+      // Fallback: no verification needed
+      if (regRes.data.token) {
+        login(regRes.data.user, regRes.data.token);
+        await registerVendorProfile(form.name);
+        await refreshUser();
+        navigate('/vendor/dashboard');
+      }
+
+    } catch (err) {
+      console.error('Submit error:', err.response?.data || err.message);
+      setApiError(err.response?.data?.message || 'Something went wrong. Please try again.');
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div style={{ backgroundColor: C.bg, color: C.cream, minHeight: '100vh' }}>
@@ -166,13 +253,13 @@ const VendorLanding = () => {
           </div>
           <h2 style={{ color: C.cream, fontSize: 26, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.02em', marginBottom: 28 }}>From application to first sale in 4 steps</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
-            {steps.map((step, i) => (
-              <div key={step.num} style={{ position: 'relative' }}>
+            {steps.map((stepItem, i) => (
+              <div key={stepItem.num} style={{ position: 'relative' }}>
                 {i < 3 && <div style={{ position: 'absolute', top: 20, left: '60%', width: '80%', height: 1, backgroundColor: C.border, zIndex: 0 }} />}
                 <div style={{ ...s.card, padding: 22, position: 'relative', zIndex: 1 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: C.gold, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 13, color: '#000', marginBottom: 14 }}>{step.num}</div>
-                  <p style={{ color: C.cream, fontWeight: 900, fontSize: 14, marginBottom: 8 }}>{step.title}</p>
-                  <p style={{ color: C.muted, fontSize: 12, lineHeight: 1.65 }}>{step.desc}</p>
+                  <div style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: C.gold, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 13, color: '#000', marginBottom: 14 }}>{stepItem.num}</div>
+                  <p style={{ color: C.cream, fontWeight: 900, fontSize: 14, marginBottom: 8 }}>{stepItem.title}</p>
+                  <p style={{ color: C.muted, fontSize: 12, lineHeight: 1.65 }}>{stepItem.desc}</p>
                 </div>
               </div>
             ))}
@@ -224,83 +311,112 @@ const VendorLanding = () => {
         <div id="apply" style={{ ...s.card, overflow: 'hidden' }}>
           <div style={{ height: 3, backgroundColor: C.gold }} />
           <div style={{ padding: '22px 28px', borderBottom: `1px solid ${C.border}` }}>
-            <p style={s.eyebrow}>Apply now</p>
+            <p style={s.eyebrow}>
+              {step === 'otp' ? 'Verify your email' : step === 'registering' ? 'Setting up your store' : 'Apply now'}
+            </p>
             <h2 style={{ color: C.cream, fontWeight: 900, fontSize: 20 }}>
-              {isLoggedIn ? `Apply as ${user?.name}` : 'Apply to become a vendor'}
+              {step === 'otp'          ? 'One last step'
+               : step === 'registering' ? 'Almost there...'
+               : isLoggedIn            ? `Apply as ${user?.name}`
+               :                         'Apply to become a vendor'}
             </h2>
             <p style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>Free to apply · Instant approval · No commitment</p>
           </div>
+
           <div style={{ padding: 28, display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-            {/* Only show name/email/password if not logged in */}
-            {!isLoggedIn && (
+            {/* REGISTERING SPINNER */}
+            {step === 'registering' && (
+              <div style={{ textAlign: 'center', padding: '32px 0' }}>
+                <div style={{ width: 36, height: 36, border: `3px solid ${C.border}`, borderTop: `3px solid ${C.gold}`, borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                <p style={{ color: C.muted, fontSize: 13 }}>Creating your vendor profile...</p>
+              </div>
+            )}
+
+            {/* OTP STEP */}
+            {step === 'otp' && (
+              <OTPStep
+                email={pendingEmail}
+                onVerified={handleOTPVerified}
+                onBack={() => { setStep('form'); setApiError(''); }}
+                parentSubmitting={submitting}
+              />
+            )}
+
+            {/* FORM STEP */}
+            {step === 'form' && (
               <>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                  {[['Full Name','name','text','Your name'],['Email','email','email','hello@yourstudio.com']].map(([label,field,type,ph]) => (
-                    <div key={field}>
-                      <label style={s.label}>{label}</label>
-                      <input type={type} value={form[field]} placeholder={ph} onChange={e => setForm({...form,[field]:e.target.value})} style={inputStyle(field)} />
-                      {errors[field] && <p style={{ color: C.err, fontSize: 11, marginTop: 4 }}>{errors[field]}</p>}
+                {!isLoggedIn && (
+                  <>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                      {[['Full Name','name','text','Your name'],['Email','email','email','hello@yourstudio.com']].map(([label,field,type,ph]) => (
+                        <div key={field}>
+                          <label style={s.label}>{label}</label>
+                          <input type={type} value={form[field]} placeholder={ph} onChange={e => setForm({...form,[field]:e.target.value})} style={inputStyle(field)} />
+                          {errors[field] && <p style={{ color: C.err, fontSize: 11, marginTop: 4 }}>{errors[field]}</p>}
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                    <div>
+                      <label style={s.label}>Password</label>
+                      <input type="password" value={form.password} placeholder="Min 6 characters" onChange={e => setForm({...form,password:e.target.value})} style={inputStyle('password')} />
+                      {errors.password && <p style={{ color: C.err, fontSize: 11, marginTop: 4 }}>{errors.password}</p>}
+                    </div>
+                  </>
+                )}
+
+                {isLoggedIn && (
+                  <div style={{ backgroundColor: C.faint, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 16px' }}>
+                    <p style={{ color: C.muted, fontSize: 11 }}>Applying as: <span style={{ color: C.gold, fontWeight: 900 }}>{user?.name} ({user?.email})</span></p>
+                  </div>
+                )}
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                  <div>
+                    <label style={s.label}>Craft Category</label>
+                    <select value={form.craft} onChange={e => setForm({...form,craft:e.target.value})} style={inputStyle('craft')}>
+                      <option value="" disabled>Select your craft</option>
+                      {['Fashion & Apparel','Furniture & Woodwork','Beads & Jewellery','Antiques & Art','Ceramics & Pottery','Metalwork & Sculpture','Textiles & Weaving','Other'].map(o=><option key={o}>{o}</option>)}
+                    </select>
+                    {errors.craft && <p style={{ color: C.err, fontSize: 11, marginTop: 4 }}>{errors.craft}</p>}
+                  </div>
+                  <div>
+                    <label style={s.label}>Phone (M-Pesa)</label>
+                    <input type="text" value={form.phone} placeholder="+254 7XX XXX XXX" onChange={e => setForm({...form,phone:e.target.value})} style={s.input} />
+                  </div>
                 </div>
+
                 <div>
-                  <label style={s.label}>Password</label>
-                  <input type="password" value={form.password} placeholder="Min 6 characters" onChange={e => setForm({...form,password:e.target.value})} style={inputStyle('password')} />
-                  {errors.password && <p style={{ color: C.err, fontSize: 11, marginTop: 4 }}>{errors.password}</p>}
+                  <label style={s.label}>Instagram / Portfolio (optional)</label>
+                  <input type="text" value={form.instagram} placeholder="@yourstudio or portfolio URL" onChange={e => setForm({...form,instagram:e.target.value})} style={s.input} />
                 </div>
+
+                <div>
+                  <label style={s.label}>Tell us about your craft</label>
+                  <textarea value={form.story} onChange={e => setForm({...form,story:e.target.value})} rows={5}
+                    placeholder="What do you make, how long have you been doing it, what makes your work distinctive..."
+                    style={{ ...inputStyle('story'), resize: 'none', lineHeight: 1.7 }} />
+                  {errors.story && <p style={{ color: C.err, fontSize: 11, marginTop: 4 }}>{errors.story}</p>}
+                </div>
+
+                {apiError && (
+                  <div style={{ backgroundColor: 'rgba(248,113,113,0.1)', border: `1px solid rgba(248,113,113,0.3)`, borderRadius: 10, padding: '12px 16px' }}>
+                    <p style={{ color: C.err, fontSize: 12 }}>{apiError}</p>
+                  </div>
+                )}
+
+                <button onClick={handleSubmit} disabled={submitting}
+                  style={{ ...s.btnGold, width: '100%', padding: '14px', borderRadius: 10, textAlign: 'center', boxSizing: 'border-box', letterSpacing: '0.08em', opacity: submitting ? 0.7 : 1 }}>
+                  {submitting ? 'Submitting...' : isLoggedIn ? 'Submit Application — Free →' : 'Create Account & Apply — Free →'}
+                </button>
+
+                {!isLoggedIn && (
+                  <p style={{ color: C.muted, fontSize: 12, textAlign: 'center' }}>
+                    Already have an account? <Link to="/login" style={{ color: C.gold, fontWeight: 900, textDecoration: 'none' }}>Login first</Link>
+                  </p>
+                )}
               </>
-            )}
-
-            {isLoggedIn && (
-              <div style={{ backgroundColor: C.faint, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 16px' }}>
-                <p style={{ color: C.muted, fontSize: 11 }}>Applying as: <span style={{ color: C.gold, fontWeight: 900 }}>{user?.name} ({user?.email})</span></p>
-              </div>
-            )}
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-              <div>
-                <label style={s.label}>Craft Category</label>
-                <select value={form.craft} onChange={e => setForm({...form,craft:e.target.value})} style={inputStyle('craft')}>
-                  <option value="" disabled>Select your craft</option>
-                  {['Fashion & Apparel','Furniture & Woodwork','Beads & Jewellery','Antiques & Art','Ceramics & Pottery','Metalwork & Sculpture','Textiles & Weaving','Other'].map(o=><option key={o}>{o}</option>)}
-                </select>
-                {errors.craft && <p style={{ color: C.err, fontSize: 11, marginTop: 4 }}>{errors.craft}</p>}
-              </div>
-              <div>
-                <label style={s.label}>Phone (M-Pesa)</label>
-                <input type="text" value={form.phone} placeholder="+254 7XX XXX XXX" onChange={e => setForm({...form,phone:e.target.value})} style={s.input} />
-              </div>
-            </div>
-
-            <div>
-              <label style={s.label}>Instagram / Portfolio (optional)</label>
-              <input type="text" value={form.instagram} placeholder="@yourstudio or portfolio URL" onChange={e => setForm({...form,instagram:e.target.value})} style={s.input} />
-            </div>
-
-            <div>
-              <label style={s.label}>Tell us about your craft</label>
-              <textarea value={form.story} onChange={e => setForm({...form,story:e.target.value})} rows={5}
-                placeholder="What do you make, how long have you been doing it, what makes your work distinctive..."
-                style={{ ...inputStyle('story'), resize: 'none', lineHeight: 1.7 }} />
-              {errors.story && <p style={{ color: C.err, fontSize: 11, marginTop: 4 }}>{errors.story}</p>}
-            </div>
-
-            {apiError && (
-              <div style={{ backgroundColor: 'rgba(248,113,113,0.1)', border: `1px solid rgba(248,113,113,0.3)`, borderRadius: 10, padding: '12px 16px' }}>
-                <p style={{ color: C.err, fontSize: 12 }}>{apiError}</p>
-              </div>
-            )}
-
-            <button onClick={handleSubmit} disabled={submitting}
-              style={{ ...s.btnGold, width: '100%', padding: '14px', borderRadius: 10, textAlign: 'center', boxSizing: 'border-box', letterSpacing: '0.08em', opacity: submitting ? 0.7 : 1 }}>
-              {submitting ? 'Submitting...' : isLoggedIn ? 'Submit Application — Free →' : 'Create Account to Apply — Free →'}
-            </button>
-
-            {!isLoggedIn && (
-              <p style={{ color: C.muted, fontSize: 12, textAlign: 'center' }}>
-                Already have an account? <Link to="/login" style={{ color: C.gold, fontWeight: 900, textDecoration: 'none' }}>Login first</Link>
-              </p>
             )}
           </div>
         </div>

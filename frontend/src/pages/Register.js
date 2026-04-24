@@ -15,74 +15,46 @@ const inputStyle = (borderColor) => ({
   outline: 'none', boxSizing: 'border-box',
 });
 
-/* ─── Password strength logic ────────────────────────────────────────────────── */
 const getStrength = (pw) => {
   if (!pw) return { score: 0, label: '', color: 'transparent', checks: [] };
-
   const checks = [
-    { label: 'At least 8 characters',         pass: pw.length >= 8         },
-    { label: 'Uppercase letter (A–Z)',         pass: /[A-Z]/.test(pw)       },
-    { label: 'Lowercase letter (a–z)',         pass: /[a-z]/.test(pw)       },
-    { label: 'Number (0–9)',                   pass: /\d/.test(pw)           },
-    { label: 'Special character (!@#$…)',      pass: /[^A-Za-z0-9]/.test(pw) },
+    { label: 'At least 8 characters',    pass: pw.length >= 8          },
+    { label: 'Uppercase letter (A–Z)',    pass: /[A-Z]/.test(pw)        },
+    { label: 'Lowercase letter (a–z)',    pass: /[a-z]/.test(pw)        },
+    { label: 'Number (0–9)',              pass: /\d/.test(pw)            },
+    { label: 'Special character (!@#$…)', pass: /[^A-Za-z0-9]/.test(pw) },
   ];
-
   const score = checks.filter(c => c.pass).length;
-
   const meta = [
-    { label: '',          color: 'transparent'    },
-    { label: 'Very weak', color: '#e05c5c'        },
-    { label: 'Weak',      color: '#f97316'        },
-    { label: 'Fair',      color: '#facc15'        },
-    { label: 'Strong',    color: '#4caf50'        },
-    { label: 'Very strong', color: '#22c55e'      },
+    { label: '',            color: 'transparent' },
+    { label: 'Very weak',   color: '#e05c5c'     },
+    { label: 'Weak',        color: '#f97316'     },
+    { label: 'Fair',        color: '#facc15'     },
+    { label: 'Strong',      color: '#4caf50'     },
+    { label: 'Very strong', color: '#22c55e'     },
   ];
-
   return { score, ...meta[score], checks };
 };
 
-/* ─── Strength bar ───────────────────────────────────────────────────────────── */
 const StrengthBar = ({ password }) => {
   const { score, label, color, checks } = useMemo(() => getStrength(password), [password]);
   if (!password) return null;
-
   return (
     <div style={{ marginTop: 10 }}>
-      {/* 5-segment bar */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
-        {[1, 2, 3, 4, 5].map(i => (
-          <div key={i} style={{
-            flex: 1, height: 3, borderRadius: 99,
-            backgroundColor: i <= score ? color : C.faint,
-            transition: 'background-color 0.25s',
-          }} />
+        {[1,2,3,4,5].map(i => (
+          <div key={i} style={{ flex: 1, height: 3, borderRadius: 99, backgroundColor: i <= score ? color : C.faint, transition: 'background-color 0.25s' }} />
         ))}
       </div>
-
-      {/* Label */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <span style={{ fontSize: 11, color: C.muted }}>Password strength</span>
         <span style={{ fontSize: 11, fontWeight: 700, color }}>{label}</span>
       </div>
-
-      {/* Checklist */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {checks.map(({ label: clabel, pass }) => (
           <div key={clabel} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <span style={{
-              fontSize: 10, fontWeight: 900,
-              color: pass ? '#4caf50' : C.muted,
-              transition: 'color 0.2s',
-            }}>
-              {pass ? '✓' : '○'}
-            </span>
-            <span style={{
-              fontSize: 11,
-              color: pass ? C.cream : C.muted,
-              transition: 'color 0.2s',
-            }}>
-              {clabel}
-            </span>
+            <span style={{ fontSize: 10, fontWeight: 900, color: pass ? '#4caf50' : C.muted, transition: 'color 0.2s' }}>{pass ? '✓' : '○'}</span>
+            <span style={{ fontSize: 11, color: pass ? C.cream : C.muted, transition: 'color 0.2s' }}>{clabel}</span>
           </div>
         ))}
       </div>
@@ -90,16 +62,16 @@ const StrengthBar = ({ password }) => {
   );
 };
 
-/* ─── Main component ─────────────────────────────────────────────────────────── */
 const Register = () => {
-  const location                            = useLocation();
-  const preselectedRole                     = useMemo(() => {
+  const location        = useLocation();
+  const preselectedRole = useMemo(() => {
     const role = new URLSearchParams(location.search).get('role');
     return ['buyer', 'vendor', 'affiliate'].includes(role) ? role : 'buyer';
   }, [location.search]);
-  const [step, setStep]                     = useState('register'); // 'register' | 'verify'
+
+  const [step, setStep]                     = useState('register');
   const [form, setForm]                     = useState({ name: '', email: '', password: '', confirm: '', role: preselectedRole });
-  const [otp, setOtp]                       = useState(['', '', '', '', '', '']);
+  const [otp, setOtp]                       = useState(['','','','','','']);
   const [pendingEmail, setPendingEmail]     = useState('');
   const [devOtp, setDevOtp]                 = useState('');
   const [errors, setErrors]                 = useState({});
@@ -150,7 +122,6 @@ const Register = () => {
     setLoading(false);
   };
 
-  /* ── OTP helpers ──────────────────────────────────────────────────────────── */
   const handleOtpChange = (index, value) => {
     if (!/^\d*$/.test(value)) return;
     const newOtp = [...otp];
@@ -178,10 +149,30 @@ const Register = () => {
     setLoading(true); setApiError('');
     try {
       const res = await authAPI.verifyEmail({ email: pendingEmail, otp: code });
-      login(res.data.user, res.data.token, navigate);
+
+      // FIX: Do NOT use login(user, token, navigate) here for vendor/affiliate.
+      // login() with navigate redirects by role — but vendor/affiliate users
+      // still need to complete their profile setup BEFORE hitting the dashboard.
+      // Instead: store credentials only, then redirect to the landing page
+      // where vendorAPI.register() / affiliateAPI.register() will be called.
+      const { user, token } = res.data;
+
+      if (form.role === 'vendor') {
+        // Store credentials so VendorLanding can call vendorAPI.register()
+        // with a valid token, then navigate to /vendor/dashboard itself.
+        login(user, token); // no navigate — just store
+        navigate('/vendor');
+      } else if (form.role === 'affiliate') {
+        login(user, token); // no navigate — just store
+        navigate('/affiliate');
+      } else {
+        // Buyers: redirect by role as normal
+        login(user, token, navigate);
+      }
+
     } catch (err) {
       setApiError(err.response?.data?.message || 'Invalid or expired code. Please try again.');
-      setOtp(['', '', '', '', '', '']);
+      setOtp(['','','','','','']);
       document.getElementById('otp-0')?.focus();
     }
     setLoading(false);
@@ -192,7 +183,7 @@ const Register = () => {
     setResending(true); setApiError(''); setDevOtp('');
     try {
       const res = await authAPI.resendOTP({ email: pendingEmail });
-      setOtp(['', '', '', '', '', '']);
+      setOtp(['','','','','','']);
       if (res.data.devOtp) setDevOtp(res.data.devOtp);
       setResendCooldown(60);
       const timer = setInterval(() => {
@@ -210,63 +201,30 @@ const Register = () => {
     return C.border;
   };
 
-  /* ── Verify step ──────────────────────────────────────────────────────────── */
+  // ── Verify step ────────────────────────────────────────────────────────────
   if (step === 'verify') return (
     <div style={{ backgroundColor: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <div style={{ width: '100%', maxWidth: 420, textAlign: 'center' }}>
-
-        <div style={{
-          width: 72, height: 72, borderRadius: '50%',
-          backgroundColor: 'rgba(201,168,76,0.1)', border: `2px solid ${C.gold}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          margin: '0 auto 24px', fontSize: 28,
-        }}>✉️</div>
-
+        <div style={{ width: 72, height: 72, borderRadius: '50%', backgroundColor: 'rgba(201,168,76,0.1)', border: `2px solid ${C.gold}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', fontSize: 28 }}>✉️</div>
         <h1 style={{ color: C.cream, fontWeight: 900, fontSize: 26, marginBottom: 8 }}>Check your email</h1>
-        <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.8, marginBottom: 8 }}>
-          We sent a 6-digit verification code to
-        </p>
+        <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.8, marginBottom: 8 }}>We sent a 6-digit verification code to</p>
         <p style={{ color: C.gold, fontWeight: 900, fontSize: 14, marginBottom: 24 }}>{pendingEmail}</p>
 
         {devOtp && (
-          <div style={{
-            backgroundColor: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.4)',
-            borderRadius: 10, padding: '14px 16px', marginBottom: 20, textAlign: 'left',
-          }}>
-            <p style={{ color: '#f97316', fontSize: 11, fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
-              ⚡ Dev Mode — Email not delivered
-            </p>
-            <p style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>
-              Resend can only send to your verified account email.<br />
-              Your OTP is shown here for testing:
-            </p>
-            <p style={{ color: '#f97316', fontSize: 32, fontWeight: 900, letterSpacing: '0.3em', textAlign: 'center' }}>
-              {devOtp}
-            </p>
-            <p style={{ color: C.muted, fontSize: 11, textAlign: 'center', marginTop: 6 }}>
-              Add <code style={{ color: C.cream }}>RESEND_TEST_EMAIL=your@email.com</code> to your <code style={{ color: C.cream }}>.env</code> to receive real emails.
-            </p>
+          <div style={{ backgroundColor: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.4)', borderRadius: 10, padding: '14px 16px', marginBottom: 20, textAlign: 'left' }}>
+            <p style={{ color: '#f97316', fontSize: 11, fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>⚡ Dev Mode — Email not delivered</p>
+            <p style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>Your OTP is shown here for testing:</p>
+            <p style={{ color: '#f97316', fontSize: 32, fontWeight: 900, letterSpacing: '0.3em', textAlign: 'center' }}>{devOtp}</p>
           </div>
         )}
 
-        {/* OTP boxes */}
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 24 }}>
           {otp.map((digit, index) => (
-            <input
-              key={index}
-              id={`otp-${index}`}
-              type="text"
-              inputMode="numeric"
-              maxLength={1}
-              value={digit}
+            <input key={index} id={`otp-${index}`} type="text" inputMode="numeric" maxLength={1} value={digit}
               onChange={e => handleOtpChange(index, e.target.value)}
               onKeyDown={e => handleOtpKeyDown(index, e)}
               onPaste={handleOtpPaste}
-              style={{
-                width: 52, height: 60, textAlign: 'center', fontSize: 24, fontWeight: 900,
-                backgroundColor: C.surface, border: `1px solid ${digit ? C.gold : C.border}`,
-                borderRadius: 10, color: C.cream, outline: 'none', boxSizing: 'border-box',
-              }}
+              style={{ width: 52, height: 60, textAlign: 'center', fontSize: 24, fontWeight: 900, backgroundColor: C.surface, border: `1px solid ${digit ? C.gold : C.border}`, borderRadius: 10, color: C.cream, outline: 'none', boxSizing: 'border-box' }}
               onFocus={e => e.target.style.borderColor = C.bHov}
               onBlur={e => e.target.style.borderColor = digit ? C.gold : C.border}
             />
@@ -279,64 +237,35 @@ const Register = () => {
           </div>
         )}
 
-        <button
-          onClick={handleVerify}
-          disabled={loading || otp.join('').length < 6}
-          style={{
-            width: '100%',
-            backgroundColor: otp.join('').length === 6 ? C.gold : C.faint,
-            color: otp.join('').length === 6 ? '#000' : C.muted,
-            border: 'none', borderRadius: 10, padding: '14px',
-            fontWeight: 900, fontSize: 13,
-            cursor: otp.join('').length === 6 ? 'pointer' : 'not-allowed',
-            marginBottom: 16,
-          }}
-        >
+        <button onClick={handleVerify} disabled={loading || otp.join('').length < 6}
+          style={{ width: '100%', backgroundColor: otp.join('').length === 6 ? C.gold : C.faint, color: otp.join('').length === 6 ? '#000' : C.muted, border: 'none', borderRadius: 10, padding: '14px', fontWeight: 900, fontSize: 13, cursor: otp.join('').length === 6 ? 'pointer' : 'not-allowed', marginBottom: 16 }}>
           {loading ? 'Verifying...' : 'Verify Email →'}
         </button>
 
         <p style={{ color: C.muted, fontSize: 13 }}>
           Didn't receive the code?{' '}
-          <button
-            onClick={handleResend}
-            disabled={resendCooldown > 0 || resending}
-            style={{
-              background: 'none', border: 'none',
-              color: resendCooldown > 0 ? C.muted : C.gold,
-              fontWeight: 700, fontSize: 13,
-              cursor: resendCooldown > 0 ? 'not-allowed' : 'pointer', padding: 0,
-            }}
-          >
+          <button onClick={handleResend} disabled={resendCooldown > 0 || resending}
+            style={{ background: 'none', border: 'none', color: resendCooldown > 0 ? C.muted : C.gold, fontWeight: 700, fontSize: 13, cursor: resendCooldown > 0 ? 'not-allowed' : 'pointer', padding: 0 }}>
             {resending ? 'Sending...' : resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend code'}
           </button>
         </p>
 
-        <button
-          onClick={() => { setStep('register'); setOtp(['','','','','','']); setApiError(''); setDevOtp(''); }}
-          style={{ marginTop: 16, background: 'none', border: 'none', color: C.muted, fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}
-        >
+        <button onClick={() => { setStep('register'); setOtp(['','','','','','']); setApiError(''); setDevOtp(''); }}
+          style={{ marginTop: 16, background: 'none', border: 'none', color: C.muted, fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}>
           ← Use a different email
         </button>
       </div>
     </div>
   );
 
-  /* ── Register step ────────────────────────────────────────────────────────── */
+  // ── Register step ──────────────────────────────────────────────────────────
   return (
     <div style={{ backgroundColor: C.bg, minHeight: '100vh', display: 'flex' }}>
 
       {/* LEFT — brand panel */}
-      <div style={{
-        width: '45%', backgroundColor: C.surface,
-        borderRight: `1px solid ${C.border}`,
-        display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-        padding: '48px', position: 'relative', overflow: 'hidden',
-      }}>
-        <img
-          src="https://images.unsplash.com/photo-1592078615290-033ee584e267?w=800"
-          alt=""
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.07 }}
-        />
+      <div style={{ width: '45%', backgroundColor: C.surface, borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '48px', position: 'relative', overflow: 'hidden' }}>
+        <img src="https://images.unsplash.com/photo-1592078615290-033ee584e267?w=800" alt=""
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.07 }} />
         <div style={{ position: 'relative', zIndex: 1 }}>
           <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
             <div style={{ width: 32, height: 32, borderRadius: 6, backgroundColor: C.gold, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 12, color: '#000' }}>57</div>
@@ -353,12 +282,7 @@ const Register = () => {
           </p>
         </div>
         <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {[
-            'Access 2,400+ artisan products',
-            'Commission fully custom pieces',
-            'Track orders in real time',
-            'AI-powered recommendations',
-          ].map(perk => (
+          {['Access 2,400+ artisan products', 'Commission fully custom pieces', 'Track orders in real time', 'AI-powered recommendations'].map(perk => (
             <div key={perk} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ color: C.gold, fontSize: 12, fontWeight: 900 }}>—</span>
               <span style={{ color: C.muted, fontSize: 12 }}>{perk}</span>
@@ -381,21 +305,12 @@ const Register = () => {
             <p style={{ color: C.muted, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>I am joining as</p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
               {[
-                { key: 'buyer',  label: 'Buyer',           desc: 'Shop & commission pieces' },
-                { key: 'vendor', label: 'Artisan / Vendor', desc: 'Sell my craft'            },
-                { key: 'affiliate', label: 'Affiliate', desc: 'Share links and earn commission' },
+                { key: 'buyer',     label: 'Buyer',            desc: 'Shop & commission pieces'            },
+                { key: 'vendor',    label: 'Artisan / Vendor',  desc: 'Sell my craft'                      },
+                { key: 'affiliate', label: 'Affiliate',         desc: 'Share links and earn commission'     },
               ].map(({ key, label, desc }) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setForm(prev => ({ ...prev, role: key }))}
-                  style={{
-                    padding: '12px', borderRadius: 10,
-                    border: `1px solid ${form.role === key ? C.gold : C.border}`,
-                    backgroundColor: form.role === key ? 'rgba(201,168,76,0.08)' : C.surface,
-                    cursor: 'pointer', textAlign: 'left',
-                  }}
-                >
+                <button key={key} type="button" onClick={() => setForm(prev => ({ ...prev, role: key }))}
+                  style={{ padding: '12px', borderRadius: 10, border: `1px solid ${form.role === key ? C.gold : C.border}`, backgroundColor: form.role === key ? 'rgba(201,168,76,0.08)' : C.surface, cursor: 'pointer', textAlign: 'left' }}>
                   <p style={{ color: form.role === key ? C.gold : C.cream, fontWeight: 900, fontSize: 12, marginBottom: 2 }}>{label}</p>
                   <p style={{ color: C.muted, fontSize: 10 }}>{desc}</p>
                 </button>
@@ -403,12 +318,12 @@ const Register = () => {
             </div>
             {form.role === 'vendor' && (
               <p style={{ color: C.muted, fontSize: 11, lineHeight: 1.6, marginTop: 10 }}>
-                Vendor accounts finish storefront setup after email verification.
+                ✦ After verification you'll be taken to your vendor application to complete store setup.
               </p>
             )}
             {form.role === 'affiliate' && (
               <p style={{ color: C.muted, fontSize: 11, lineHeight: 1.6, marginTop: 10 }}>
-                Affiliate accounts finish activation after email verification and a quick profile setup.
+                ✦ After verification you'll be taken to the affiliate page to complete your profile.
               </p>
             )}
           </div>
@@ -420,99 +335,55 @@ const Register = () => {
           )}
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-
-            {/* Full Name */}
             <div>
               <label style={{ color: C.muted, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Full Name</label>
-              <input
-                type="text" name="name" value={form.name} onChange={handleChange}
-                placeholder="Your full name" autoComplete="name"
+              <input type="text" name="name" value={form.name} onChange={handleChange} placeholder="Your full name" autoComplete="name"
                 style={inputStyle(getBorderColor('name'))}
-                onFocus={() => setFocused('name')} onBlur={() => setFocused('')}
-              />
+                onFocus={() => setFocused('name')} onBlur={() => setFocused('')} />
               {errors.name && <p style={{ color: '#e05c5c', fontSize: 11, marginTop: 4 }}>{errors.name}</p>}
             </div>
 
-            {/* Email */}
             <div>
               <label style={{ color: C.muted, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Email Address</label>
-              <input
-                type="email" name="email" value={form.email} onChange={handleChange}
-                placeholder="you@example.com" autoComplete="email"
+              <input type="email" name="email" value={form.email} onChange={handleChange} placeholder="you@example.com" autoComplete="email"
                 style={inputStyle(getBorderColor('email'))}
-                onFocus={() => setFocused('email')} onBlur={() => setFocused('')}
-              />
+                onFocus={() => setFocused('email')} onBlur={() => setFocused('')} />
               {errors.email && <p style={{ color: '#e05c5c', fontSize: 11, marginTop: 4 }}>{errors.email}</p>}
             </div>
 
-            {/* Password + strength meter */}
             <div>
               <label style={{ color: C.muted, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Password</label>
               <div style={{ position: 'relative' }}>
-                <input
-                  type={showPw ? 'text' : 'password'}
-                  name="password" value={form.password} onChange={handleChange}
+                <input type={showPw ? 'text' : 'password'} name="password" value={form.password} onChange={handleChange}
                   placeholder="Min 8 characters" autoComplete="new-password"
                   style={{ ...inputStyle(getBorderColor('password')), paddingRight: 52 }}
-                  onFocus={() => setFocused('password')} onBlur={() => setFocused('')}
-                />
-                <button
-                  type="button" onClick={() => setShowPw(!showPw)}
-                  style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: C.muted, cursor: 'pointer', fontSize: 11 }}
-                >
+                  onFocus={() => setFocused('password')} onBlur={() => setFocused('')} />
+                <button type="button" onClick={() => setShowPw(!showPw)}
+                  style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: C.muted, cursor: 'pointer', fontSize: 11 }}>
                   {showPw ? 'Hide' : 'Show'}
                 </button>
               </div>
-
-              {/* Strength indicator — renders as user types */}
               <StrengthBar password={form.password} />
-
-              {errors.password && (
-                <p style={{ color: '#e05c5c', fontSize: 11, marginTop: 6 }}>{errors.password}</p>
-              )}
+              {errors.password && <p style={{ color: '#e05c5c', fontSize: 11, marginTop: 6 }}>{errors.password}</p>}
             </div>
 
-            {/* Confirm password */}
             <div>
               <label style={{ color: C.muted, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Confirm Password</label>
-              <input
-                type="password" name="confirm" value={form.confirm} onChange={handleChange}
-                placeholder="Repeat password" autoComplete="new-password"
+              <input type="password" name="confirm" value={form.confirm} onChange={handleChange} placeholder="Repeat password" autoComplete="new-password"
                 style={inputStyle(getBorderColor('confirm'))}
-                onFocus={() => setFocused('confirm')} onBlur={() => setFocused('')}
-              />
-              {/* Live match indicator */}
+                onFocus={() => setFocused('confirm')} onBlur={() => setFocused('')} />
               {form.confirm && (
                 <p style={{ fontSize: 11, marginTop: 4, color: form.password === form.confirm ? '#4caf50' : '#e05c5c' }}>
                   {form.password === form.confirm ? '✓ Passwords match' : '✗ Passwords do not match'}
                 </p>
               )}
-              {errors.confirm && !form.confirm && (
-                <p style={{ color: '#e05c5c', fontSize: 11, marginTop: 4 }}>{errors.confirm}</p>
-              )}
+              {errors.confirm && !form.confirm && <p style={{ color: '#e05c5c', fontSize: 11, marginTop: 4 }}>{errors.confirm}</p>}
             </div>
 
-            {/* Submit — disabled until password is at least "Fair" (score ≥ 3) */}
-            <button
-              type="submit"
-              disabled={loading || pwScore < 3}
-              style={{
-                backgroundColor: loading || pwScore < 3 ? C.faint : C.gold,
-                color: loading || pwScore < 3 ? C.muted : '#000',
-                border: 'none', borderRadius: 10, padding: '14px',
-                fontWeight: 900, fontSize: 13,
-                cursor: loading || pwScore < 3 ? 'not-allowed' : 'pointer',
-                letterSpacing: '0.04em', marginTop: 8,
-                transition: 'background-color 0.2s',
-              }}
-            >
-              {loading
-                ? 'Sending verification code...'
-                : pwScore < 3
-                ? 'Strengthen your password to continue'
-                : 'Continue →'}
+            <button type="submit" disabled={loading || pwScore < 3}
+              style={{ backgroundColor: loading || pwScore < 3 ? C.faint : C.gold, color: loading || pwScore < 3 ? C.muted : '#000', border: 'none', borderRadius: 10, padding: '14px', fontWeight: 900, fontSize: 13, cursor: loading || pwScore < 3 ? 'not-allowed' : 'pointer', letterSpacing: '0.04em', marginTop: 8, transition: 'background-color 0.2s' }}>
+              {loading ? 'Sending verification code...' : pwScore < 3 ? 'Strengthen your password to continue' : 'Continue →'}
             </button>
-
           </form>
 
           <p style={{ color: C.muted, fontSize: 11, textAlign: 'center', marginTop: 20, lineHeight: 1.7 }}>

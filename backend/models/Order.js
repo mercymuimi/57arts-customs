@@ -82,7 +82,7 @@ const orderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// ✅ No next() — modern Mongoose handles async pre-hooks via returned promise
+// Mongoose 9: async pre-save with no next parameter.
 orderSchema.pre('save', async function () {
   if (!this.orderNumber) {
     const count = await mongoose.model('Order').countDocuments();

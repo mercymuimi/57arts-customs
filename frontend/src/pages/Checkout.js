@@ -32,10 +32,10 @@ const isValidObjectId = str => /^[a-f\d]{24}$/i.test(String(str ?? ''));
 
 /* ─── Static data ────────────────────────────────────────────────────────────── */
 const paymentMethods = [
-  { id: 'mpesa',  label: 'M-Pesa',           desc: 'Safaricom M-Pesa STK push',   icon: '📱' },
-  { id: 'card',   label: 'Visa / Mastercard', desc: 'Credit or debit card',        icon: '💳' },
+  { id: 'mpesa',  label: 'M-Pesa',           desc: 'Safaricom M-Pesa STK push',    icon: '📱' },
+  { id: 'card',   label: 'Visa / Mastercard', desc: 'Credit or debit card',         icon: '💳' },
   { id: 'paypal', label: 'PayPal',            desc: 'Pay with your PayPal account', icon: '🅿' },
-  { id: 'bank',   label: 'Bank Transfer',     desc: 'Direct bank transfer',        icon: '🏦' },
+  { id: 'bank',   label: 'Bank Transfer',     desc: 'Direct bank transfer',         icon: '🏦' },
 ];
 
 const STEPS = ['Delivery', 'Payment', 'Verify', 'Review'];
@@ -83,23 +83,22 @@ const TextInput = ({ value, onChange, placeholder, type = 'text', hasError, styl
       boxSizing: 'border-box',
       ...style,
     }}
-    onFocus={e  => (e.target.style.borderColor = C.bHov)}
-    onBlur={e   => (e.target.style.borderColor = hasError ? 'rgba(224,92,92,0.4)' : C.border)}
+    onFocus={e => (e.target.style.borderColor = C.bHov)}
+    onBlur={e  => (e.target.style.borderColor = hasError ? 'rgba(224,92,92,0.4)' : C.border)}
   />
 );
 
 /** Alert / status banner */
 const Alert = ({ type, children }) => {
   const colors = {
-    success: { bg: 'rgba(76,175,80,0.1)',   border: 'rgba(76,175,80,0.3)',   text: C.green },
-    error:   { bg: 'rgba(224,92,92,0.1)',   border: 'rgba(224,92,92,0.3)',   text: C.red   },
-    info:    { bg: 'rgba(201,168,76,0.08)', border: 'rgba(201,168,76,0.3)',  text: C.gold  },
+    success: { bg: 'rgba(76,175,80,0.1)',   border: 'rgba(76,175,80,0.3)',  text: C.green },
+    error:   { bg: 'rgba(224,92,92,0.1)',   border: 'rgba(224,92,92,0.3)', text: C.red   },
+    info:    { bg: 'rgba(201,168,76,0.08)', border: 'rgba(201,168,76,0.3)', text: C.gold  },
   };
   const s = colors[type] || colors.info;
   return (
     <div style={{
-      marginTop: 12,
-      padding: '10px 14px',
+      marginTop: 12, padding: '10px 14px',
       backgroundColor: s.bg,
       border: `1px solid ${s.border}`,
       borderRadius: 8,
@@ -110,16 +109,8 @@ const Alert = ({ type, children }) => {
 };
 
 /* ─── GPS hook ───────────────────────────────────────────────────────────────── */
-/**
- * useGeoFill — requests GPS coordinates then reverse-geocodes via Nominatim
- * (OpenStreetMap). Free, no API key required, good coverage across Africa.
- *
- * Returns { fillFromGPS, gpsState }
- *   gpsState: 'idle' | 'locating' | 'geocoding' | 'success' | 'error'
- *   gpsError: human-readable message
- */
 const useGeoFill = (onFill) => {
-  const [gpsState, setGpsState] = useState('idle'); // idle | locating | geocoding | success | error
+  const [gpsState, setGpsState] = useState('idle');
   const [gpsError, setGpsError] = useState('');
 
   const fillFromGPS = () => {
@@ -181,8 +172,8 @@ const useGeoFill = (onFill) => {
 const GPSButton = ({ onFill }) => {
   const { fillFromGPS, gpsState, gpsError } = useGeoFill(onFill);
 
-  const busy    = gpsState === 'locating' || gpsState === 'geocoding';
-  const label   = {
+  const busy  = gpsState === 'locating' || gpsState === 'geocoding';
+  const label = {
     idle:      '📍 Use my current location',
     locating:  '⏳ Getting GPS coordinates…',
     geocoding: '🔍 Looking up address…',
@@ -197,16 +188,13 @@ const GPSButton = ({ onFill }) => {
         onClick={fillFromGPS}
         disabled={busy}
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
+          display: 'flex', alignItems: 'center', gap: 8,
           padding: '11px 18px',
           backgroundColor: C.surface,
           border: `1px solid ${gpsState === 'success' ? 'rgba(76,175,80,0.4)' : C.border}`,
           borderRadius: 10,
           color: gpsState === 'success' ? C.green : C.cream,
-          fontSize: 13,
-          fontWeight: 700,
+          fontSize: 13, fontWeight: 700,
           cursor: busy ? 'wait' : 'pointer',
           opacity: busy ? 0.7 : 1,
           transition: 'all 0.2s',
@@ -250,12 +238,10 @@ const StepDelivery = ({ form, setForm, errors }) => {
         Delivery Details
       </h2>
 
-      {/* GPS autofill */}
       <GPSButton onFill={handleGPSFill} />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-        {/* Name + Email */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
           <Field label="Full Name" error={errors.name}>
             <TextInput {...field('name')} placeholder="Your name" />
@@ -265,17 +251,14 @@ const StepDelivery = ({ form, setForm, errors }) => {
           </Field>
         </div>
 
-        {/* Phone */}
         <Field label="Phone Number" error={errors.phone}>
           <TextInput {...field('phone')} type="tel" placeholder="+254 7XX XXX XXX" />
         </Field>
 
-        {/* Street address */}
         <Field label="Street Address" error={errors.address}>
           <TextInput {...field('address')} placeholder="Street, estate or area" />
         </Field>
 
-        {/* City + Country */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
           <Field label="City / Town" error={errors.city}>
             <TextInput {...field('city')} placeholder="Nairobi" />
@@ -285,16 +268,10 @@ const StepDelivery = ({ form, setForm, errors }) => {
               value={form.country}
               onChange={e => setForm(f => ({ ...f, country: e.target.value }))}
               style={{
-                width: '100%',
-                backgroundColor: C.bg,
-                border: `1px solid ${C.border}`,
-                borderRadius: 10,
-                padding: '12px 15px',
-                color: C.cream,
-                fontSize: 13,
-                outline: 'none',
-                boxSizing: 'border-box',
-                cursor: 'pointer',
+                width: '100%', backgroundColor: C.bg,
+                border: `1px solid ${C.border}`, borderRadius: 10,
+                padding: '12px 15px', color: C.cream, fontSize: 13,
+                outline: 'none', boxSizing: 'border-box', cursor: 'pointer',
               }}
             >
               {COUNTRIES.map(c => (
@@ -304,7 +281,6 @@ const StepDelivery = ({ form, setForm, errors }) => {
           </Field>
         </div>
 
-        {/* Notes */}
         <Field label="Order Notes (optional)">
           <textarea
             value={form.notes}
@@ -312,17 +288,11 @@ const StepDelivery = ({ form, setForm, errors }) => {
             placeholder="Any special instructions for your artisan…"
             rows={3}
             style={{
-              width: '100%',
-              backgroundColor: C.bg,
-              border: `1px solid ${C.border}`,
-              borderRadius: 10,
-              padding: '12px 15px',
-              color: C.cream,
-              fontSize: 13,
-              outline: 'none',
-              boxSizing: 'border-box',
-              resize: 'none',
-              lineHeight: 1.6,
+              width: '100%', backgroundColor: C.bg,
+              border: `1px solid ${C.border}`, borderRadius: 10,
+              padding: '12px 15px', color: C.cream, fontSize: 13,
+              outline: 'none', boxSizing: 'border-box',
+              resize: 'none', lineHeight: 1.6,
             }}
           />
         </Field>
@@ -347,7 +317,6 @@ const StepPayment = ({
       Payment Method
     </h2>
 
-    {/* Method selector */}
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
       {paymentMethods.map(m => (
         <div
@@ -361,13 +330,9 @@ const StepPayment = ({
           style={{
             backgroundColor: C.surface,
             border: `1px solid ${payMethod === m.id ? C.gold : C.border}`,
-            borderRadius: 12,
-            padding: '16px 20px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 16,
-            cursor: 'pointer',
-            transition: 'border-color 0.2s',
+            borderRadius: 12, padding: '16px 20px',
+            display: 'flex', alignItems: 'center', gap: 16,
+            cursor: 'pointer', transition: 'border-color 0.2s',
           }}
         >
           <div style={{
@@ -517,6 +482,7 @@ const StepVerify = ({
   pollCount, total,
   handleVerifyPayment,
 }) => {
+  const MAX_POLLS = 8;
   const icons = { mpesa: '📱', card: '💳', paypal: '🅿', bank: '🏦' };
   const hints = {
     mpesa:  `STK push sent to ${mpesaPhone}. After entering your PIN, click verify below.`,
@@ -537,9 +503,7 @@ const StepVerify = ({
       <div style={{
         backgroundColor: C.surface,
         border: `1px solid ${C.border}`,
-        borderRadius: 14,
-        padding: 28,
-        textAlign: 'center',
+        borderRadius: 14, padding: 28, textAlign: 'center',
       }}>
         <div style={{ fontSize: 48, marginBottom: 16 }}>
           {verified ? '✅' : verifying ? '⏳' : icons[payMethod]}
@@ -549,7 +513,7 @@ const StepVerify = ({
           <>
             <p style={{ color: C.cream, fontWeight: 900, fontSize: 15, marginBottom: 8 }}>
               {verifying
-                ? `Checking payment… (${pollCount}/12)`
+                ? `Checking payment… (${pollCount}/${MAX_POLLS})`
                 : payMethod === 'mpesa'
                 ? 'Waiting for M-Pesa confirmation'
                 : 'Confirm Payment'}
@@ -570,9 +534,10 @@ const StepVerify = ({
                 I Have Paid — Verify Now
               </button>
             )}
+            {/* FIX: updated hint to reflect new 15s polling interval */}
             {verifying && payMethod === 'mpesa' && (
               <p style={{ color: C.muted, fontSize: 11, marginTop: 12 }}>
-                Checking every 5 seconds. Up to 60 seconds.
+                Checking every 15 seconds. Up to 2 minutes.
               </p>
             )}
           </>
@@ -604,7 +569,6 @@ const StepReview = ({ form, payMethod, items, placeError, setStep }) => (
       Review Order
     </h2>
 
-    {/* Delivery summary */}
     <div style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 20, marginBottom: 14 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <p style={{ color: C.cream, fontWeight: 900, fontSize: 13 }}>Delivery</p>
@@ -621,7 +585,6 @@ const StepReview = ({ form, payMethod, items, placeError, setStep }) => (
       </p>
     </div>
 
-    {/* Payment summary */}
     <div style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 20, marginBottom: 14 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <p style={{ color: C.cream, fontWeight: 900, fontSize: 13 }}>Payment</p>
@@ -632,7 +595,6 @@ const StepReview = ({ form, payMethod, items, placeError, setStep }) => (
       </p>
     </div>
 
-    {/* Items */}
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {items.map(item => (
         <div
@@ -640,11 +602,8 @@ const StepReview = ({ form, payMethod, items, placeError, setStep }) => (
           style={{
             backgroundColor: C.surface,
             border: `1px solid ${C.border}`,
-            borderRadius: 12,
-            padding: '14px 18px',
-            display: 'flex',
-            gap: 14,
-            alignItems: 'center',
+            borderRadius: 12, padding: '14px 18px',
+            display: 'flex', gap: 14, alignItems: 'center',
           }}
         >
           <img src={item.img} alt={item.name} style={{ width: 52, height: 52, borderRadius: 8, objectFit: 'cover' }} />
@@ -670,10 +629,8 @@ const OrderSummary = ({ items, subtotal, shipping, total, verified, step }) => (
   <div style={{
     backgroundColor: C.surface,
     border: `1px solid ${C.border}`,
-    borderRadius: 14,
-    padding: 24,
-    position: 'sticky',
-    top: 24,
+    borderRadius: 14, padding: 24,
+    position: 'sticky', top: 24,
   }}>
     <h3 style={{
       color: C.cream, fontWeight: 900, fontSize: 14,
@@ -745,10 +702,8 @@ const Checkout = () => {
   const { items, subtotal, clearCart } = useCart();
   const { user } = useAuth();
 
-  /* step state */
   const [step, setStep] = useState(0);
 
-  /* delivery form */
   const [form, setForm] = useState({
     name:    user?.name             || '',
     email:   user?.email            || '',
@@ -760,29 +715,25 @@ const Checkout = () => {
   });
   const [errors, setErrors] = useState({});
 
-  /* payment */
-  const [payMethod,          setPayMethod]          = useState('mpesa');
-  const [mpesaPhone,         setMpesaPhone]         = useState(user?.phone || '');
-  const [stkSent,            setStkSent]            = useState(false);
-  const [stkLoading,         setStkLoading]         = useState(false);
-  const [checkoutRequestId,  setCheckoutRequestId]  = useState('');
-  const [paymentData,        setPaymentData]        = useState(null);
-  const [cardForm,           setCardForm]           = useState({ number: '', expiry: '', cvv: '', holder: '' });
+  const [payMethod,         setPayMethod]         = useState('mpesa');
+  const [mpesaPhone,        setMpesaPhone]        = useState(user?.phone || '');
+  const [stkSent,           setStkSent]           = useState(false);
+  const [stkLoading,        setStkLoading]        = useState(false);
+  const [checkoutRequestId, setCheckoutRequestId] = useState('');
+  const [paymentData,       setPaymentData]       = useState(null);
+  const [cardForm,          setCardForm]          = useState({ number: '', expiry: '', cvv: '', holder: '' });
 
-  /* verify */
   const [verifying,   setVerifying]   = useState(false);
   const [verifyError, setVerifyError] = useState('');
   const [verified,    setVerified]    = useState(false);
   const [pollCount,   setPollCount]   = useState(0);
   const pollRef = useRef(null);
 
-  /* place order */
   const [placed,      setPlaced]      = useState(false);
   const [placedOrder, setPlacedOrder] = useState(null);
   const [placing,     setPlacing]     = useState(false);
   const [placeError,  setPlaceError]  = useState('');
 
-  /* derived */
   const shipping = calcShipping(subtotal);
   const total    = subtotal + shipping;
 
@@ -843,18 +794,20 @@ const Checkout = () => {
   };
 
   /* ── Payment polling ─────────────────────────────────────────────────────── */
+  // FIX: Changed interval from 5s to 15s to stay under Safaricom's rate limit
+  // of 5 requests/minute. Also fixed the logic bug where the count check ran
+  // inside setPollCount (a state updater) before the query, causing an extra
+  // query to fire after the limit was reached. Now uses a local `count` variable
+  // to check the limit AFTER the query, so polling stops cleanly.
   const startPolling = () => {
     if (pollRef.current) clearInterval(pollRef.current);
-    setPollCount(0);
+    let count = 0;
+    const MAX_POLLS = 8; // 8 × 15s = 2 minutes max
+
     pollRef.current = setInterval(async () => {
-      setPollCount(c => {
-        if (c >= 12) {
-          clearInterval(pollRef.current);
-          setVerifying(false);
-          setVerifyError('Payment not confirmed. Please check your phone and try again.');
-        }
-        return c + 1;
-      });
+      count += 1;
+      setPollCount(count);
+
       try {
         const { data } = await api.post('/payments/mpesa/query', { checkoutRequestId });
         if (data.paid) {
@@ -863,9 +816,17 @@ const Checkout = () => {
           setVerified(true);
           setVerifying(false);
           setVerifyError('');
+          return;
         }
-      } catch { /* ignore transient errors */ }
-    }, 5000);
+      } catch { /* ignore transient network errors */ }
+
+      // Stop polling after MAX_POLLS attempts
+      if (count >= MAX_POLLS) {
+        clearInterval(pollRef.current);
+        setVerifying(false);
+        setVerifyError('Payment not confirmed after 2 minutes. Please check your phone and try again.');
+      }
+    }, 15000); // ✅ 15s interval — safely under Safaricom's 5 requests/min limit
   };
 
   /* ── Verify payment ──────────────────────────────────────────────────────── */
@@ -879,6 +840,7 @@ const Checkout = () => {
         setVerifying(false);
         return;
       }
+      // Do one immediate check first before starting the polling interval
       try {
         const { data } = await api.post('/payments/mpesa/query', { checkoutRequestId });
         if (data.paid) {
@@ -1034,7 +996,7 @@ const Checkout = () => {
   return (
     <div style={{ backgroundColor: C.bg, color: C.cream, minHeight: '100vh' }}>
 
-      {/* ── Header / stepper ─────────────────────────────────────────────── */}
+      {/* Header / stepper */}
       <div style={{
         borderBottom: `1px solid ${C.border}`,
         padding: '24px 48px',
@@ -1044,7 +1006,6 @@ const Checkout = () => {
           maxWidth: 1200, margin: '0 auto',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          {/* Logo */}
           <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
             <div style={{
               width: 28, height: 28, borderRadius: 6,
@@ -1057,7 +1018,6 @@ const Checkout = () => {
             <span style={{ color: C.cream, fontWeight: 900, fontSize: 13 }}>57 ARTS & CUSTOMS</span>
           </Link>
 
-          {/* Step indicators */}
           <div style={{ display: 'flex', alignItems: 'center' }}>
             {STEPS.map((s, i) => (
               <React.Fragment key={s}>
@@ -1097,7 +1057,7 @@ const Checkout = () => {
         </div>
       </div>
 
-      {/* ── Body ─────────────────────────────────────────────────────────── */}
+      {/* Body */}
       <div style={{
         maxWidth: 1200, margin: '0 auto',
         padding: '40px 48px',
@@ -1108,9 +1068,7 @@ const Checkout = () => {
 
         {/* Left — active step */}
         <div>
-          {step === 0 && (
-            <StepDelivery form={form} setForm={setForm} errors={errors} />
-          )}
+          {step === 0 && <StepDelivery form={form} setForm={setForm} errors={errors} />}
           {step === 1 && (
             <StepPayment
               payMethod={payMethod}         setPayMethod={setPayMethod}

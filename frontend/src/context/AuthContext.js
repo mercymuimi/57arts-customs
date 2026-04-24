@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authAPI, vendorAPI, affiliateAPI } from '../services/api';
+import { authAPI } from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -8,31 +8,16 @@ export const STORAGE_KEYS = {
   user:  '57arts_user',
 };
 
-const resolvePostLoginRoute = async (userData) => {
-  if (userData.role === 'admin') return '/admin';
-  if (userData.role === 'buyer') return '/';
-
-  if (userData.role === 'vendor') {
-    try {
-      await vendorAPI.getProfile();
-      return '/vendor/dashboard';
-    } catch (error) {
-      if (error.response?.status === 404) return '/vendor';
-      return '/vendor/dashboard';
-    }
+// ✅ FIXED — simple role-based redirect, no async API calls during login
+// The old version called vendorAPI.getProfile() / affiliateAPI.getProfile()
+// during login before the token was set in axios, causing "next is not a function"
+const getRoleRedirect = (role) => {
+  switch (role) {
+    case 'admin':     return '/admin';
+    case 'vendor':    return '/vendor/dashboard';
+    case 'affiliate': return '/affiliate/dashboard';
+    default:          return '/';
   }
-
-  if (userData.role === 'affiliate') {
-    try {
-      await affiliateAPI.getProfile();
-      return '/affiliate/dashboard';
-    } catch (error) {
-      if (error.response?.status === 404) return '/affiliate';
-      return '/affiliate/dashboard';
-    }
-  }
-
-  return '/';
 };
 
 export const AuthProvider = ({ children }) => {
@@ -53,19 +38,21 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem(STORAGE_KEYS.token);
       localStorage.removeItem(STORAGE_KEYS.user);
     } finally {
-      setReady(true); // ✅ always set ready so app doesn't hang
+      setReady(true);
     }
   }, []);
 
-  // Login — stores credentials and redirects by role
-  const login = async (userData, authToken, navigate) => {
+  // ✅ FIXED — login is now synchronous (no async API calls)
+  // Token is saved to localStorage BEFORE any navigation happens,
+  // so axios interceptor picks it up correctly on next request
+  const login = (userData, authToken, navigate) => {
     setUser(userData);
     setToken(authToken);
     localStorage.setItem(STORAGE_KEYS.token, authToken);
     localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(userData));
 
     if (navigate) {
-      const redirect = await resolvePostLoginRoute(userData);
+      const redirect = getRoleRedirect(userData.role);
       navigate(redirect);
     }
   };
@@ -76,7 +63,7 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     localStorage.removeItem(STORAGE_KEYS.token);
     localStorage.removeItem(STORAGE_KEYS.user);
-    if (navigate) {
+    if (typeof navigate === 'function') {
       navigate('/login');
     } else {
       window.location.href = '/login';
@@ -90,7 +77,9 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(updated));
   };
 
-  // Refresh user from server (after role change e.g. buyer becomes vendor)
+  // ✅ FIXED — refreshUser now:
+  // 1. Saves fresh token (with updated role e.g. buyer → vendor/affiliate)
+  // 2. Only logs out on genuine 401, not network errors
   const refreshUser = async () => {
     try {
       const { data } = await authAPI.getMe();
@@ -98,8 +87,17 @@ export const AuthProvider = ({ children }) => {
         setUser(data.user);
         localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(data.user));
       }
-    } catch {
-      logout();
+      if (data?.token) {
+        setToken(data.token);
+        localStorage.setItem(STORAGE_KEYS.token, data.token);
+      }
+    } catch (err) {
+      // ✅ Only force logout on real auth failure, not network blips
+      if (err?.response?.status === 401) {
+        logout();
+      } else {
+        console.error('refreshUser failed:', err?.message);
+      }
     }
   };
 
@@ -109,8 +107,6 @@ export const AuthProvider = ({ children }) => {
   const isAdmin     = user?.role === 'admin';
   const isBuyer     = user?.role === 'buyer';
 
-  // ✅ Don't render children until localStorage is checked
-  // This prevents flash of "logged out" state on page refresh
   if (!ready) {
     return (
       <div style={{
