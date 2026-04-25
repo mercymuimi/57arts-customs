@@ -180,6 +180,38 @@ const getAllAffiliates = async (req, res) => {
   } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
+// PATCH /api/admin/affiliates/:id/approve
+const approveAffiliate = async (req, res) => {
+  try {
+    if (!requireAdmin(req, res)) return;
+    const affiliate = await Affiliate.findByIdAndUpdate(
+      req.params.id,
+      { status: 'active' },
+      { new: true }
+    ).populate('user', 'name email');
+    if (!affiliate) return res.status(404).json({ message: 'Affiliate not found' });
+    // Upgrade user role to 'affiliate' now that admin has approved
+    await User.findByIdAndUpdate(affiliate.user._id, { role: 'affiliate' });
+    res.json({ message: 'Affiliate approved', affiliate });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+};
+
+// PATCH /api/admin/affiliates/:id/suspend
+const suspendAffiliate = async (req, res) => {
+  try {
+    if (!requireAdmin(req, res)) return;
+    const affiliate = await Affiliate.findByIdAndUpdate(
+      req.params.id,
+      { status: 'suspended' },
+      { new: true }
+    ).populate('user', 'name email');
+    if (!affiliate) return res.status(404).json({ message: 'Affiliate not found' });
+    // Downgrade user role back to 'buyer' when suspended/rejected
+    await User.findByIdAndUpdate(affiliate.user._id, { role: 'buyer' });
+    res.json({ message: 'Affiliate suspended', affiliate });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+};
+
 let platformSettings = { maintenanceMode: false, newVendorRegistrations: true };
 
 // GET /api/admin/settings
@@ -204,6 +236,6 @@ module.exports = {
   getAllVendors, approveVendor, rejectVendor,
   getAllOrders, updateOrderStatus,
   getAllProducts, deleteProduct,
-  getAllAffiliates,
+  getAllAffiliates, approveAffiliate, suspendAffiliate,
   getSettings, updateSettings,
 };

@@ -7,7 +7,7 @@ const {
   getAllVendors, approveVendor, rejectVendor,
   getAllOrders, updateOrderStatus,
   getAllProducts, deleteProduct,
-  getAllAffiliates,
+  getAllAffiliates, approveAffiliate, suspendAffiliate,
   getSettings, updateSettings,
 } = require('../controllers/adminController');
 
@@ -31,6 +31,8 @@ router.get('/products', getAllProducts);
 router.delete('/products/:id', deleteProduct);
 
 router.get('/affiliates', getAllAffiliates);
+router.patch('/affiliates/:id/approve', approveAffiliate);
+router.patch('/affiliates/:id/suspend', suspendAffiliate);
 
 router.get('/settings', getSettings);
 router.put('/settings', updateSettings);

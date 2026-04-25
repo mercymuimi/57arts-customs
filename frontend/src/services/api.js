@@ -42,20 +42,20 @@ export const authAPI = {
   verifyEmail:    (data) => api.post('/auth/verify-email', data),
   resendOTP:      (data) => api.post('/auth/resend-otp', data),
   login:          (data) => api.post('/auth/login', data),
-  forgotPassword: (data) => api.post('/auth/forgot-password', data), // ✅
-  resetPassword:  (data) => api.post('/auth/reset-password', data),  // ✅
+  forgotPassword: (data) => api.post('/auth/forgot-password', data),
+  resetPassword:  (data) => api.post('/auth/reset-password', data),
   getMe:          ()     => api.get('/auth/me'),
   updateProfile:  (data) => api.put('/auth/me', data),
 };
 
 // ── ORDERS ────────────────────────────────────────────────────────────────────
 export const orderAPI = {
-  create:            (data)       => api.post('/orders', data),
-  getMyOrders:       ()           => api.get('/orders/my-orders'),
-  getById:           (id)         => api.get(`/orders/${id}`),
-  cancel:            (id, reason) => api.put(`/orders/${id}/cancel`, { reason }),
-  getVendorOrders:   ()           => api.get('/orders/vendor/all'),
-  updateStatus:      (id, status) => api.put(`/orders/${id}/status`, { status }),
+  create:          (data)       => api.post('/orders', data),
+  getMyOrders:     ()           => api.get('/orders/my-orders'),
+  getById:         (id)         => api.get(`/orders/${id}`),
+  cancel:          (id, reason) => api.put(`/orders/${id}/cancel`, { reason }),
+  getVendorOrders: ()           => api.get('/orders/vendor/all'),
+  updateStatus:    (id, status) => api.put(`/orders/${id}/status`, { status }),
 };
 
 // ── VENDORS ───────────────────────────────────────────────────────────────────
@@ -94,21 +94,36 @@ export const aiAPI = {
 
 // ── ADMIN ─────────────────────────────────────────────────────────────────────
 export const adminAPI = {
-  getStats:          ()             => api.get('/admin/stats'),
-  getUsers:          ()             => api.get('/admin/users'),
-  toggleUser:        (id)           => api.put(`/admin/users/${id}/toggle`),
-  updateUserRole:    (id, role)     => api.put(`/admin/users/${id}/role`, { role }),
-  deleteUser:        (id)           => api.delete(`/admin/users/${id}`),
-  getVendors:        ()             => api.get('/admin/vendors'),
-  approveVendor:     (id)           => api.put(`/admin/vendors/${id}/approve`),
-  rejectVendor:      (id)           => api.put(`/admin/vendors/${id}/reject`),
-  getOrders:         ()             => api.get('/admin/orders'),
-  updateOrderStatus: (id, status)   => api.put(`/admin/orders/${id}/status`, { orderStatus: status }),
-  getProducts:       ()             => api.get('/admin/products'),
-  deleteProduct:     (id)           => api.delete(`/admin/products/${id}`),
-  getAffiliates:     ()             => api.get('/admin/affiliates'),
-  getSettings:       ()             => api.get('/admin/settings'),
-  updateSettings:    (data)         => api.put('/admin/settings', data),
+  // Dashboard
+  getStats:          ()           => api.get('/admin/stats'),
+
+  // Users
+  getUsers:          ()           => api.get('/admin/users'),
+  toggleUser:        (id)         => api.put(`/admin/users/${id}/toggle`),
+  updateUserRole:    (id, role)   => api.put(`/admin/users/${id}/role`, { role }),
+  deleteUser:        (id)         => api.delete(`/admin/users/${id}`),
+
+  // Vendors
+  getVendors:        ()           => api.get('/admin/vendors'),
+  approveVendor:     (id)         => api.put(`/admin/vendors/${id}/approve`),
+  rejectVendor:      (id)         => api.put(`/admin/vendors/${id}/reject`),
+
+  // Orders
+  getOrders:         ()           => api.get('/admin/orders'),
+  updateOrderStatus: (id, status) => api.put(`/admin/orders/${id}/status`, { orderStatus: status }),
+
+  // Products
+  getProducts:       ()           => api.get('/admin/products'),
+  deleteProduct:     (id)         => api.delete(`/admin/products/${id}`),
+
+  // Affiliates
+  getAffiliates:     ()           => api.get('/admin/affiliates'),
+  approveAffiliate:  (id)         => api.patch(`/admin/affiliates/${id}/approve`),
+  suspendAffiliate:  (id)         => api.patch(`/admin/affiliates/${id}/suspend`),
+
+  // Settings
+  getSettings:       ()           => api.get('/admin/settings'),
+  updateSettings:    (data)       => api.put('/admin/settings', data),
 };
 
 export default api;

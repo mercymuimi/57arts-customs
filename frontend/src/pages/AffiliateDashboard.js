@@ -165,6 +165,59 @@ const AffiliateDashboard = () => {
     </div>
   );
 
+  // ── Pending approval screen ───────────────────────────────────────────────
+  if (stats?.status === 'pending') return (
+    <div style={{ backgroundColor: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ textAlign: 'center', maxWidth: 480, padding: 40 }}>
+        <div style={{
+          width: 72, height: 72, borderRadius: '50%',
+          backgroundColor: 'rgba(245,158,11,0.12)',
+          border: '2px solid rgba(245,158,11,0.3)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 32, margin: '0 auto 24px',
+        }}>⏳</div>
+        <h2 style={{ color: C.cream, fontWeight: 900, fontSize: 24, marginBottom: 12 }}>Application Under Review</h2>
+        <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.8, marginBottom: 28 }}>
+          Your affiliate application has been received and is being reviewed by our team.
+          You'll be able to access your dashboard and start earning once approved.
+        </p>
+        <div style={{
+          backgroundColor: C.surface, border: `1px solid ${C.border}`,
+          borderRadius: 12, padding: '16px 24px', marginBottom: 28,
+        }}>
+          <p style={{ color: C.muted, fontSize: 10, fontWeight: 900, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 6 }}>
+            Application submitted as
+          </p>
+          <p style={{ color: C.gold, fontWeight: 900, fontSize: 14 }}>{profile?.user?.email || user?.email}</p>
+        </div>
+        <p style={{ color: C.muted, fontSize: 11, marginBottom: 28 }}>
+          We typically review applications within 1–2 business days.
+        </p>
+        <Link to="/" style={{ ...s.btnGhost, textDecoration: 'none', display: 'inline-block' }}>← Back to Home</Link>
+      </div>
+    </div>
+  );
+
+  // ── Suspended screen ──────────────────────────────────────────────────────
+  if (stats?.status === 'suspended') return (
+    <div style={{ backgroundColor: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ textAlign: 'center', maxWidth: 480, padding: 40 }}>
+        <div style={{
+          width: 72, height: 72, borderRadius: '50%',
+          backgroundColor: 'rgba(224,92,92,0.1)',
+          border: '2px solid rgba(224,92,92,0.3)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 32, margin: '0 auto 24px',
+        }}>🚫</div>
+        <h2 style={{ color: C.cream, fontWeight: 900, fontSize: 24, marginBottom: 12 }}>Account Suspended</h2>
+        <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.8, marginBottom: 28 }}>
+          Your affiliate account has been suspended. Please contact support if you believe this is a mistake.
+        </p>
+        <Link to="/" style={{ ...s.btnGhost, textDecoration: 'none', display: 'inline-block' }}>← Back to Home</Link>
+      </div>
+    </div>
+  );
+
   return (
     <div style={{ backgroundColor: C.bg, color: C.cream, minHeight: '100vh' }}>
 

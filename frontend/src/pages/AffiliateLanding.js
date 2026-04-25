@@ -119,24 +119,39 @@ const AffiliateLanding = () => {
   if (submitted) {
     return (
       <div style={{ backgroundColor: C.bg, color: C.cream, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ maxWidth: 440, width: '100%', textAlign: 'center', padding: '0 24px' }}>
-          <div style={{ width: 72, height: 72, borderRadius: '50%', backgroundColor: C.gold, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', fontSize: 26 }}>✦</div>
-          <h1 style={{ color: C.cream, fontWeight: 900, fontSize: 28, textTransform: 'uppercase', marginBottom: 12 }}>You're In!</h1>
-          <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.8, marginBottom: 10 }}>
-            Welcome, <span style={{ color: C.gold, fontWeight: 900 }}>{form.name}</span>! Your affiliate account is active.
+        <div style={{ maxWidth: 480, width: '100%', textAlign: 'center', padding: '0 24px' }}>
+          <div style={{
+            width: 72, height: 72, borderRadius: '50%',
+            backgroundColor: 'rgba(245,158,11,0.12)',
+            border: '2px solid rgba(245,158,11,0.35)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 24px', fontSize: 30,
+          }}>⏳</div>
+
+          <h1 style={{ color: C.cream, fontWeight: 900, fontSize: 28, textTransform: 'uppercase', marginBottom: 12 }}>
+            Application Received!
+          </h1>
+          <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.8, marginBottom: 20 }}>
+            Thanks, <span style={{ color: C.gold, fontWeight: 900 }}>{form.name}</span>! Your application is under review.
+            Our team will approve it within <span style={{ color: C.cream, fontWeight: 700 }}>1–2 business days</span>.
           </p>
+
           {affiliateCode && (
             <div style={{ backgroundColor: C.faint, border: `1px solid ${C.border}`, borderRadius: 12, padding: '16px 24px', marginBottom: 20 }}>
-              <p style={{ color: C.muted, fontSize: 11, marginBottom: 6 }}>YOUR AFFILIATE CODE</p>
+              <p style={{ color: C.muted, fontSize: 10, fontWeight: 900, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 6 }}>
+                Your Affiliate Code (active after approval)
+              </p>
               <p style={{ color: C.gold, fontWeight: 900, fontSize: 22, letterSpacing: '0.1em' }}>{affiliateCode}</p>
             </div>
           )}
-          <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.8, marginBottom: 28 }}>
-            Your dashboard and referral links are ready. Start sharing and earning today!
+
+          <p style={{ color: C.muted, fontSize: 12, lineHeight: 1.8, marginBottom: 28 }}>
+            You'll receive an email once your account is approved. You can check your application status anytime from your dashboard.
           </p>
+
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
             <Link to="/" style={s.btnGhost}>Back to Home</Link>
-            <Link to="/affiliate/dashboard" style={s.btnGold}>Go to Dashboard →</Link>
+            <Link to="/affiliate/dashboard" style={s.btnGold}>Check Status →</Link>
           </div>
         </div>
       </div>
@@ -245,7 +260,7 @@ const AffiliateLanding = () => {
             <p style={s.eyebrow}>Apply to join</p>
             <h2 style={{ color: C.cream, fontWeight: 900, fontSize: 20 }}>Join the Affiliate Programme</h2>
             <p style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>
-              {user ? 'You\'re logged in — your account will be activated instantly.' : 'Free to join · Instant link on approval · No minimum traffic required'}
+              {user ? 'You\'re logged in — your application will be reviewed within 1–2 business days.' : 'Free to join · Instant link on approval · No minimum traffic required'}
             </p>
           </div>
           <div style={{ padding: 28, display: 'flex', flexDirection: 'column', gap: 16 }}>

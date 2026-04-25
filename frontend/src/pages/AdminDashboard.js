@@ -567,46 +567,91 @@ const ProductsPage = () => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// AFFILIATES PAGE
+// AFFILIATES PAGE  –  includes pending-approval flow
 // ═══════════════════════════════════════════════════════════════════════════════
 const AffiliatesPage = () => {
   const [affiliates, setAffiliates] = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [search,     setSearch]     = useState('');
+  const [filter,     setFilter]     = useState('all');
   const [sort,       setSort]       = useState('earned');
 
-  useEffect(() => {
+  // ── data loader (useCallback so approve/suspend/reinstate can refresh) ──────
+  const load = useCallback(() => {
+    setLoading(true);
     adminAPI.getAffiliates()
       .then(r => setAffiliates(r.data))
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => { load(); }, [load]);
+
+  // ── approval actions ────────────────────────────────────────────────────────
+  const approve   = async id => {
+    try { await adminAPI.approveAffiliate(id);  load(); }
+    catch (err) { alert(err.response?.data?.message || 'Failed to approve affiliate'); }
+  };
+  const suspend   = async id => {
+    try { await adminAPI.suspendAffiliate(id);  load(); }
+    catch (err) { alert(err.response?.data?.message || 'Failed to suspend affiliate'); }
+  };
+  const reinstate = async id => {
+    try { await adminAPI.approveAffiliate(id);  load(); }
+    catch (err) { alert(err.response?.data?.message || 'Failed to reinstate affiliate'); }
+  };
+
+  // ── counts for filter badges ────────────────────────────────────────────────
+  const counts = useMemo(() => ({
+    all:       affiliates.length,
+    pending:   affiliates.filter(a => a.status === 'pending').length,
+    active:    affiliates.filter(a => a.status === 'active').length,
+    suspended: affiliates.filter(a => a.status === 'suspended').length,
+  }), [affiliates]);
+
+  // ── filtered + sorted list ──────────────────────────────────────────────────
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return [...affiliates]
-      .filter(a => !q || (a.user?.name || '').toLowerCase().includes(q) || (a.user?.email || '').toLowerCase().includes(q))
+      .filter(a => {
+        const matchSearch = !q
+          || (a.user?.name     || '').toLowerCase().includes(q)
+          || (a.user?.email    || '').toLowerCase().includes(q)
+          || (a.affiliateCode  || '').toLowerCase().includes(q);
+        const matchFilter = filter === 'all' || a.status === filter;
+        return matchSearch && matchFilter;
+      })
       .sort((a, b) => {
         if (sort === 'earned') return (b.totalEarned || 0) - (a.totalEarned || 0);
         if (sort === 'clicks') return (b.totalClicks || 0) - (a.totalClicks || 0);
         if (sort === 'orders') return (b.totalOrders || 0) - (a.totalOrders || 0);
         return 0;
       });
-  }, [affiliates, search, sort]);
+  }, [affiliates, search, filter, sort]);
 
   if (loading) return <Loading text="Loading affiliates…" />;
 
-  const totalEarned = affiliates.reduce((s, a) => s + (a.totalEarned || 0), 0);
-  const totalClicks = affiliates.reduce((s, a) => s + (a.totalClicks || 0), 0);
+  const totalEarned = affiliates.filter(a => a.status === 'active').reduce((s, a) => s + (a.totalEarned || 0), 0);
+  const totalClicks = affiliates.filter(a => a.status === 'active').reduce((s, a) => s + (a.totalClicks || 0), 0);
 
   return (
     <>
       <PageHeader
         title="Affiliate Management"
-        subtitle={`KES ${totalEarned.toLocaleString()} total earned · ${totalClicks.toLocaleString()} total clicks`}
+        subtitle={`${counts.pending} pending approval · KES ${totalEarned.toLocaleString()} earned · ${totalClicks.toLocaleString()} clicks`}
         right={
           <>
             <SearchBar value={search} onChange={setSearch} placeholder="Search affiliates…" />
+            <FilterSelect
+              value={filter}
+              onChange={setFilter}
+              options={[
+                { value: 'all',       label: `All (${counts.all})`             },
+                { value: 'pending',   label: `Pending (${counts.pending})`     },
+                { value: 'active',    label: `Active (${counts.active})`       },
+                { value: 'suspended', label: `Suspended (${counts.suspended})` },
+              ]}
+            />
             <FilterSelect
               value={sort}
               onChange={setSort}
@@ -620,23 +665,79 @@ const AffiliatesPage = () => {
         }
       />
 
-      <Table cols={['Affiliate', 'Code', 'Clicks', 'Orders', 'Conversion', 'Earnings', 'Status']} empty="No affiliates yet">
+      {/* ── pending-approval banner ──────────────────────────────────────────── */}
+      {counts.pending > 0 && (
+        <div style={{
+          backgroundColor: 'rgba(245,158,11,0.08)',
+          border: `1px solid rgba(245,158,11,0.3)`,
+          borderRadius: 12, padding: '12px 18px',
+          display: 'flex', alignItems: 'center', gap: 10,
+          marginBottom: 18, fontSize: 13,
+        }}>
+          <span style={{ fontSize: 16 }}>⏳</span>
+          <span style={{ color: C.yellow, fontWeight: 700 }}>
+            {counts.pending} affiliate application{counts.pending > 1 ? 's' : ''} waiting for review.
+          </span>
+          <button
+            onClick={() => setFilter('pending')}
+            style={{
+              marginLeft: 'auto', backgroundColor: 'rgba(245,158,11,0.15)',
+              border: `1px solid rgba(245,158,11,0.35)`, color: C.yellow,
+              borderRadius: 8, padding: '4px 12px', fontSize: 11,
+              fontWeight: 800, cursor: 'pointer',
+            }}
+          >
+            Review Now
+          </button>
+        </div>
+      )}
+
+      <Table
+        cols={['Affiliate', 'Code', 'Channel / Audience', 'Clicks', 'Orders', 'Conv.', 'Earnings', 'Status', 'Actions']}
+        empty="No affiliates found"
+      >
         {filtered.map(a => {
-          const conv = a.totalClicks > 0 ? ((a.totalOrders / a.totalClicks) * 100).toFixed(1) : '0.0';
+          const conv        = a.totalClicks > 0 ? ((a.totalOrders / a.totalClicks) * 100).toFixed(1) : '0.0';
+          const statusColor = { active: 'green', suspended: 'red', pending: 'yellow' }[a.status] || 'gray';
           return (
             <Tr key={a._id}>
               <Td>
                 <div>
-                  <p style={{ fontWeight: 700 }}>{a.user?.name || '—'}</p>
+                  <p style={{ fontWeight: 700 }}>{a.user?.name  || '—'}</p>
                   <p style={{ color: C.muted, fontSize: 11 }}>{a.user?.email || '—'}</p>
                 </div>
               </Td>
-              <Td><span style={{ fontFamily: 'monospace', color: C.gold, fontWeight: 800, fontSize: 12 }}>{a.affiliateCode}</span></Td>
+              <Td>
+                <span style={{ fontFamily: 'monospace', color: C.gold, fontWeight: 800, fontSize: 12 }}>
+                  {a.affiliateCode || '—'}
+                </span>
+              </Td>
+              <Td style={{ color: C.muted, fontSize: 11, maxWidth: 160 }}>
+                {a.applicationData?.channel
+                  ? <><span style={{ color: C.cream }}>{a.applicationData.channel}</span>{a.applicationData.audience ? ` · ${a.applicationData.audience}` : ''}</>
+                  : '—'}
+              </Td>
               <Td style={{ color: C.muted }}>{(a.totalClicks || 0).toLocaleString()}</Td>
               <Td style={{ color: C.muted }}>{(a.totalOrders || 0).toLocaleString()}</Td>
               <Td><span style={{ color: Number(conv) > 5 ? C.green : C.muted }}>{conv}%</span></Td>
               <Td><span style={{ color: C.green, fontWeight: 800 }}>KES {(a.totalEarned || 0).toLocaleString()}</span></Td>
-              <Td><Badge text={a.status || 'active'} color={a.status === 'suspended' ? 'red' : 'green'} /></Td>
+              <Td><Badge text={a.status} color={statusColor} /></Td>
+              <Td>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {a.status === 'pending' && (
+                    <>
+                      <Btn onClick={() => approve(a._id)}  variant="success">Approve</Btn>
+                      <Btn onClick={() => suspend(a._id)}  variant="danger">Reject</Btn>
+                    </>
+                  )}
+                  {a.status === 'active' && (
+                    <Btn onClick={() => suspend(a._id)}    variant="danger">Suspend</Btn>
+                  )}
+                  {a.status === 'suspended' && (
+                    <Btn onClick={() => reinstate(a._id)}  variant="default">Reinstate</Btn>
+                  )}
+                </div>
+              </Td>
             </Tr>
           );
         })}

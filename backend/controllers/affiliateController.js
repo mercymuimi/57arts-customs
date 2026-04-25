@@ -12,16 +12,16 @@ exports.registerAffiliate = async (req, res) => {
     const { payoutMethod, mpesaNumber, bankDetails, channel, audience, why } = req.body;
 
     const affiliate = await Affiliate.create({
-      user:           req.user._id,
-      payoutMethod:   payoutMethod || 'mpesa',
-      mpesaNumber:    mpesaNumber  || '',
-      bankDetails:    bankDetails  || {},
-      status:         'active',
-      commissionRate: 5,
+      user:            req.user._id,
+      payoutMethod:    payoutMethod || 'mpesa',
+      mpesaNumber:     mpesaNumber  || '',
+      bankDetails:     bankDetails  || {},
+      status:          'pending',   // admin must approve before affiliate can earn
+      commissionRate:  5,
       applicationData: { channel, audience, why },
     });
 
-    await User.findByIdAndUpdate(req.user._id, { role: 'affiliate' });
+    // Role stays as 'buyer' until admin approves — upgraded in approveAffiliate
 
     res.status(201).json({ success: true, affiliate });
   } catch (err) {
