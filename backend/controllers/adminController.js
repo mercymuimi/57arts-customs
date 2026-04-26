@@ -1,8 +1,9 @@
-const User = require('../models/User');
-const Order = require('../models/Order');
-const Product = require('../models/Product');
-const Vendor = require('../models/Vendor');
-const Affiliate = require('../models/Affiliate');
+const User        = require('../models/User');
+const Order       = require('../models/Order');
+const CustomOrder = require('../models/CustomOrder');
+const Product     = require('../models/Product');
+const Vendor      = require('../models/Vendor');
+const Affiliate   = require('../models/Affiliate');
 
 const requireAdmin = (req, res) => {
   if (req.user.role !== 'admin') {
@@ -16,29 +17,66 @@ const requireAdmin = (req, res) => {
 const getDashboardStats = async (req, res) => {
   try {
     if (!requireAdmin(req, res)) return;
-    const [totalUsers, totalVendors, totalOrders, totalProducts, totalAffiliates, recentOrders, revenueData] = await Promise.all([
+
+    const [
+      totalUsers,
+      totalVendors,
+      totalRegularOrders,
+      totalCustomOrders,
+      totalProducts,
+      totalAffiliates,
+      recentRegularOrders,
+      recentCustomOrders,
+      revenueData,
+    ] = await Promise.all([
       User.countDocuments({ role: 'buyer' }),
       User.countDocuments({ role: 'vendor' }),
       Order.countDocuments(),
+      CustomOrder.countDocuments(),
       Product.countDocuments(),
       User.countDocuments({ role: 'affiliate' }),
       Order.find().sort({ createdAt: -1 }).limit(5).populate('user', 'name email'),
+      CustomOrder.find().sort({ createdAt: -1 }).limit(5).populate('user', 'name email'),
       Order.aggregate([
         { $match: { paymentStatus: 'paid' } },
         { $group: { _id: { $month: '$createdAt' }, total: { $sum: '$totalPrice' } } },
         { $sort: { _id: 1 } },
       ]),
     ]);
-    const totalRevenue = await Order.aggregate([
+
+    const totalRevenueData = await Order.aggregate([
       { $match: { paymentStatus: 'paid' } },
       { $group: { _id: null, total: { $sum: '$totalPrice' } } },
     ]);
+
+    const recentOrders = [
+      ...recentRegularOrders.map(o => ({ ...o.toObject(), type: 'regular' })),
+      ...recentCustomOrders.map(o => ({
+        ...o.toObject(),
+        type:        'custom',
+        totalPrice:  o.quotedPrice || 0,
+        orderStatus: o.orderStatus,
+        orderNumber: o.orderNumber,
+      })),
+    ]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 5);
+
     res.json({
-      totalUsers, totalVendors, totalOrders, totalProducts, totalAffiliates,
-      totalRevenue: totalRevenue[0]?.total || 0,
-      recentOrders, revenueData,
+      totalUsers,
+      totalVendors,
+      totalOrders:        totalRegularOrders + totalCustomOrders,
+      totalRegularOrders,
+      totalCustomOrders,
+      totalProducts,
+      totalAffiliates,
+      totalRevenue:       totalRevenueData[0]?.total || 0,
+      recentOrders,
+      revenueData,
     });
-  } catch (err) { res.status(500).json({ message: err.message }); }
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 };
 
 // GET /api/admin/users
@@ -97,7 +135,6 @@ const getAllVendors = async (req, res) => {
 };
 
 // PUT /api/admin/vendors/:id/approve
-// ✅ FIX: Upgrades user role to 'vendor' only after admin approval
 const approveVendor = async (req, res) => {
   try {
     if (!requireAdmin(req, res)) return;
@@ -107,14 +144,12 @@ const approveVendor = async (req, res) => {
       { new: true }
     ).populate('user', 'name email');
     if (!vendor) return res.status(404).json({ message: 'Vendor not found' });
-    // ✅ Now upgrade the user role to 'vendor' — this is the only place this happens
     await User.findByIdAndUpdate(vendor.user._id, { role: 'vendor' });
     res.json({ message: 'Vendor approved', vendor });
   } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
 // PUT /api/admin/vendors/:id/reject
-// ✅ FIX: Downgrades user role back to 'buyer' when suspended
 const rejectVendor = async (req, res) => {
   try {
     if (!requireAdmin(req, res)) return;
@@ -124,7 +159,6 @@ const rejectVendor = async (req, res) => {
       { new: true }
     ).populate('user', 'name email');
     if (!vendor) return res.status(404).json({ message: 'Vendor not found' });
-    // ✅ Downgrade user role back to 'buyer' when suspended
     await User.findByIdAndUpdate(vendor.user._id, { role: 'buyer' });
     res.json({ message: 'Vendor suspended', vendor });
   } catch (err) { res.status(500).json({ message: err.message }); }
@@ -185,12 +219,9 @@ const approveAffiliate = async (req, res) => {
   try {
     if (!requireAdmin(req, res)) return;
     const affiliate = await Affiliate.findByIdAndUpdate(
-      req.params.id,
-      { status: 'active' },
-      { new: true }
+      req.params.id, { status: 'active' }, { new: true }
     ).populate('user', 'name email');
     if (!affiliate) return res.status(404).json({ message: 'Affiliate not found' });
-    // Upgrade user role to 'affiliate' now that admin has approved
     await User.findByIdAndUpdate(affiliate.user._id, { role: 'affiliate' });
     res.json({ message: 'Affiliate approved', affiliate });
   } catch (err) { res.status(500).json({ message: err.message }); }
@@ -201,12 +232,9 @@ const suspendAffiliate = async (req, res) => {
   try {
     if (!requireAdmin(req, res)) return;
     const affiliate = await Affiliate.findByIdAndUpdate(
-      req.params.id,
-      { status: 'suspended' },
-      { new: true }
+      req.params.id, { status: 'suspended' }, { new: true }
     ).populate('user', 'name email');
     if (!affiliate) return res.status(404).json({ message: 'Affiliate not found' });
-    // Downgrade user role back to 'buyer' when suspended/rejected
     await User.findByIdAndUpdate(affiliate.user._id, { role: 'buyer' });
     res.json({ message: 'Affiliate suspended', affiliate });
   } catch (err) { res.status(500).json({ message: err.message }); }
@@ -231,11 +259,50 @@ const updateSettings = async (req, res) => {
   } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
+// GET /api/admin/custom-orders
+const getAllCustomOrders = async (req, res) => {
+  try {
+    if (!requireAdmin(req, res)) return;
+    const orders = await CustomOrder.find()
+      .populate('user', 'name email')
+      .sort({ createdAt: -1 });
+    res.json(orders);
+  } catch (err) { res.status(500).json({ message: err.message }); }
+};
+
+// PUT /api/admin/custom-orders/:id/status
+const updateCustomOrderStatus = async (req, res) => {
+  try {
+    if (!requireAdmin(req, res)) return;
+    const { orderStatus, quotedPrice, adminNotes } = req.body;
+
+    const allowed = ['pending', 'quoted', 'approved', 'in_progress', 'delivered', 'cancelled'];
+    if (orderStatus && !allowed.includes(orderStatus))
+      return res.status(400).json({ message: `Invalid status. Must be one of: ${allowed.join(', ')}` });
+
+    const update = {};
+    if (orderStatus !== undefined)  update.orderStatus  = orderStatus;
+    if (quotedPrice !== undefined)  update.quotedPrice  = quotedPrice;
+    if (adminNotes  !== undefined)  update.adminNotes   = adminNotes;
+
+    const order = await CustomOrder.findByIdAndUpdate(
+      req.params.id,
+      { $set: update },
+      { new: true, runValidators: true }
+    ).populate('user', 'name email');
+
+    if (!order) return res.status(404).json({ message: 'Custom order not found' });
+    res.json(order);
+  } catch (err) { res.status(500).json({ message: err.message }); }
+};
+
 module.exports = {
-  getDashboardStats, getAllUsers, toggleUserStatus, updateUserRole, deleteUser,
+  getDashboardStats,
+  getAllUsers, toggleUserStatus, updateUserRole, deleteUser,
   getAllVendors, approveVendor, rejectVendor,
   getAllOrders, updateOrderStatus,
   getAllProducts, deleteProduct,
   getAllAffiliates, approveAffiliate, suspendAffiliate,
   getSettings, updateSettings,
+  getAllCustomOrders, updateCustomOrderStatus,
 };

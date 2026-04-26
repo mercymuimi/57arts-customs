@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
-const api = axios.create({ baseURL: BASE, timeout: 8000 });
+const api = axios.create({ baseURL: BASE, timeout: 120000 }); // 120s — allows Stability AI generation time
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('57arts_token');
@@ -90,6 +90,7 @@ export const aiAPI = {
   recordInteraction:  (body)        => api.post('/ai/interactions', body),
   getSimilar:         (productId)   => api.get(`/ai/similar/${productId}`),
   chat:               (message, userId) => api.post('/ai/chat', { message, user_id: userId || null }),
+  generateImage:      (data)        => api.post('/ai/generate-image', data, { timeout: 120000 }),
 };
 
 // ── ADMIN ─────────────────────────────────────────────────────────────────────
@@ -120,6 +121,10 @@ export const adminAPI = {
   getAffiliates:     ()           => api.get('/admin/affiliates'),
   approveAffiliate:  (id)         => api.patch(`/admin/affiliates/${id}/approve`),
   suspendAffiliate:  (id)         => api.patch(`/admin/affiliates/${id}/suspend`),
+
+  // Custom Orders
+  getCustomOrders:          ()              => api.get('/admin/custom-orders'),
+  updateCustomOrderStatus:  (id, data)      => api.put(`/admin/custom-orders/${id}/status`, data),
 
   // Settings
   getSettings:       ()           => api.get('/admin/settings'),

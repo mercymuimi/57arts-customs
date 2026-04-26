@@ -21,6 +21,7 @@ const sideLinks = [
   { id: 'Dashboard',         icon: '▦',  group: 'main' },
   { id: 'Vendors',           icon: '🏪', group: 'main' },
   { id: 'Orders',            icon: '📦', group: 'main' },
+  { id: 'Custom Orders',     icon: '✦',  group: 'main' },
   { id: 'Products',          icon: '🛍️', group: 'manage' },
   { id: 'Affiliates',        icon: '🔗', group: 'manage' },
   { id: 'User Management',   icon: '👥', group: 'manage' },
@@ -201,6 +202,7 @@ const DashboardPage = () => {
         <StatCard label="Total Revenue"    value={`KES ${(stats.totalRevenue || 0).toLocaleString()}`} icon="💰" sub="All time" />
         <StatCard label="Active Vendors"   value={stats.totalVendors   || 0} icon="🏪" />
         <StatCard label="Total Orders"     value={stats.totalOrders    || 0} icon="📦" />
+        <StatCard label="Custom Orders"   value={stats.totalCustomOrders || 0} icon="✦" />
         <StatCard label="Total Users"      value={stats.totalUsers     || 0} icon="👥" />
         <StatCard label="Total Products"   value={stats.totalProducts  || 0} icon="🛍️" />
         <StatCard label="Total Affiliates" value={stats.totalAffiliates|| 0} icon="🔗" />
@@ -925,6 +927,132 @@ const SettingsPage = () => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// CUSTOM ORDERS PAGE
+// ═══════════════════════════════════════════════════════════════════════════════
+const customOrderStatusColor = s => ({
+  pending:     'yellow',
+  quoted:      'blue',
+  approved:    'blue',
+  in_progress: 'yellow',
+  delivered:   'green',
+  cancelled:   'red',
+}[s] || 'gray');
+
+const CustomOrdersPage = () => {
+  const [orders,  setOrders]  = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search,  setSearch]  = useState('');
+  const [filter,  setFilter]  = useState('all');
+
+  const load = useCallback(() => {
+    setLoading(true);
+    adminAPI.getCustomOrders()
+      .then(r => setOrders(r.data))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const changeStatus = async (id, orderStatus) => {
+    try {
+      await adminAPI.updateCustomOrderStatus(id, { orderStatus });
+      load();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update status');
+    }
+  };
+
+  const filtered = useMemo(() => orders.filter(o => {
+    const q = search.toLowerCase();
+    const matchSearch = !q
+      || (o.orderNumber || '').toLowerCase().includes(q)
+      || (o.user?.name  || '').toLowerCase().includes(q)
+      || (o.user?.email || '').toLowerCase().includes(q)
+      || (o.vision      || '').toLowerCase().includes(q);
+    const matchFilter = filter === 'all' || o.orderStatus === filter;
+    return matchSearch && matchFilter;
+  }), [orders, search, filter]);
+
+  if (loading) return <Loading text="Loading custom orders…" />;
+
+  const CATEGORY_ICONS = { fashion: '👔', furniture: '🪑', beads: '💎' };
+
+  return (
+    <>
+      <PageHeader
+        title="Custom Orders"
+        subtitle={`${orders.length} total · ${orders.filter(o => o.orderStatus === 'pending').length} awaiting review`}
+        right={
+          <>
+            <SearchBar value={search} onChange={setSearch} placeholder="Search vision / customer…" />
+            <FilterSelect
+              value={filter}
+              onChange={setFilter}
+              options={[
+                { value: 'all',         label: 'All Statuses'   },
+                { value: 'pending',     label: 'Pending'        },
+                { value: 'quoted',      label: 'Quoted'         },
+                { value: 'approved',    label: 'Approved'       },
+                { value: 'in_progress', label: 'In Progress'    },
+                { value: 'delivered',   label: 'Delivered'      },
+                { value: 'cancelled',   label: 'Cancelled'      },
+              ]}
+            />
+          </>
+        }
+      />
+
+      <Table
+        cols={['Order #', 'Customer', 'Category', 'Vision', 'Price', 'Status', 'Update']}
+        empty="No custom orders found"
+      >
+        {filtered.map(o => (
+          <Tr key={o._id}>
+            <Td>
+              <span style={{ fontWeight: 800, fontFamily: 'monospace', fontSize: 11 }}>
+                {o.orderNumber || o._id?.slice(-8)}
+              </span>
+            </Td>
+            <Td style={{ color: C.muted }}>{o.user?.name || o.user?.email || 'Unknown'}</Td>
+            <Td>
+              <span style={{ fontSize: 14 }}>{CATEGORY_ICONS[o.category] || '✦'}</span>{' '}
+              <span style={{ textTransform: 'capitalize', fontSize: 12 }}>{o.categoryLabel || o.category}</span>
+            </Td>
+            <Td style={{ maxWidth: 220 }}>
+              <p style={{ color: C.muted, fontSize: 11, fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                "{o.vision}"
+              </p>
+            </Td>
+            <Td>
+              <span style={{ color: C.gold, fontWeight: 800 }}>
+                {o.quotedPrice ? `KES ${o.quotedPrice.toLocaleString()}` : o.basePrice || '—'}
+              </span>
+            </Td>
+            <Td><Badge text={o.orderStatus} color={customOrderStatusColor(o.orderStatus)} /></Td>
+            <Td>
+              <select
+                value={o.orderStatus}
+                onChange={e => changeStatus(o._id, e.target.value)}
+                style={{
+                  backgroundColor: C.bg, border: `1px solid ${C.border}`,
+                  color: C.cream, fontSize: 11, padding: '4px 8px',
+                  borderRadius: 7, outline: 'none', cursor: 'pointer',
+                }}
+              >
+                {['pending','quoted','approved','in_progress','delivered','cancelled'].map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </Td>
+          </Tr>
+        ))}
+      </Table>
+    </>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // MAIN ADMIN DASHBOARD
 // ═══════════════════════════════════════════════════════════════════════════════
 const AdminDashboard = () => {
@@ -934,6 +1062,7 @@ const AdminDashboard = () => {
     'Dashboard':         <DashboardPage />,
     'Vendors':           <VendorsPage />,
     'Orders':            <OrdersPage />,
+    'Custom Orders':     <CustomOrdersPage />,
     'Products':          <ProductsPage />,
     'Affiliates':        <AffiliatesPage />,
     'User Management':   <UsersPage />,

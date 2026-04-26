@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { aiAPI } from '../services/api';
+import api from '../services/api';
 
 // ── DESIGN TOKENS ─────────────────────────────────────────────────────────────
 const C = {
@@ -12,6 +14,8 @@ const C = {
   muted:   '#606060',
   dim:     '#333333',
   gold:    '#c9a84c',
+  green:   '#4ade80',
+  red:     '#e05c5c',
 };
 
 const s = {
@@ -30,12 +34,12 @@ const categories = [
     desc: 'Bespoke apparel, statement pieces, and heritage-infused streetwear.',
     timeline: '2–4 Weeks', basePrice: 'KES 15,000',
     materials: [
-      { id: 'organic-cotton',  name: 'Organic Cotton',       img: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300' },
-      { id: 'aso-oke',        name: 'Aso-Oke Hand-woven',   img: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=300' },
-      { id: 'italian-velvet', name: 'Italian Velvet',        img: 'https://images.unsplash.com/photo-1551537482-f2075a1d41f2?w=300' },
-      { id: 'selvedge-denim', name: '14oz Selvedge Denim',  img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=300' },
-      { id: 'belgian-linen',  name: 'Belgian Linen',         img: 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=300' },
-      { id: 'kente-cloth',    name: 'Kente Cloth',           img: 'https://images.unsplash.com/photo-1596752765962-c89db2f87768?w=300' },
+      { id: 'organic-cotton',  name: 'Organic Cotton',      img: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300' },
+      { id: 'aso-oke',        name: 'Aso-Oke Hand-woven',  img: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=300' },
+      { id: 'italian-velvet', name: 'Italian Velvet',       img: 'https://images.unsplash.com/photo-1551537482-f2075a1d41f2?w=300' },
+      { id: 'selvedge-denim', name: '14oz Selvedge Denim', img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=300' },
+      { id: 'belgian-linen',  name: 'Belgian Linen',        img: 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=300' },
+      { id: 'kente-cloth',    name: 'Kente Cloth',          img: 'https://images.unsplash.com/photo-1596752765962-c89db2f87768?w=300' },
     ],
   },
   {
@@ -43,12 +47,12 @@ const categories = [
     desc: 'Custom carved wood, sculptural metalwork, and functional art.',
     timeline: '4–8 Weeks', basePrice: 'KES 45,000',
     materials: [
-      { id: 'solid-mahogany', name: 'Solid Mahogany',   img: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=300' },
-      { id: 'teak-wood',      name: 'Teak Wood',         img: 'https://images.unsplash.com/photo-1592078615290-033ee584e267?w=300' },
-      { id: 'recycled-brass', name: 'Recycled Brass',    img: 'https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?w=300' },
-      { id: 'walnut',         name: 'Black Walnut',       img: 'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?w=300' },
-      { id: 'reclaimed-oak',  name: 'Reclaimed Oak',      img: 'https://images.unsplash.com/photo-1506439773649-6e0eb8cfb237?w=300' },
-      { id: 'cast-iron',      name: 'Cast Iron',          img: 'https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?w=300' },
+      { id: 'solid-mahogany', name: 'Solid Mahogany',  img: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=300' },
+      { id: 'teak-wood',      name: 'Teak Wood',        img: 'https://images.unsplash.com/photo-1592078615290-033ee584e267?w=300' },
+      { id: 'recycled-brass', name: 'Recycled Brass',   img: 'https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?w=300' },
+      { id: 'walnut',         name: 'Black Walnut',      img: 'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?w=300' },
+      { id: 'reclaimed-oak',  name: 'Reclaimed Oak',     img: 'https://images.unsplash.com/photo-1506439773649-6e0eb8cfb237?w=300' },
+      { id: 'cast-iron',      name: 'Cast Iron',         img: 'https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?w=300' },
     ],
   },
   {
@@ -56,20 +60,14 @@ const categories = [
     desc: 'Intricate traditional beadwork, modern accents, and luxury accessories.',
     timeline: '1–3 Weeks', basePrice: 'KES 8,000',
     materials: [
-      { id: 'obsidian',        name: 'Genuine Obsidian',     img: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=300' },
-      { id: 'gold-leaf',       name: '24k Gold Leaf',         img: 'https://images.unsplash.com/photo-1611085583191-a3b181a88401?w=300' },
-      { id: 'glass-beads',     name: 'Venetian Glass Beads', img: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=300' },
-      { id: 'sterling-silver', name: 'Sterling Silver',       img: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=300' },
-      { id: 'coral',           name: 'Natural Coral',         img: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300' },
-      { id: 'turquoise',       name: 'Turquoise Stone',       img: 'https://images.unsplash.com/photo-1551651653-c5186a1524ba?w=300' },
+      { id: 'obsidian',        name: 'Genuine Obsidian',    img: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=300' },
+      { id: 'gold-leaf',       name: '24k Gold Leaf',        img: 'https://images.unsplash.com/photo-1611085583191-a3b181a88401?w=300' },
+      { id: 'glass-beads',     name: 'Venetian Glass Beads',img: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=300' },
+      { id: 'sterling-silver', name: 'Sterling Silver',      img: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=300' },
+      { id: 'coral',           name: 'Natural Coral',        img: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300' },
+      { id: 'turquoise',       name: 'Turquoise Stone',      img: 'https://images.unsplash.com/photo-1551651653-c5186a1524ba?w=300' },
     ],
   },
-];
-
-const aiRenders = [
-  'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600',
-  'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=600',
-  'https://images.unsplash.com/photo-1592078615290-033ee584e267?w=600',
 ];
 
 const steps = [
@@ -80,13 +78,23 @@ const steps = [
 ];
 
 const aiProcess = [
-  { icon: '✍', title: 'You Describe', desc: 'Share your vision, mood, references and inspiration.' },
-  { icon: '◎', title: 'AI Analyzes',  desc: 'Our model identifies patterns, materials and structural possibilities.' },
-  { icon: '▣', title: 'Draft Generated', desc: 'A visual concept is rendered from your description.' },
-  { icon: '✦', title: 'Artisan Refines', desc: 'Master craftsmen take the AI draft and bring it to life.' },
+  { icon: '✍', title: 'You Describe',      desc: 'Share your vision, mood, references and inspiration.' },
+  { icon: '◎', title: 'AI Analyzes',       desc: 'Our model identifies patterns, materials and structural possibilities.' },
+  { icon: '▣', title: 'Draft Generated',   desc: 'A visual concept is rendered from your description.' },
+  { icon: '✦', title: 'Artisan Refines',   desc: 'Master craftsmen take the AI draft and bring it to life.' },
 ];
 
-// ── SHARED FOOTER ─────────────────────────────────────────────────────────────
+// Loading messages that cycle while waiting for image generation
+const LOADING_MESSAGES = [
+  'Analysing your vision...',
+  'Consulting the artisan archives...',
+  'Weaving patterns from your description...',
+  'Applying African craftsmanship context...',
+  'Rendering concept — almost there...',
+  'Adding finishing touches...',
+];
+
+// ── FOOTER ────────────────────────────────────────────────────────────────────
 const Footer = () => (
   <footer style={{ backgroundColor: C.surface, borderTop: `1px solid ${C.border}`, padding: '64px 0 36px' }}>
     <div style={s.section}>
@@ -101,7 +109,8 @@ const Footer = () => (
           <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.8, maxWidth: 270, marginBottom: 18 }}>
             Redefining luxury through artisanal craftsmanship and AI-powered creativity. Built for the bold generation.
           </p>
-          <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: C.muted, fontSize: 11, fontWeight: 900, letterSpacing: '0.08em', textDecoration: 'none', border: `1px solid ${C.border}`, padding: '6px 14px', borderRadius: 8 }}
+          <Link to="/"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: C.muted, fontSize: 11, fontWeight: 900, letterSpacing: '0.08em', textDecoration: 'none', border: `1px solid ${C.border}`, padding: '6px 14px', borderRadius: 8 }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = C.bHov; e.currentTarget.style.color = C.cream; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.muted; }}>
             ← Back to Home
@@ -135,23 +144,82 @@ const Footer = () => (
   </footer>
 );
 
+// ── LOADING PANEL ─────────────────────────────────────────────────────────────
+const LoadingPanel = ({ elapsed }) => {
+  const msgIndex = Math.min(Math.floor(elapsed / 10), LOADING_MESSAGES.length - 1);
+  const progress = Math.min((elapsed / 60) * 100, 95); // cap at 95% until done
+
+  return (
+    <div style={{ ...s.card, padding: 24, textAlign: 'center' }}>
+      {/* Spinning ring */}
+      <div style={{ width: 48, height: 48, borderRadius: '50%', border: `3px solid ${C.border}`, borderTop: `3px solid ${C.gold}`, margin: '0 auto 16px', animation: 'spin 1s linear infinite' }} />
+
+      <p style={{ color: C.gold, fontWeight: 900, fontSize: 13, marginBottom: 6 }}>
+        {LOADING_MESSAGES[msgIndex]}
+      </p>
+      <p style={{ color: C.muted, fontSize: 11, marginBottom: 16 }}>
+        {elapsed < 15
+          ? 'Usually takes 15–60 seconds — hang tight!'
+          : elapsed < 40
+          ? 'Still working... Pollinations is rendering your concept'
+          : 'Almost done — complex renders take a little longer'}
+      </p>
+
+      {/* Animated progress bar */}
+      <div style={{ height: 4, backgroundColor: C.border, borderRadius: 100, overflow: 'hidden', marginBottom: 10 }}>
+        <div style={{
+          height: '100%',
+          backgroundColor: C.gold,
+          borderRadius: 100,
+          width: `${progress}%`,
+          transition: 'width 1s ease',
+        }} />
+      </div>
+      <p style={{ color: C.dim, fontSize: 10, letterSpacing: '0.05em' }}>{Math.round(progress)}% — {elapsed}s elapsed</p>
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
+    </div>
+  );
+};
+
 // ── COMPONENT ─────────────────────────────────────────────────────────────────
 const CustomOrder = () => {
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [vision,           setVision]           = useState('');
-  const [selectedMaterials,setSelectedMaterials] = useState([]);
-  const [uploadedFiles,    setUploadedFiles]    = useState([]);
-  const [dragOver,         setDragOver]         = useState(false);
-  const [aiGenerating,     setAiGenerating]     = useState(false);
-  const [aiRender,         setAiRender]         = useState(null);
-  const [submitted,        setSubmitted]        = useState(false);
-  const [submittedDraft,   setSubmittedDraft]   = useState(null);
-  const [savedDraft,       setSavedDraft]       = useState(false);
-  const [activeStep,       setActiveStep]       = useState(1);
-  const [hovMat,           setHovMat]           = useState(null);
-  const [renderConfirmed,  setRenderConfirmed]  = useState(false);
+  const navigate = useNavigate();
 
+  const [selectedCategory,  setSelectedCategory]  = useState(null);
+  const [vision,            setVision]            = useState('');
+  const [selectedMaterials, setSelectedMaterials] = useState([]);
+  const [uploadedFiles,     setUploadedFiles]     = useState([]);
+  const [dragOver,          setDragOver]          = useState(false);
+  const [aiGenerating,      setAiGenerating]      = useState(false);
+  const [aiRender,          setAiRender]          = useState(null);
+  const [aiProvider,        setAiProvider]        = useState(null); // 'stability' | 'pollinations'
+  const [aiError,           setAiError]           = useState(null);
+  const [submitted,         setSubmitted]         = useState(false);
+  const [submittedDraft,    setSubmittedDraft]    = useState(null);
+  const [savedDraft,        setSavedDraft]        = useState(false);
+  const [activeStep,        setActiveStep]        = useState(1);
+  const [hovMat,            setHovMat]            = useState(null);
+  const [renderConfirmed,   setRenderConfirmed]   = useState(false);
+  const [elapsed,           setElapsed]           = useState(0);
+  const [submitting,        setSubmitting]        = useState(false);
+  const [submitError,       setSubmitError]       = useState(null);
+
+  const timerRef = useRef(null);
   const category = categories.find(c => c.id === selectedCategory);
+
+  // Elapsed timer — counts seconds while generating
+  useEffect(() => {
+    if (aiGenerating) {
+      setElapsed(0);
+      timerRef.current = setInterval(() => setElapsed(prev => prev + 1), 1000);
+    } else {
+      clearInterval(timerRef.current);
+    }
+    return () => clearInterval(timerRef.current);
+  }, [aiGenerating]);
 
   const toggleMaterial = (id) =>
     setSelectedMaterials(prev => prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]);
@@ -160,18 +228,39 @@ const CustomOrder = () => {
     const newFiles = Array.from(files).map(f => ({
       name: f.name,
       size: (f.size / 1024).toFixed(1) + ' KB',
-      url: URL.createObjectURL(f),
+      url:  URL.createObjectURL(f),
     }));
     setUploadedFiles(prev => [...prev, ...newFiles]);
   };
 
-  const handleGenerateRender = () => {
+  const handleGenerateRender = async () => {
     if (!vision.trim()) return;
-    setAiGenerating(true); setAiRender(null);
-    setTimeout(() => {
-      setAiRender(aiRenders[Math.floor(Math.random() * aiRenders.length)]);
+    setAiGenerating(true);
+    setAiRender(null);
+    setAiError(null);
+    setAiProvider(null);
+    setRenderConfirmed(false);
+
+    try {
+      const res = await aiAPI.generateImage({
+        prompt:   vision.trim(),
+        category: selectedCategory || 'general',
+      });
+
+      if (res.data?.image) {
+        setAiRender(res.data.image);
+        setAiProvider(res.data.provider || 'unknown');
+        setActiveStep(prev => Math.max(prev, 3));
+      } else {
+        setAiError('No image returned. Please try again.');
+      }
+    } catch (err) {
+      const msg = err.response?.data?.error || err.message || 'Generation failed. Please try again.';
+      setAiError(msg);
+      console.error('[CustomOrder] generateImage error:', msg);
+    } finally {
       setAiGenerating(false);
-    }, 2500);
+    }
   };
 
   const handleSaveDraft = () => {
@@ -180,20 +269,55 @@ const CustomOrder = () => {
     setTimeout(() => setSavedDraft(false), 3000);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedCategory || !vision.trim()) return;
-    setSubmittedDraft({ category: selectedCategory, categoryLabel: category?.label, categoryIcon: category?.icon, vision, materials: selectedMaterials, filesCount: uploadedFiles.length, aiRender, timeline: category?.timeline, basePrice: category?.basePrice });
+    setSubmitting(true);
+    setSubmitError(null);
+
+    const draft = {
+      category:      selectedCategory,
+      categoryLabel: category?.label,
+      categoryIcon:  category?.icon,
+      vision,
+      materials:     selectedMaterials,
+      filesCount:    uploadedFiles.length,
+      aiRender,
+      aiProvider,
+      timeline:      category?.timeline,
+      basePrice:     category?.basePrice,
+    };
+
+    try {
+      await api.post('/custom-orders', {
+        category:      draft.category,
+        categoryLabel: draft.categoryLabel,
+        vision:        draft.vision,
+        materials:     draft.materials,
+        filesCount:    draft.filesCount,
+        aiRender:      draft.aiRender,
+        aiProvider:    draft.aiProvider,
+        timeline:      draft.timeline,
+        basePrice:     draft.basePrice,
+      });
+    } catch (err) {
+      console.error('[CustomOrder] submit error:', err);
+      setSubmitError('Failed to save your order. Please try again.');
+      setSubmitting(false);
+      return;
+    }
+
+    setSubmittedDraft(draft);
     setSubmitted(true);
+    setSubmitting(false);
   };
 
   const progressPct = !selectedCategory ? 0 : !vision ? 25 : selectedMaterials.length === 0 ? 50 : aiRender ? 100 : 75;
 
-  // ── SUBMITTED STATE ────────────────────────────────────────────────────────
+  // ── SUBMITTED STATE ──────────────────────────────────────────────────────────
   if (submitted && submittedDraft) {
     return (
       <div style={{ backgroundColor: C.bg, color: C.cream, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
         <div style={{ maxWidth: 480, width: '100%', textAlign: 'center' }}>
-          {/* Icon */}
           <div style={{ width: 72, height: 72, borderRadius: '50%', backgroundColor: C.gold, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', fontSize: 28 }}>✦</div>
           <h1 style={{ color: C.cream, fontWeight: 900, fontSize: 32, textTransform: 'uppercase', marginBottom: 8 }}>Vision Submitted!</h1>
           <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.8, marginBottom: 28 }}>
@@ -201,18 +325,17 @@ const CustomOrder = () => {
             You'll receive a quote within <span style={{ color: C.gold, fontWeight: 900 }}>24–48 hours</span>.
           </p>
 
-          {/* Summary */}
           <div style={{ ...s.card, padding: 24, marginBottom: 16, textAlign: 'left' }}>
             <p style={{ ...s.eyebrow, marginBottom: 16 }}>Brief Summary</p>
             {[
-              { label: 'Category',  value: submittedDraft.categoryLabel },
+              { label: 'Category',  value: `${submittedDraft.categoryIcon} ${submittedDraft.categoryLabel}` },
               { label: 'Materials', value: `${submittedDraft.materials.length} selected` },
               { label: 'Files',     value: `${submittedDraft.filesCount} uploaded` },
-              { label: 'AI Render', value: submittedDraft.aiRender ? 'Generated ✓' : 'Not generated', green: !!submittedDraft.aiRender },
+              { label: 'AI Render', value: submittedDraft.aiRender ? `Generated ✓ (via ${submittedDraft.aiProvider})` : 'Not generated', green: !!submittedDraft.aiRender },
             ].map(row => (
               <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
                 <span style={{ color: C.muted, fontSize: 12 }}>{row.label}</span>
-                <span style={{ fontSize: 12, fontWeight: 900, color: row.green ? '#4ade80' : C.cream }}>{row.value}</span>
+                <span style={{ fontSize: 12, fontWeight: 900, color: row.green ? C.green : C.cream }}>{row.value}</span>
               </div>
             ))}
             <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 12, marginTop: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -231,10 +354,8 @@ const CustomOrder = () => {
             )}
           </div>
 
-          {/* What happens next */}
-          <div style={{ backgroundColor: C.faint, border: `1px solid ${C.border}`, borderRadius: 14, padding: 20, marginBottom: 24, textAlign: 'left' }}>
-            <div style={{ height: 2, backgroundColor: C.gold, borderRadius: 2, marginBottom: 18 }} />
-            <p style={s.eyebrow}>What Happens Next</p>
+          <div style={{ ...s.card, padding: 20, marginBottom: 24, textAlign: 'left' }}>
+            <p style={{ ...s.eyebrow, marginBottom: 16 }}>What Happens Next</p>
             {['Artisan reviews your brief and vision', 'You receive a detailed quote + timeline', 'Approve quote and make payment', 'Crafting begins — track progress live'].map((text, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: i < 3 ? 12 : 0 }}>
                 <div style={{ width: 24, height: 24, borderRadius: '50%', backgroundColor: C.gold, color: '#000', fontWeight: 900, fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -246,7 +367,7 @@ const CustomOrder = () => {
           </div>
 
           <div style={{ display: 'flex', gap: 10 }}>
-            <Link to="/vision-board" style={{ ...s.btnGold, flex: 1, textAlign: 'center', padding: '13px' }}>View Vision Board</Link>
+            <Link to="/vision-board" style={{ ...s.btnGold,  flex: 1, textAlign: 'center', padding: '13px' }}>View Vision Board</Link>
             <Link to="/shop"         style={{ ...s.btnGhost, flex: 1, textAlign: 'center', padding: '13px' }}>Continue Shopping</Link>
           </div>
         </div>
@@ -254,7 +375,7 @@ const CustomOrder = () => {
     );
   }
 
-  // ── MAIN FORM ──────────────────────────────────────────────────────────────
+  // ── MAIN FORM ────────────────────────────────────────────────────────────────
   return (
     <div style={{ backgroundColor: C.bg, color: C.cream, minHeight: '100vh' }}>
 
@@ -291,10 +412,7 @@ const CustomOrder = () => {
                 return (
                   <div key={step.num} onClick={() => setActiveStep(i + 1)}
                     style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderRadius: 12, cursor: 'pointer', border: `1px solid ${isActive ? C.gold : C.border}`, backgroundColor: isActive ? 'rgba(201,168,76,0.06)' : 'transparent', opacity: !isActive && !isDone ? 0.45 : 1, transition: 'all 0.2s' }}>
-                    <div style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 11,
-                      backgroundColor: isDone ? C.gold : 'transparent',
-                      border: isDone ? 'none' : `2px solid ${isActive ? C.gold : C.border}`,
-                      color: isDone ? '#000' : isActive ? C.gold : C.muted }}>
+                    <div style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 11, backgroundColor: isDone ? C.gold : 'transparent', border: isDone ? 'none' : `2px solid ${isActive ? C.gold : C.border}`, color: isDone ? '#000' : isActive ? C.gold : C.muted }}>
                       {isDone ? '✓' : step.num}
                     </div>
                     <div>
@@ -312,7 +430,7 @@ const CustomOrder = () => {
       {/* FORM BODY */}
       <div style={{ ...s.section, padding: '52px 48px 32px', display: 'flex', flexDirection: 'column', gap: 48 }}>
 
-        {/* AI PROGRESS BANNER */}
+        {/* PROGRESS BANNER */}
         <div style={{ backgroundColor: C.faint, border: `1px solid ${C.border}`, borderRadius: 14, padding: '18px 22px', display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{ width: 36, height: 36, borderRadius: 9, backgroundColor: C.surface, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.gold, fontSize: 16, flexShrink: 0 }}>✦</div>
           <div style={{ flex: 1 }}>
@@ -375,18 +493,25 @@ const CustomOrder = () => {
                 rows={8}
                 style={{ ...s.input, resize: 'none', lineHeight: 1.7 }}
                 onFocus={e => e.target.style.borderColor = C.bHov}
-                onBlur={e => e.target.style.borderColor = C.border}
+                onBlur={e  => e.target.style.borderColor = C.border}
               />
               <p style={{ color: C.dim, fontSize: 11, marginTop: 6 }}>{vision.length} characters</p>
 
-              {/* AI Generate button */}
-              <button onClick={handleGenerateRender} disabled={!vision.trim()}
-                style={{ ...s.btnGold, marginTop: 14, width: '100%', padding: '12px', borderRadius: 10, opacity: vision.trim() ? 1 : 0.4, cursor: vision.trim() ? 'pointer' : 'not-allowed', textAlign: 'center', boxSizing: 'border-box' }}>
-                {aiGenerating ? '⟳ Generating Concept...' : '✦ Generate AI Concept Render'}
+              {/* Generate button */}
+              <button onClick={handleGenerateRender} disabled={!vision.trim() || aiGenerating}
+                style={{ ...s.btnGold, marginTop: 14, width: '100%', padding: '12px', borderRadius: 10, opacity: vision.trim() && !aiGenerating ? 1 : 0.4, cursor: vision.trim() && !aiGenerating ? 'pointer' : 'not-allowed', textAlign: 'center', boxSizing: 'border-box' }}>
+                {aiGenerating ? '⟳ Generating — please wait...' : '✦ Generate AI Concept Render'}
               </button>
+
+              {/* Provider badge — shows which engine was used */}
+              {aiProvider && !aiGenerating && (
+                <p style={{ color: C.dim, fontSize: 10, marginTop: 8, textAlign: 'center', letterSpacing: '0.05em' }}>
+                  ✓ Generated via {aiProvider === 'stability' ? 'Stability AI (High Quality)' : 'Pollinations AI (Free Tier)'}
+                </p>
+              )}
             </div>
 
-            {/* File upload + AI render */}
+            {/* Right panel — upload + render */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {/* Drag & drop */}
               <div
@@ -401,6 +526,7 @@ const CustomOrder = () => {
                 <p style={{ color: C.muted, fontSize: 11 }}>PNG, JPG, PDF — up to 10MB each</p>
               </div>
 
+              {/* Uploaded files list */}
               {uploadedFiles.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {uploadedFiles.map((f, i) => (
@@ -413,18 +539,24 @@ const CustomOrder = () => {
                 </div>
               )}
 
-              {/* AI render preview */}
-              {aiGenerating && (
-                <div style={{ ...s.card, padding: 20, textAlign: 'center' }}>
-                  <p style={{ color: C.gold, fontWeight: 900, fontSize: 12, marginBottom: 12 }}>⟳ AI is visualising your concept...</p>
-                  <div style={{ height: 4, backgroundColor: C.border, borderRadius: 100, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', backgroundColor: C.gold, borderRadius: 100, width: '70%', animation: 'pulse 1.5s infinite' }} />
-                  </div>
+              {/* ERROR STATE */}
+              {aiError && !aiGenerating && (
+                <div style={{ backgroundColor: 'rgba(224,92,92,0.1)', border: `1px solid rgba(224,92,92,0.3)`, borderRadius: 10, padding: '12px 16px', color: C.red, fontSize: 12 }}>
+                  ⚠ {aiError}
+                  <button onClick={handleGenerateRender}
+                    style={{ display: 'block', marginTop: 8, color: C.gold, fontSize: 11, fontWeight: 900, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                    ↺ Try again
+                  </button>
                 </div>
               )}
+
+              {/* LOADING STATE — with elapsed timer and cycling messages */}
+              {aiGenerating && <LoadingPanel elapsed={elapsed} />}
+
+              {/* RENDER PREVIEW */}
               {aiRender && !aiGenerating && (
                 <div style={{ ...s.card, border: renderConfirmed ? `2px solid ${C.gold}` : `1px solid ${C.border}`, transition: 'border-color 0.3s' }}>
-                  <div style={{ position: 'relative', borderRadius: '14px 14px 0 0', overflow: 'hidden', height: 160 }}>
+                  <div style={{ position: 'relative', borderRadius: '14px 14px 0 0', overflow: 'hidden', height: 180 }}>
                     <img src={aiRender} alt="AI Concept Render" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     {renderConfirmed && (
                       <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(201,168,76,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -444,17 +576,12 @@ const CustomOrder = () => {
                       onClick={() => {
                         setRenderConfirmed(true);
                         setActiveStep(prev => Math.max(prev, 4));
-                        // scroll to Step 3 materials section
                         setTimeout(() => {
                           const el = document.getElementById('step3-materials');
                           if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                         }, 200);
                       }}
-                      style={{
-                        ...s.btnGold, flex: 1, textAlign: 'center', padding: '9px', fontSize: 11,
-                        backgroundColor: renderConfirmed ? '#1a3a1a' : C.gold,
-                        color: renderConfirmed ? C.green : '#000',
-                      }}>
+                      style={{ ...s.btnGold, flex: 1, textAlign: 'center', padding: '9px', fontSize: 11, backgroundColor: renderConfirmed ? '#1a3a1a' : C.gold, color: renderConfirmed ? C.green : '#000' }}>
                       {renderConfirmed ? '✓ Confirmed!' : 'Use This →'}
                     </button>
                   </div>
@@ -484,7 +611,7 @@ const CustomOrder = () => {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12 }}>
                 {category.materials.map(mat => {
                   const selected = selectedMaterials.includes(mat.id);
-                  const hov = hovMat === mat.id;
+                  const hov      = hovMat === mat.id;
                   return (
                     <button key={mat.id}
                       onClick={() => { toggleMaterial(mat.id); setActiveStep(prev => Math.max(prev, 3)); }}
@@ -554,15 +681,16 @@ const CustomOrder = () => {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          {savedDraft && <span style={{ color: '#4ade80', fontSize: 11, fontWeight: 900 }}>✓ Draft Saved!</span>}
+          {savedDraft && <span style={{ color: C.green, fontSize: 11, fontWeight: 900 }}>✓ Draft Saved!</span>}
+          {submitError && <span style={{ color: C.red, fontSize: 11, fontWeight: 700 }}>⚠ {submitError}</span>}
           <button onClick={handleSaveDraft} disabled={!selectedCategory}
             style={{ ...s.btnGhost, padding: '11px 20px', fontSize: 11, opacity: selectedCategory ? 1 : 0.4, cursor: selectedCategory ? 'pointer' : 'not-allowed' }}>
             Save Draft
           </button>
-          <button onClick={handleSubmit} disabled={!selectedCategory || !vision.trim()}
-            style={{ ...s.btnGold, padding: '11px 24px', fontSize: 11, letterSpacing: '0.08em', opacity: selectedCategory && vision.trim() ? 1 : 0.4, cursor: selectedCategory && vision.trim() ? 'pointer' : 'not-allowed' }}>
-            SUBMIT VISION →
-            {(!selectedCategory || !vision.trim()) && (
+          <button onClick={handleSubmit} disabled={!selectedCategory || !vision.trim() || submitting}
+            style={{ ...s.btnGold, padding: '11px 24px', fontSize: 11, letterSpacing: '0.08em', opacity: selectedCategory && vision.trim() && !submitting ? 1 : 0.4, cursor: selectedCategory && vision.trim() && !submitting ? 'pointer' : 'not-allowed' }}>
+            {submitting ? 'Submitting...' : 'SUBMIT VISION →'}
+            {!submitting && (!selectedCategory || !vision.trim()) && (
               <span style={{ opacity: 0.7, marginLeft: 6, fontSize: 10 }}>
                 {!selectedCategory ? '(pick category)' : '(add description)'}
               </span>

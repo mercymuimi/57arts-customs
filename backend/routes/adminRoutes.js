@@ -9,6 +9,7 @@ const {
   getAllProducts, deleteProduct,
   getAllAffiliates, approveAffiliate, suspendAffiliate,
   getSettings, updateSettings,
+  getAllCustomOrders, updateCustomOrderStatus,
 } = require('../controllers/adminController');
 
 router.use(protect);
@@ -36,5 +37,9 @@ router.patch('/affiliates/:id/suspend', suspendAffiliate);
 
 router.get('/settings', getSettings);
 router.put('/settings', updateSettings);
+
+// ── Custom Orders ─────────────────────────────────────────────────────────────
+router.get('/custom-orders', getAllCustomOrders);
+router.put('/custom-orders/:id/status', updateCustomOrderStatus);
 
 module.exports = router;

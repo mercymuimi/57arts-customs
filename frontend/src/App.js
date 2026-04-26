@@ -34,6 +34,7 @@ import VendorLanding      from './pages/VendorLanding';
 import AffiliateLanding   from './pages/AffiliateLanding';
 import Syndicate          from './pages/Syndicate';
 import ArtisanChatPage    from './pages/ArtisanChatPage';
+import VisionBoard        from './pages/VisionBoard';
 
 function App() {
   return (
@@ -72,6 +73,7 @@ function App() {
               <Route path="/order-tracking" element={<ProtectedRoute><OrderTracking /></ProtectedRoute>}  />
               <Route path="/custom-order"   element={<ProtectedRoute><CustomOrder /></ProtectedRoute>}    />
               <Route path="/drafts"         element={<ProtectedRoute><Drafts /></ProtectedRoute>}         />
+              <Route path="/vision-board"   element={<ProtectedRoute><VisionBoard /></ProtectedRoute>}   />
 
               {/* ── AFFILIATE ONLY ───────────────────────────────────────── */}
               <Route path="/affiliate/dashboard" element={
