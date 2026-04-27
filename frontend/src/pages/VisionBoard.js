@@ -262,8 +262,11 @@ const OrderTimeline = ({ status }) => {
 };
 
 // ── CARD ACTIONS ──────────────────────────────────────────────────────────────
+// ✦ FIX: quoted/quote_received now routes to payment page instead of directly approving
 const CardActions = ({ draft, onStatusChange, onDelete }) => (
   <div style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
+
+    {/* DRAFT — edit or submit */}
     {draft.status === 'draft' && (<>
       <Link to="/custom-order"
         className="vb-action-btn"
@@ -277,32 +280,53 @@ const CardActions = ({ draft, onStatusChange, onDelete }) => (
         Submit
       </button>
     </>)}
-    {draft.status === 'submitted' && (
-      <div style={{ flex: 1, textAlign: 'center', color: C.muted, fontSize: 11, fontFamily: "'DM Sans', sans-serif" }}>⏳ Awaiting quote…</div>
+
+    {/* SUBMITTED — waiting for artisan quote */}
+    {(draft.status === 'submitted' || draft.status === 'pending') && (
+      <div style={{ flex: 1, textAlign: 'center', color: C.muted, fontSize: 11, fontFamily: "'DM Sans', sans-serif" }}>
+        ⏳ Awaiting quote…
+      </div>
     )}
-    {draft.status === 'quote_received' && (<>
+
+    {/* QUOTED — buyer must pay before production starts */}
+    {(draft.status === 'quoted' || draft.status === 'quote_received') && (<>
       <button className="vb-action-btn"
         style={{ border: `1px solid ${C.gold}`, color: C.gold, background: 'transparent' }}
         onMouseEnter={e => { e.currentTarget.style.background = C.gold; e.currentTarget.style.color = '#000'; }}
         onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = C.gold; }}>
         View Quote
       </button>
-      <button className="vb-action-btn" onClick={() => onStatusChange(draft.id, 'in_production')}
-        style={{ border: 'none', background: C.gold, color: '#000' }}>
-        Approve
-      </button>
+      {/* ✦ Routes to payment page — no longer directly approves */}
+      <Link
+        to={`/custom-order-payment/${draft.id}`}
+        className="vb-action-btn"
+        style={{ border: 'none', background: C.gold, color: '#000', textDecoration: 'none' }}>
+        Approve & Pay →
+      </Link>
     </>)}
-    {draft.status === 'in_production' && (
+
+    {/* APPROVED — paid, waiting for production to start */}
+    {draft.status === 'approved' && (
+      <div style={{ flex: 1, textAlign: 'center', color: C.gold, fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 700 }}>
+        ✓ Paid — Production starting soon
+      </div>
+    )}
+
+    {/* IN PRODUCTION */}
+    {(draft.status === 'in_production' || draft.status === 'in_progress') && (
       <Link to="/order-tracking" className="vb-action-btn"
         style={{ background: 'rgba(63,217,138,0.1)', color: C.green, border: `1px solid rgba(63,217,138,0.3)`, textDecoration: 'none' }}>
         Track Order →
       </Link>
     )}
+
+    {/* DELIVERED */}
     {draft.status === 'delivered' && (
       <div className="vb-action-btn" style={{ background: 'rgba(63,217,138,0.08)', color: C.green, border: `1px solid rgba(63,217,138,0.2)` }}>
         ✓ Delivered
       </div>
     )}
+
     <button className="vb-btn-icon" onClick={() => onDelete(draft.id)}>✕</button>
   </div>
 );
@@ -339,15 +363,15 @@ const Footer = () => (
 
 // ── MAIN COMPONENT ────────────────────────────────────────────────────────────
 const VisionBoard = () => {
-  const [drafts, setDrafts]           = useState([]);
-  const [filter, setFilter]           = useState('all');
-  const [search, setSearch]           = useState('');
+  const [drafts, setDrafts]               = useState([]);
+  const [filter, setFilter]               = useState('all');
+  const [search, setSearch]               = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState(null);
-  const [view, setView]               = useState('grid');
-  const [loading, setLoading]         = useState(true);
-  const [error, setError]             = useState(null);
-  const [dragId, setDragId]           = useState(null);
-  const [dragOverId, setDragOverId]   = useState(null);
+  const [view, setView]                   = useState('grid');
+  const [loading, setLoading]             = useState(true);
+  const [error, setError]                 = useState(null);
+  const [dragId, setDragId]               = useState(null);
+  const [dragOverId, setDragOverId]       = useState(null);
   const dragNode = useRef(null);
 
   useEffect(() => { injectStyles(); }, []);
@@ -357,7 +381,7 @@ const VisionBoard = () => {
       .then(r => {
         const normalized = r.data.map(o => ({
           id:            o._id,
-          status:        o.orderStatus || 'pending',
+          status:        o.status || o.orderStatus || 'pending',
           category:      o.category,
           categoryLabel: o.categoryLabel || o.category,
           categoryIcon:  CATEGORY_ICONS[o.category] || '✦',
@@ -386,10 +410,6 @@ const VisionBoard = () => {
 
   const handleStatusChange = (id, newStatus) => {
     setDrafts(prev => prev.map(d => d.id === id ? { ...d, status: newStatus } : d));
-    try {
-      const stored = JSON.parse(localStorage.getItem('57arts_drafts') || '[]');
-      localStorage.setItem('57arts_drafts', JSON.stringify(stored.map(d => d.id === id ? { ...d, status: newStatus } : d)));
-    } catch (e) { console.error(e); }
   };
 
   // Drag handlers
@@ -420,20 +440,26 @@ const VisionBoard = () => {
   const counts = {
     all:            drafts.length,
     draft:          drafts.filter(d => d.status === 'draft').length,
-    submitted:      drafts.filter(d => ['submitted','pending'].includes(d.status)).length,
-    quote_received: drafts.filter(d => ['quote_received','quoted'].includes(d.status)).length,
-    in_production:  drafts.filter(d => ['in_production','in_progress'].includes(d.status)).length,
+    submitted:      drafts.filter(d => ['submitted', 'pending'].includes(d.status)).length,
+    quote_received: drafts.filter(d => ['quote_received', 'quoted'].includes(d.status)).length,
+    in_production:  drafts.filter(d => ['in_production', 'in_progress'].includes(d.status)).length,
     delivered:      drafts.filter(d => d.status === 'delivered').length,
   };
 
   const filtered = drafts
-    .filter(d => filter === 'all' || d.status === filter || (filter === 'submitted' && d.status === 'pending') || (filter === 'quote_received' && d.status === 'quoted') || (filter === 'in_production' && d.status === 'in_progress'))
+    .filter(d =>
+      filter === 'all' ||
+      d.status === filter ||
+      (filter === 'submitted'      && d.status === 'pending') ||
+      (filter === 'quote_received' && d.status === 'quoted') ||
+      (filter === 'in_production'  && d.status === 'in_progress')
+    )
     .filter(d => {
       if (!search.trim()) return true;
       const q = search.toLowerCase();
       return (d.categoryLabel || '').toLowerCase().includes(q)
-          || (d.vision || '').toLowerCase().includes(q)
-          || (d.orderNumber || '').toLowerCase().includes(q);
+          || (d.vision        || '').toLowerCase().includes(q)
+          || (d.orderNumber   || '').toLowerCase().includes(q);
     });
 
   const FILTERS = [
@@ -484,9 +510,9 @@ const VisionBoard = () => {
               {!loading && !error && (
                 <div style={{ display: 'flex', gap: 16 }}>
                   {[
-                    { label: 'Active', value: drafts.filter(d => ['submitted','pending','quote_received','in_production','in_progress'].includes(d.status)).length, color: C.blue },
-                    { label: 'Delivered', value: counts.delivered, color: C.green },
-                    { label: 'Drafts', value: counts.draft, color: C.muted },
+                    { label: 'Active',     value: drafts.filter(d => ['submitted','pending','quote_received','quoted','in_production','in_progress','approved'].includes(d.status)).length, color: C.blue },
+                    { label: 'Delivered',  value: counts.delivered, color: C.green },
+                    { label: 'Drafts',     value: counts.draft,     color: C.muted },
                   ].map(({ label, value, color }) => (
                     <div key={label} style={{ textAlign: 'center', background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px 20px' }}>
                       <div style={{ color, fontSize: 28, fontWeight: 900, fontFamily: "'Playfair Display', serif", lineHeight: 1 }}>{value}</div>
@@ -522,7 +548,6 @@ const VisionBoard = () => {
 
         {/* SEARCH + FILTERS */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 32, flexWrap: 'wrap' }}>
-          {/* Search */}
           <div style={{ position: 'relative', flexShrink: 0 }}>
             <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: C.muted, fontSize: 14, pointerEvents: 'none' }}>⌕</span>
             <input
@@ -536,7 +561,6 @@ const VisionBoard = () => {
 
           <div style={{ width: 1, height: 28, background: C.border, flexShrink: 0 }} />
 
-          {/* Filter pills */}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {FILTERS.map(tab => (
               <button key={tab.key} className={`vb-filter-btn${filter === tab.key ? ' active' : ''}`}
@@ -548,25 +572,22 @@ const VisionBoard = () => {
           </div>
         </div>
 
-        {/* LOADING STATE */}
+        {/* LOADING */}
         {loading && <SkeletonGrid />}
 
-        {/* ERROR STATE */}
+        {/* ERROR */}
         {!loading && error && (
-          <div style={{ background: 'rgba(240,106,106,0.06)', border: `1px solid rgba(240,106,106,0.2)`, borderRadius: 16, padding: 48, textAlign: 'center', animation: 'cardIn 0.4s ease' }}>
+          <div style={{ background: 'rgba(240,106,106,0.06)', border: `1px solid rgba(240,106,106,0.2)`, borderRadius: 16, padding: 48, textAlign: 'center' }}>
             <p style={{ fontSize: 40, marginBottom: 16 }}>⚠️</p>
             <p style={{ color: C.red, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>{error}</p>
             <p style={{ color: C.muted, fontSize: 13, marginBottom: 24 }}>Check your connection and try again.</p>
-            <button onClick={() => window.location.reload()}
-              style={{ ...s.btnGold, background: C.red, color: '#fff' }}>
-              Retry
-            </button>
+            <button onClick={() => window.location.reload()} style={{ ...s.btnGold, background: C.red, color: '#fff' }}>Retry</button>
           </div>
         )}
 
-        {/* EMPTY STATE */}
+        {/* EMPTY */}
         {!loading && !error && filtered.length === 0 && (
-          <div style={{ background: C.card, border: `2px dashed ${C.border}`, borderRadius: 20, padding: 80, textAlign: 'center', animation: 'cardIn 0.4s ease' }}>
+          <div style={{ background: C.card, border: `2px dashed ${C.border}`, borderRadius: 20, padding: 80, textAlign: 'center' }}>
             <div style={{ fontSize: 56, marginBottom: 20 }}>{search ? '🔍' : '🎨'}</div>
             <h2 style={{ color: C.cream, fontWeight: 900, fontSize: 22, marginBottom: 10, fontFamily: "'Playfair Display', serif" }}>
               {search ? 'No matches found' : 'Your canvas awaits'}
@@ -578,14 +599,8 @@ const VisionBoard = () => {
                   ? 'Start your first custom order brief and let your creativity take shape.'
                   : `No ${filter.replace(/_/g, ' ')} pieces in your pipeline.`}
             </p>
-            {!search && (
-              <Link to="/custom-order" style={s.btnGold}>+ Create Your First Vision</Link>
-            )}
-            {search && (
-              <button onClick={() => setSearch('')} style={{ ...s.btnGhost, border: `1px solid ${C.border}` }}>
-                Clear Search
-              </button>
-            )}
+            {!search && <Link to="/custom-order" style={s.btnGold}>+ Create Your First Vision</Link>}
+            {search  && <button onClick={() => setSearch('')} style={{ ...s.btnGhost, border: `1px solid ${C.border}` }}>Clear Search</button>}
           </div>
         )}
 
@@ -602,7 +617,7 @@ const VisionBoard = () => {
                 onDragOver={e => onDragOver(e, draft.id)}
                 onDrop={e => onDrop(e, draft.id)}>
 
-                {/* Image / render */}
+                {/* Image */}
                 <div style={{ position: 'relative', height: 180, backgroundColor: C.faint, overflow: 'hidden', flexShrink: 0 }}>
                   {draft.aiRender ? (
                     <img src={draft.aiRender} alt="AI Render"
@@ -632,12 +647,11 @@ const VisionBoard = () => {
 
                 {/* Content */}
                 <div style={{ padding: '18px 18px 16px', flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {/* Title row */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 3 }}>
                         <span style={{ fontSize: 15 }}>{draft.categoryIcon}</span>
-                        <p style={{ color: C.cream, fontWeight: 700, fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}>{draft.categoryLabel}</p>
+                        <p style={{ color: C.cream, fontWeight: 700, fontSize: 14 }}>{draft.categoryLabel}</p>
                       </div>
                       <p style={{ color: C.muted, fontSize: 10, fontWeight: 500 }}>{timeAgo(draft.savedAt)}</p>
                     </div>
@@ -649,14 +663,12 @@ const VisionBoard = () => {
                     </div>
                   </div>
 
-                  {/* Vision snippet */}
                   {draft.vision && (
                     <p style={{ color: C.muted, fontSize: 12, lineHeight: 1.7, fontStyle: 'italic', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', borderLeft: `2px solid ${C.dim}`, paddingLeft: 10 }}>
                       "{draft.vision}"
                     </p>
                   )}
 
-                  {/* Materials */}
                   {draft.materialNames.length > 0 && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                       {draft.materialNames.slice(0, 3).map(m => (
@@ -668,10 +680,8 @@ const VisionBoard = () => {
                     </div>
                   )}
 
-                  {/* Timeline progress */}
                   <OrderTimeline status={draft.status} />
 
-                  {/* Actions */}
                   <div style={{ marginTop: 'auto', paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
                     <CardActions draft={draft} onStatusChange={handleStatusChange} onDelete={() => setDeleteConfirm(draft.id)} />
                   </div>
@@ -685,8 +695,8 @@ const VisionBoard = () => {
               onMouseEnter={e => { e.currentTarget.style.borderColor = C.gold; e.currentTarget.style.background = 'rgba(200,164,90,0.03)'; e.currentTarget.querySelector('.plus-icon').style.borderColor = C.gold; e.currentTarget.querySelector('.plus-icon').style.color = C.gold; e.currentTarget.querySelector('.plus-label').style.color = C.gold; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.background = 'transparent'; e.currentTarget.querySelector('.plus-icon').style.borderColor = C.dim; e.currentTarget.querySelector('.plus-icon').style.color = C.dim; e.currentTarget.querySelector('.plus-label').style.color = C.muted; }}>
               <div className="plus-icon" style={{ width: 52, height: 52, borderRadius: '50%', border: `1.5px dashed ${C.dim}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, color: C.dim, marginBottom: 14, transition: 'all 0.25s' }}>+</div>
-              <p className="plus-label" style={{ color: C.muted, fontWeight: 800, fontSize: 13, marginBottom: 6, fontFamily: "'DM Sans', sans-serif", transition: 'color 0.25s' }}>New Vision</p>
-              <p style={{ color: C.dim, fontSize: 11, fontFamily: "'DM Sans', sans-serif" }}>Start a custom order</p>
+              <p className="plus-label" style={{ color: C.muted, fontWeight: 800, fontSize: 13, marginBottom: 6, transition: 'color 0.25s' }}>New Vision</p>
+              <p style={{ color: C.dim, fontSize: 11 }}>Start a custom order</p>
             </Link>
           </div>
         )}
@@ -704,14 +714,12 @@ const VisionBoard = () => {
                 onDragOver={e => onDragOver(e, draft.id)}
                 onDrop={e => onDrop(e, draft.id)}>
 
-                {/* Thumbnail */}
                 <div style={{ width: 68, height: 68, borderRadius: 12, overflow: 'hidden', flexShrink: 0, background: C.faint }}>
                   {draft.aiRender
                     ? <img src={draft.aiRender} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>{draft.categoryIcon}</div>}
                 </div>
 
-                {/* Info */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 5 }}>
                     <p style={{ color: C.cream, fontWeight: 700, fontSize: 14 }}>{draft.categoryLabel}</p>
@@ -730,7 +738,6 @@ const VisionBoard = () => {
                   </div>
                 </div>
 
-                {/* Actions */}
                 <div style={{ flexShrink: 0 }}>
                   <CardActions draft={draft} onStatusChange={handleStatusChange} onDelete={() => setDeleteConfirm(draft.id)} />
                 </div>
@@ -751,13 +758,13 @@ const VisionBoard = () => {
             </p>
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => setDeleteConfirm(null)}
-                style={{ flex: 1, padding: '13px', borderRadius: 10, fontWeight: 800, fontSize: 12, border: `1px solid ${C.border}`, background: 'transparent', color: C.cream, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", transition: 'border-color 0.15s' }}
+                style={{ flex: 1, padding: '13px', borderRadius: 10, fontWeight: 800, fontSize: 12, border: `1px solid ${C.border}`, background: 'transparent', color: C.cream, cursor: 'pointer', transition: 'border-color 0.15s' }}
                 onMouseEnter={e => e.currentTarget.style.borderColor = C.bHov}
                 onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
                 Cancel
               </button>
               <button onClick={() => handleDelete(deleteConfirm)}
-                style={{ flex: 1, padding: '13px', borderRadius: 10, fontWeight: 800, fontSize: 12, border: 'none', background: C.red, color: '#fff', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                style={{ flex: 1, padding: '13px', borderRadius: 10, fontWeight: 800, fontSize: 12, border: 'none', background: C.red, color: '#fff', cursor: 'pointer' }}>
                 Delete
               </button>
             </div>

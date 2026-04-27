@@ -18,10 +18,11 @@ const C = {
 };
 
 const sideLinks = [
-  { id: 'Dashboard',         icon: '▦',  group: 'main' },
-  { id: 'Vendors',           icon: '🏪', group: 'main' },
-  { id: 'Orders',            icon: '📦', group: 'main' },
-  { id: 'Custom Orders',     icon: '✦',  group: 'main' },
+  { id: 'Dashboard',         icon: '▦',  group: 'main'   },
+  { id: 'Vendors',           icon: '🏪', group: 'main'   },
+  { id: 'Orders',            icon: '📦', group: 'main'   },
+  { id: 'Custom Orders',     icon: '✦',  group: 'main'   },
+  { id: 'Subscribers',       icon: '✉️', group: 'main'   },
   { id: 'Products',          icon: '🛍️', group: 'manage' },
   { id: 'Affiliates',        icon: '🔗', group: 'manage' },
   { id: 'User Management',   icon: '👥', group: 'manage' },
@@ -202,7 +203,7 @@ const DashboardPage = () => {
         <StatCard label="Total Revenue"    value={`KES ${(stats.totalRevenue || 0).toLocaleString()}`} icon="💰" sub="All time" />
         <StatCard label="Active Vendors"   value={stats.totalVendors   || 0} icon="🏪" />
         <StatCard label="Total Orders"     value={stats.totalOrders    || 0} icon="📦" />
-        <StatCard label="Custom Orders"   value={stats.totalCustomOrders || 0} icon="✦" />
+        <StatCard label="Custom Orders"    value={stats.totalCustomOrders || 0} icon="✦" />
         <StatCard label="Total Users"      value={stats.totalUsers     || 0} icon="👥" />
         <StatCard label="Total Products"   value={stats.totalProducts  || 0} icon="🛍️" />
         <StatCard label="Total Affiliates" value={stats.totalAffiliates|| 0} icon="🔗" />
@@ -269,9 +270,6 @@ const DashboardPage = () => {
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // VENDORS PAGE
-// ✅ FIX: Added e.stopPropagation() to Btn (above) so clicks don't get swallowed.
-//         Status logic now correctly reads v.isApproved and v.status from the
-//         schema fields we added to Vendor.js.
 // ═══════════════════════════════════════════════════════════════════════════════
 const VendorsPage = () => {
   const [vendors, setVendors]   = useState([]);
@@ -569,7 +567,7 @@ const ProductsPage = () => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// AFFILIATES PAGE  –  includes pending-approval flow
+// AFFILIATES PAGE
 // ═══════════════════════════════════════════════════════════════════════════════
 const AffiliatesPage = () => {
   const [affiliates, setAffiliates] = useState([]);
@@ -578,7 +576,6 @@ const AffiliatesPage = () => {
   const [filter,     setFilter]     = useState('all');
   const [sort,       setSort]       = useState('earned');
 
-  // ── data loader (useCallback so approve/suspend/reinstate can refresh) ──────
   const load = useCallback(() => {
     setLoading(true);
     adminAPI.getAffiliates()
@@ -589,7 +586,6 @@ const AffiliatesPage = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  // ── approval actions ────────────────────────────────────────────────────────
   const approve   = async id => {
     try { await adminAPI.approveAffiliate(id);  load(); }
     catch (err) { alert(err.response?.data?.message || 'Failed to approve affiliate'); }
@@ -603,7 +599,6 @@ const AffiliatesPage = () => {
     catch (err) { alert(err.response?.data?.message || 'Failed to reinstate affiliate'); }
   };
 
-  // ── counts for filter badges ────────────────────────────────────────────────
   const counts = useMemo(() => ({
     all:       affiliates.length,
     pending:   affiliates.filter(a => a.status === 'pending').length,
@@ -611,7 +606,6 @@ const AffiliatesPage = () => {
     suspended: affiliates.filter(a => a.status === 'suspended').length,
   }), [affiliates]);
 
-  // ── filtered + sorted list ──────────────────────────────────────────────────
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return [...affiliates]
@@ -667,7 +661,6 @@ const AffiliatesPage = () => {
         }
       />
 
-      {/* ── pending-approval banner ──────────────────────────────────────────── */}
       {counts.pending > 0 && (
         <div style={{
           backgroundColor: 'rgba(245,158,11,0.08)',
@@ -879,8 +872,8 @@ const SettingsPage = () => {
   if (!settings) return <Loading text="Loading settings…" />;
 
   const items = [
-    { key: 'maintenanceMode',        label: 'Maintenance Mode',         desc: 'Disable all platform features for users', danger: true },
-    { key: 'newVendorRegistrations', label: 'New Vendor Registrations',  desc: 'Allow new vendors to register on the platform' },
+    { key: 'maintenanceMode',        label: 'Maintenance Mode',        desc: 'Disable all platform features for users', danger: true },
+    { key: 'newVendorRegistrations', label: 'New Vendor Registrations', desc: 'Allow new vendors to register on the platform' },
   ];
 
   return (
@@ -990,13 +983,13 @@ const CustomOrdersPage = () => {
               value={filter}
               onChange={setFilter}
               options={[
-                { value: 'all',         label: 'All Statuses'   },
-                { value: 'pending',     label: 'Pending'        },
-                { value: 'quoted',      label: 'Quoted'         },
-                { value: 'approved',    label: 'Approved'       },
-                { value: 'in_progress', label: 'In Progress'    },
-                { value: 'delivered',   label: 'Delivered'      },
-                { value: 'cancelled',   label: 'Cancelled'      },
+                { value: 'all',         label: 'All Statuses' },
+                { value: 'pending',     label: 'Pending'      },
+                { value: 'quoted',      label: 'Quoted'       },
+                { value: 'approved',    label: 'Approved'     },
+                { value: 'in_progress', label: 'In Progress'  },
+                { value: 'delivered',   label: 'Delivered'    },
+                { value: 'cancelled',   label: 'Cancelled'    },
               ]}
             />
           </>
@@ -1053,6 +1046,150 @@ const CustomOrdersPage = () => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// SUBSCRIBERS PAGE
+// ═══════════════════════════════════════════════════════════════════════════════
+const SubscribersPage = () => {
+  const [subscribers, setSubscribers] = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [search,      setSearch]      = useState('');
+  const [filter,      setFilter]      = useState('all');
+
+  const load = useCallback(() => {
+    setLoading(true);
+    adminAPI.getSubscribers()
+      .then(r => setSubscribers(r.data))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const approve = async id => {
+    try { await adminAPI.approveSubscriber(id); load(); }
+    catch (err) { alert(err.response?.data?.message || 'Failed to approve subscriber'); }
+  };
+
+  const reject = async id => {
+    try { await adminAPI.rejectSubscriber(id); load(); }
+    catch (err) { alert(err.response?.data?.message || 'Failed to reject subscriber'); }
+  };
+
+  const counts = useMemo(() => ({
+    all:      subscribers.length,
+    pending:  subscribers.filter(s => s.status === 'pending').length,
+    approved: subscribers.filter(s => s.status === 'approved').length,
+    rejected: subscribers.filter(s => s.status === 'rejected').length,
+  }), [subscribers]);
+
+  const filtered = useMemo(() => subscribers.filter(s => {
+    const matchSearch = !search || s.email.toLowerCase().includes(search.toLowerCase());
+    const matchFilter = filter === 'all' || s.status === filter;
+    return matchSearch && matchFilter;
+  }), [subscribers, search, filter]);
+
+  if (loading) return <Loading text="Loading subscribers…" />;
+
+  return (
+    <>
+      <PageHeader
+        title="Syndicate Subscribers"
+        subtitle={`${counts.pending} pending approval · ${counts.approved} active members`}
+        right={
+          <>
+            <SearchBar value={search} onChange={setSearch} placeholder="Search email…" />
+            <FilterSelect
+              value={filter}
+              onChange={setFilter}
+              options={[
+                { value: 'all',      label: `All (${counts.all})`           },
+                { value: 'pending',  label: `Pending (${counts.pending})`   },
+                { value: 'approved', label: `Approved (${counts.approved})` },
+                { value: 'rejected', label: `Rejected (${counts.rejected})` },
+              ]}
+            />
+          </>
+        }
+      />
+
+      {/* ── Stats row ──────────────────────────────────────────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 24 }}>
+        <StatCard label="Total"    value={counts.all}      icon="✉️" />
+        <StatCard label="Pending"  value={counts.pending}  icon="⏳" sub="Awaiting review" />
+        <StatCard label="Approved" value={counts.approved} icon="✅" sub="Welcome email sent" />
+        <StatCard label="Rejected" value={counts.rejected} icon="🚫" />
+      </div>
+
+      {/* ── Pending banner ─────────────────────────────────────────────────── */}
+      {counts.pending > 0 && (
+        <div style={{
+          backgroundColor: 'rgba(245,158,11,0.08)',
+          border: `1px solid rgba(245,158,11,0.3)`,
+          borderRadius: 12, padding: '12px 18px',
+          display: 'flex', alignItems: 'center', gap: 10,
+          marginBottom: 18, fontSize: 13,
+        }}>
+          <span style={{ fontSize: 16 }}>⏳</span>
+          <span style={{ color: C.yellow, fontWeight: 700 }}>
+            {counts.pending} subscriber{counts.pending > 1 ? 's' : ''} waiting for approval.
+          </span>
+          <button
+            onClick={() => setFilter('pending')}
+            style={{
+              marginLeft: 'auto', backgroundColor: 'rgba(245,158,11,0.15)',
+              border: `1px solid rgba(245,158,11,0.35)`, color: C.yellow,
+              borderRadius: 8, padding: '4px 12px', fontSize: 11,
+              fontWeight: 800, cursor: 'pointer',
+            }}
+          >
+            Review Now
+          </button>
+        </div>
+      )}
+
+      <Table
+        cols={['Email', 'Status', 'Subscribed', 'Actions']}
+        empty="No subscribers found"
+      >
+        {filtered.map(s => {
+          const statusColor = { approved: 'green', rejected: 'red', pending: 'yellow' }[s.status] || 'gray';
+          return (
+            <Tr key={s._id}>
+              <Td>
+                <span style={{ fontWeight: 600, fontFamily: 'monospace', fontSize: 13 }}>
+                  {s.email}
+                </span>
+              </Td>
+              <Td><Badge text={s.status} color={statusColor} /></Td>
+              <Td style={{ color: C.muted, fontSize: 11 }}>
+                {s.createdAt ? new Date(s.createdAt).toLocaleDateString('en-GB', {
+                  day: 'numeric', month: 'short', year: 'numeric',
+                }) : '—'}
+              </Td>
+              <Td>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {s.status === 'pending' && (
+                    <>
+                      <Btn onClick={() => approve(s._id)} variant="success">Approve + Email</Btn>
+                      <Btn onClick={() => reject(s._id)}  variant="danger">Reject</Btn>
+                    </>
+                  )}
+                  {s.status === 'approved' && (
+                    <Btn onClick={() => reject(s._id)} variant="danger">Revoke</Btn>
+                  )}
+                  {s.status === 'rejected' && (
+                    <Btn onClick={() => approve(s._id)} variant="default">Reinstate</Btn>
+                  )}
+                </div>
+              </Td>
+            </Tr>
+          );
+        })}
+      </Table>
+    </>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // MAIN ADMIN DASHBOARD
 // ═══════════════════════════════════════════════════════════════════════════════
 const AdminDashboard = () => {
@@ -1063,6 +1200,7 @@ const AdminDashboard = () => {
     'Vendors':           <VendorsPage />,
     'Orders':            <OrdersPage />,
     'Custom Orders':     <CustomOrdersPage />,
+    'Subscribers':       <SubscribersPage />,
     'Products':          <ProductsPage />,
     'Affiliates':        <AffiliatesPage />,
     'User Management':   <UsersPage />,

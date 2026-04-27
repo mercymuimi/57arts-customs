@@ -8,33 +8,35 @@ import AffiliateTracker   from './components/AffiliateTracker';
 import Navbar             from './components/layout/Navbar';
 
 // ── Pages ─────────────────────────────────────────────────────────────────────
-import Home               from './pages/Home';
-import Login              from './pages/Login';
-import Register           from './pages/Register';
-import ForgotPassword     from './pages/ForgotPassword.js';
-import Fashion            from './pages/fashion';
-import Furniture          from './pages/Furniture';
-import Beads              from './pages/Beads';
-import CustomOrder        from './pages/CustomOrder';
-import About              from './pages/About';
-import Shop               from './pages/Shop';
-import Gallery            from './pages/Gallery';
-import SearchResults      from './pages/SearchResults';
-import ProductDetail      from './pages/ProductDetail';
-import Checkout           from './pages/Checkout';
-import UserProfile        from './pages/UserProfile';
-import VendorDashboard    from './pages/VendorDashboard';
-import AdminDashboard     from './pages/AdminDashboard';
-import OrderTracking      from './pages/OrderTracking';
-import AffiliateDashboard from './pages/AffiliateDashboard';
-import Cart               from './pages/Cart';
-import Contact            from './pages/Contact';
-import Drafts             from './pages/Drafts';
-import VendorLanding      from './pages/VendorLanding';
-import AffiliateLanding   from './pages/AffiliateLanding';
-import Syndicate          from './pages/Syndicate';
-import ArtisanChatPage    from './pages/ArtisanChatPage';
-import VisionBoard        from './pages/VisionBoard';
+import Home                  from './pages/Home';
+import Login                 from './pages/Login';
+import Register              from './pages/Register';
+import ForgotPassword        from './pages/ForgotPassword.js';
+import Fashion               from './pages/fashion';
+import Furniture             from './pages/Furniture';
+import Beads                 from './pages/Beads';
+import CustomOrder           from './pages/CustomOrder';
+import CustomOrderPayment    from './pages/CustomOrderPayment';
+import About                 from './pages/About';
+import Shop                  from './pages/Shop';
+import Gallery               from './pages/Gallery';
+import SearchResults         from './pages/SearchResults';
+import ProductDetail         from './pages/ProductDetail';
+import Checkout              from './pages/Checkout';
+import UserProfile           from './pages/UserProfile';
+import VendorDashboard       from './pages/VendorDashboard';
+import AdminDashboard        from './pages/AdminDashboard';
+import OrderTracking         from './pages/OrderTracking';
+import AffiliateDashboard    from './pages/AffiliateDashboard';
+import Cart                  from './pages/Cart';
+import Contact               from './pages/Contact';
+import Drafts                from './pages/Drafts';
+import VendorLanding         from './pages/VendorLanding';
+import AffiliateLanding      from './pages/AffiliateLanding';
+import Syndicate             from './pages/Syndicate';
+import SyndicateMembersArea  from './pages/SyndicateMembersArea';
+import ArtisanChatPage       from './pages/ArtisanChatPage';
+import VisionBoard           from './pages/VisionBoard';
 
 function App() {
   return (
@@ -66,14 +68,18 @@ function App() {
               <Route path="/syndicate"       element={<Syndicate />}        />
               <Route path="/artisan-chat"    element={<ArtisanChatPage />}  />
 
+              {/* ── SYNDICATE MEMBERS AREA (public URL, gated by email approval) ── */}
+              <Route path="/syndicate/members" element={<SyndicateMembersArea />} />
+
               {/* ── ANY LOGGED-IN USER ───────────────────────────────────── */}
               <Route path="/cart"           element={<ProtectedRoute><Cart /></ProtectedRoute>}           />
               <Route path="/checkout"       element={<ProtectedRoute><Checkout /></ProtectedRoute>}       />
               <Route path="/profile"        element={<ProtectedRoute><UserProfile /></ProtectedRoute>}    />
               <Route path="/order-tracking" element={<ProtectedRoute><OrderTracking /></ProtectedRoute>}  />
               <Route path="/custom-order"   element={<ProtectedRoute><CustomOrder /></ProtectedRoute>}    />
+              <Route path="/custom-order-payment/:id" element={<ProtectedRoute><CustomOrderPayment /></ProtectedRoute>} />
               <Route path="/drafts"         element={<ProtectedRoute><Drafts /></ProtectedRoute>}         />
-              <Route path="/vision-board"   element={<ProtectedRoute><VisionBoard /></ProtectedRoute>}   />
+              <Route path="/vision-board"   element={<ProtectedRoute><VisionBoard /></ProtectedRoute>}    />
 
               {/* ── AFFILIATE ONLY ───────────────────────────────────────── */}
               <Route path="/affiliate/dashboard" element={

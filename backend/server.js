@@ -15,7 +15,8 @@ const reviewRoutes      = require('./routes/reviewRoutes');
 const paymentRoutes     = require('./routes/paymentRoutes');
 const adminRoutes       = require('./routes/adminRoutes');
 const customOrderRoutes = require('./routes/customOrderRoutes');
-const contactRoutes     = require('./routes/contactRoutes'); // ← NEW
+const contactRoutes     = require('./routes/contactRoutes');
+const subscriberRoutes  = require('./routes/subscriberRoutes'); // ← NEW
 
 const app = express();
 
@@ -40,7 +41,8 @@ app.use('/api/reviews',       reviewRoutes);
 app.use('/api/payments',      paymentRoutes);
 app.use('/api/admin',         adminRoutes);
 app.use('/api/custom-orders', customOrderRoutes);
-app.use('/api/contact',       contactRoutes); // ← NEW
+app.use('/api/contact',       contactRoutes);
+app.use('/api/subscribers',   subscriberRoutes); // ← NEW
 
 app.get('/', (req, res) => {
   res.json({ message: 'Welcome to 57 Arts & Customs API!' });

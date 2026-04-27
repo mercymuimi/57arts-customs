@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import api from '../services/api';
 
 const perks = [
   {
@@ -44,40 +45,43 @@ const interests = [
 ];
 
 const stats = [
-  { value: '57',    label: 'Members per year' },
-  { value: '340+',  label: 'Active artisans'  },
-  { value: '98%',   label: 'Satisfaction'     },
-  { value: '24hr',  label: 'Response time'    },
+  { value: '57',   label: 'Members per year' },
+  { value: '340+', label: 'Active artisans'  },
+  { value: '98%',  label: 'Satisfaction'     },
+  { value: '24hr', label: 'Response time'    },
 ];
 
 const Syndicate = () => {
-  const [form, setForm]               = useState({ name: '', email: '', code: '', interest: 'Custom Furniture' });
-  const [submitted, setSubmitted]     = useState(false);
-  const [loading, setLoading]         = useState(false);
-  const [synCode, setSynCode]         = useState('');
+  const [form, setForm]             = useState({ name: '', email: '', interest: 'Custom Furniture' });
+  const [submitted, setSubmitted]   = useState(false);
+  const [loading, setLoading]       = useState(false);
+  const [error, setError]           = useState('');
+  const [alreadyIn, setAlreadyIn]   = useState(false); // already_pending or already_approved
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [copied, setCopied]           = useState(false);
 
   const handleChange = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name || !form.email) return;
+    if (!form.email) return;
     setLoading(true);
-    setTimeout(() => {
-      const code = 'SYND-' +
-        Math.random().toString(36).substring(2, 6).toUpperCase() + '-' +
-        Math.random().toString(36).substring(2, 6).toUpperCase();
-      setSynCode(code);
-      setSubmitted(true);
-      setLoading(false);
-    }, 1800);
-  };
+    setError('');
 
-  const copyCode = () => {
-    navigator.clipboard.writeText(synCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await api.post('/subscribers', { email: form.email.toLowerCase().trim() });
+      setSubmitted(true);
+    } catch (err) {
+      const msg = err.response?.data?.message || '';
+      if (msg === 'already_approved') {
+        setAlreadyIn('approved');
+      } else if (msg === 'already_pending') {
+        setAlreadyIn('pending');
+      } else {
+        setError('Something went wrong. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -122,14 +126,12 @@ const Syndicate = () => {
 
       {/* ── HERO ─────────────────────────────────────── */}
       <div className="relative overflow-hidden" style={{ backgroundColor: '#1a1a00' }}>
-        {/* Glow */}
         <div
           className="absolute inset-0 opacity-10 pointer-events-none"
           style={{ backgroundImage: 'radial-gradient(circle at 60% 50%, #FFD700, transparent 60%)' }}
         />
 
         <div className="max-w-6xl mx-auto px-8 py-20 grid grid-cols-2 gap-12 items-center relative z-10">
-          {/* Left */}
           <div>
             <div className="flex items-center gap-2 mb-5">
               <div className="w-8 h-px bg-yellow-400" />
@@ -160,7 +162,6 @@ const Syndicate = () => {
             </div>
           </div>
 
-          {/* Right — image */}
           <div className="relative rounded-2xl overflow-hidden border border-yellow-900" style={{ height: '420px' }}>
             <img
               src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800"
@@ -171,7 +172,6 @@ const Syndicate = () => {
               className="absolute inset-0"
               style={{ background: 'linear-gradient(to top, rgba(26,21,0,0.85) 0%, transparent 60%)' }}
             />
-            {/* Member count badge */}
             <div
               className="absolute bottom-5 left-5 right-5 rounded-xl border border-yellow-900 p-4"
               style={{ backgroundColor: 'rgba(26,21,0,0.9)' }}>
@@ -190,7 +190,6 @@ const Syndicate = () => {
           </div>
         </div>
 
-        {/* Stats bar */}
         <div className="border-t border-yellow-900 px-8 py-6">
           <div className="max-w-6xl mx-auto grid grid-cols-4 gap-0 divide-x divide-yellow-900">
             {stats.map(s => (
@@ -220,70 +219,46 @@ const Syndicate = () => {
           </p>
         </div>
 
-        {/* Top 3 */}
         <div className="grid grid-cols-3 gap-5 mb-5">
           {perks.slice(0, 3).map((perk, i) => (
-            <div
-              key={i}
-              className="rounded-2xl border border-gray-800 p-6 hover:border-yellow-900 transition"
-              style={{ backgroundColor: '#1a1a00' }}
-            >
+            <div key={i} className="rounded-2xl border border-gray-800 p-6 hover:border-yellow-900 transition" style={{ backgroundColor: '#1a1a00' }}>
               <div className="w-10 h-10 bg-yellow-400 bg-opacity-20 border border-yellow-900 rounded-xl flex items-center justify-center mb-4 text-lg">
                 {perk.icon}
               </div>
-              <h3 className="text-white font-black text-sm uppercase tracking-wide mb-3">
-                {perk.title}
-              </h3>
+              <h3 className="text-white font-black text-sm uppercase tracking-wide mb-3">{perk.title}</h3>
               <p className="text-gray-500 text-xs leading-relaxed">{perk.desc}</p>
             </div>
           ))}
         </div>
-
-        {/* Bottom 3 */}
         <div className="grid grid-cols-3 gap-5">
           {perks.slice(3).map((perk, i) => (
-            <div
-              key={i}
-              className="rounded-2xl border border-gray-800 p-6 hover:border-yellow-900 transition"
-              style={{ backgroundColor: '#1a1a00' }}
-            >
+            <div key={i} className="rounded-2xl border border-gray-800 p-6 hover:border-yellow-900 transition" style={{ backgroundColor: '#1a1a00' }}>
               <div className="w-10 h-10 bg-yellow-400 bg-opacity-20 border border-yellow-900 rounded-xl flex items-center justify-center mb-4 text-lg">
                 {perk.icon}
               </div>
-              <h3 className="text-white font-black text-sm uppercase tracking-wide mb-3">
-                {perk.title}
-              </h3>
+              <h3 className="text-white font-black text-sm uppercase tracking-wide mb-3">{perk.title}</h3>
               <p className="text-gray-500 text-xs leading-relaxed">{perk.desc}</p>
             </div>
           ))}
         </div>
 
-        {/* Craftsmanship feature banner */}
-        <div
-          className="mt-5 rounded-2xl border border-yellow-900 overflow-hidden relative"
-          style={{ height: '200px' }}>
+        <div className="mt-5 rounded-2xl border border-yellow-900 overflow-hidden relative" style={{ height: '200px' }}>
           <img
             src="https://images.unsplash.com/photo-1592078615290-033ee584e267?w=1200"
             alt="Craftsmanship"
             className="absolute inset-0 w-full h-full object-cover opacity-30"
           />
-          <div
-            className="absolute inset-0"
-            style={{ background: 'linear-gradient(to right, rgba(42,32,0,0.97) 50%, transparent 100%)' }}
-          />
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, rgba(42,32,0,0.97) 50%, transparent 100%)' }} />
           <div className="absolute inset-0 flex items-center px-10">
             <div>
-              <p className="text-yellow-400 font-black text-xs uppercase tracking-widest mb-2">
-                ✦ The 57 Arts Standard
-              </p>
+              <p className="text-yellow-400 font-black text-xs uppercase tracking-widest mb-2">✦ The 57 Arts Standard</p>
               <h3 className="text-white font-black text-3xl uppercase leading-tight">
                 Craftsmanship<br />
                 <span className="text-yellow-400 italic">Without Compromise</span>
               </h3>
             </div>
             <div className="ml-auto">
-              <a href="#gateway"
-                className="bg-yellow-400 text-black px-6 py-3 rounded-xl font-black text-sm hover:bg-yellow-500 transition">
+              <a href="#gateway" className="bg-yellow-400 text-black px-6 py-3 rounded-xl font-black text-sm hover:bg-yellow-500 transition">
                 Join Now →
               </a>
             </div>
@@ -291,21 +266,17 @@ const Syndicate = () => {
         </div>
       </div>
 
-      {/* ── GATEWAY — Application Form ───────────────── */}
+      {/* ── GATEWAY ──────────────────────────────────── */}
       <div
         id="gateway"
         className="py-16 px-8"
         style={{ backgroundColor: '#1a1a00', borderTop: '1px solid', borderColor: '#2a2000' }}
       >
         <div className="max-w-xl mx-auto">
-
-          {/* Header */}
           <div className="text-center mb-10">
             <div className="flex items-center justify-center gap-2 mb-4">
               <div className="w-8 h-px bg-yellow-400" />
-              <span className="text-yellow-400 text-xs font-black uppercase tracking-widest">
-                The Gateway
-              </span>
+              <span className="text-yellow-400 text-xs font-black uppercase tracking-widest">The Gateway</span>
               <div className="w-8 h-px bg-yellow-400" />
             </div>
             <h2 className="text-white font-black text-4xl uppercase leading-tight mb-4">
@@ -318,12 +289,35 @@ const Syndicate = () => {
             </p>
           </div>
 
-          {!submitted ? (
-            <form onSubmit={handleSubmit} noValidate>
-              <div
-                className="rounded-2xl border border-gray-800 p-8"
-                style={{ backgroundColor: '#1a1500' }}
+          {/* ── Already in states ── */}
+          {alreadyIn === 'approved' && (
+            <div className="rounded-2xl border border-yellow-900 p-8 text-center mb-6" style={{ backgroundColor: '#2a2000' }}>
+              <div className="text-4xl mb-4">✦</div>
+              <p className="text-yellow-400 font-black text-xs uppercase tracking-widest mb-2">You're already in</p>
+              <h3 className="text-white font-black text-xl uppercase mb-3">Syndicate Member Detected</h3>
+              <p className="text-gray-400 text-sm mb-6">Your membership is active. Head to the members area to access your exclusive drops and perks.</p>
+              <Link
+                to="/syndicate/members"
+                className="inline-block bg-yellow-400 text-black px-8 py-3 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-yellow-500 transition"
               >
+                Enter Members Area →
+              </Link>
+            </div>
+          )}
+
+          {alreadyIn === 'pending' && (
+            <div className="rounded-2xl border border-gray-700 p-8 text-center mb-6" style={{ backgroundColor: '#1a1500' }}>
+              <div className="text-4xl mb-4">⏳</div>
+              <p className="text-yellow-400 font-black text-xs uppercase tracking-widest mb-2">Application Under Review</p>
+              <h3 className="text-white font-black text-xl uppercase mb-3">You're Already on the List</h3>
+              <p className="text-gray-400 text-sm">Your dossier has been received. We'll send your approval and access details to your email within 24 hours.</p>
+            </div>
+          )}
+
+          {/* ── Main form ── */}
+          {!submitted && !alreadyIn && (
+            <form onSubmit={handleSubmit} noValidate>
+              <div className="rounded-2xl border border-gray-800 p-8" style={{ backgroundColor: '#1a1500' }}>
 
                 {/* Name + Email */}
                 <div className="grid grid-cols-2 gap-4 mb-4">
@@ -336,14 +330,13 @@ const Syndicate = () => {
                       value={form.name}
                       onChange={e => handleChange('name', e.target.value)}
                       placeholder="Your full name"
-                      required
                       className="w-full px-4 py-3 rounded-xl text-white text-sm outline-none border border-gray-700 focus:border-yellow-400 transition placeholder-gray-700"
                       style={{ backgroundColor: '#2a2000' }}
                     />
                   </div>
                   <div>
                     <label className="text-yellow-400 text-xs font-black uppercase tracking-widest block mb-2">
-                      Email Address
+                      Email Address *
                     </label>
                     <input
                       type="email"
@@ -353,29 +346,6 @@ const Syndicate = () => {
                       required
                       className="w-full px-4 py-3 rounded-xl text-white text-sm outline-none border border-gray-700 focus:border-yellow-400 transition placeholder-gray-700"
                       style={{ backgroundColor: '#2a2000' }}
-                    />
-                  </div>
-                </div>
-
-                {/* Invitation code */}
-                <div className="mb-4">
-                  <label className="text-yellow-400 text-xs font-black uppercase tracking-widest block mb-2">
-                    Invitation Code{' '}
-                    <span className="text-gray-700 normal-case font-normal tracking-normal">
-                      (optional)
-                    </span>
-                  </label>
-                  <div
-                    className="flex items-center rounded-xl border border-gray-700 focus-within:border-yellow-400 transition overflow-hidden"
-                    style={{ backgroundColor: '#2a2000' }}
-                  >
-                    <span className="text-yellow-400 px-4 text-sm flex-shrink-0">🔒</span>
-                    <input
-                      type="text"
-                      value={form.code}
-                      onChange={e => handleChange('code', e.target.value)}
-                      placeholder="SYND-XXXX-XXXX"
-                      className="flex-1 bg-transparent text-white text-sm py-3 pr-4 outline-none placeholder-gray-700 font-mono tracking-widest"
                     />
                   </div>
                 </div>
@@ -393,19 +363,12 @@ const Syndicate = () => {
                       style={{ backgroundColor: '#2a2000' }}
                     >
                       <span>{form.interest}</span>
-                      <svg
-                        className={`w-4 h-4 text-gray-500 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`}
-                        fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                      >
+                      <svg className={`w-4 h-4 text-gray-500 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
                     </button>
-
                     {dropdownOpen && (
-                      <div
-                        className="absolute top-full left-0 right-0 mt-1 rounded-xl border border-gray-700 overflow-hidden z-20"
-                        style={{ backgroundColor: '#1a1a00' }}
-                      >
+                      <div className="absolute top-full left-0 right-0 mt-1 rounded-xl border border-gray-700 overflow-hidden z-20" style={{ backgroundColor: '#1a1a00' }}>
                         {interests.map(opt => (
                           <button
                             key={opt}
@@ -425,10 +388,15 @@ const Syndicate = () => {
                   </div>
                 </div>
 
-                {/* Submit */}
+                {error && (
+                  <div className="mb-4 px-4 py-3 rounded-xl border border-red-900 text-red-400 text-sm" style={{ backgroundColor: 'rgba(224,92,92,0.08)' }}>
+                    {error}
+                  </div>
+                )}
+
                 <button
                   type="submit"
-                  disabled={loading || !form.name || !form.email}
+                  disabled={loading || !form.email}
                   className="w-full py-4 rounded-xl font-black text-sm uppercase tracking-widest transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{ backgroundColor: loading ? '#8a7020' : '#FFD700', color: '#0a0a00' }}
                 >
@@ -443,18 +411,15 @@ const Syndicate = () => {
                   ) : 'Submit Dossier →'}
                 </button>
               </div>
-
               <p className="text-center text-gray-700 text-xs uppercase tracking-widest mt-4">
                 ✦ Confidentiality is our primary protocol. All data is encrypted.
               </p>
             </form>
+          )}
 
-          ) : (
-            /* ── SUCCESS STATE ── */
-            <div
-              className="rounded-2xl border border-yellow-900 p-10 text-center"
-              style={{ backgroundColor: '#2a2000' }}
-            >
+          {/* ── Success state ── */}
+          {submitted && (
+            <div className="rounded-2xl border border-yellow-900 p-10 text-center" style={{ backgroundColor: '#2a2000' }}>
               <div className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-5 text-3xl font-black text-black">
                 ✦
               </div>
@@ -462,47 +427,36 @@ const Syndicate = () => {
                 Dossier Received
               </p>
               <h3 className="text-white font-black text-2xl uppercase mb-3">
-                Welcome to the Vanguard,<br />
-                <span className="text-yellow-400">{form.name.split(' ')[0]}.</span>
+                {form.name
+                  ? <>Welcome to the Vanguard,<br /><span className="text-yellow-400">{form.name.split(' ')[0]}.</span></>
+                  : <>You're on the List.</>
+                }
               </h3>
               <p className="text-gray-400 text-sm leading-relaxed mb-6">
-                Your application has been logged. Syndicate credentials and access details will
-                be dispatched to{' '}
-                <span className="text-yellow-400 font-black">{form.email}</span> within 24 hours.
+                Your application has been logged. Once our team approves your dossier, a welcome email with full Syndicate access will be dispatched to{' '}
+                <span className="text-yellow-400 font-black">{form.email}</span>.
               </p>
 
-              {/* Generated code */}
-              <div
-                className="rounded-xl border border-yellow-900 p-4 mb-3"
-                style={{ backgroundColor: '#1a1500' }}
-              >
-                <p className="text-gray-600 text-xs uppercase tracking-widest mb-2">
-                  Your Provisional Access Code
-                </p>
-                <p className="text-yellow-400 font-black text-2xl tracking-widest font-mono mb-3">
-                  {synCode}
-                </p>
-                <button
-                  onClick={copyCode}
-                  className={`text-xs font-black uppercase tracking-widest px-4 py-2 rounded-lg transition ${
-                    copied
-                      ? 'bg-green-500 text-white'
-                      : 'border border-gray-700 text-gray-400 hover:border-yellow-400 hover:text-yellow-400'
-                  }`}
-                  style={!copied ? { backgroundColor: '#2a2000' } : {}}>
-                  {copied ? '✓ Copied!' : 'Copy Code'}
-                </button>
+              <div className="rounded-xl border border-yellow-900 p-4 mb-6" style={{ backgroundColor: '#1a1500' }}>
+                <p className="text-gray-600 text-xs uppercase tracking-widest mb-1">What happens next</p>
+                <div className="flex flex-col gap-3 mt-3 text-left">
+                  {[
+                    { icon: '⏳', text: 'Admin reviews your application — usually within 24 hours.' },
+                    { icon: '✉️', text: 'You receive a welcome email with a direct link to the Syndicate Members Area.' },
+                    { icon: '✦',  text: 'Instant access to early drops, private events, and bespoke consults.' },
+                  ].map((step, i) => (
+                    <div key={i} className="flex items-start gap-3">
+                      <span className="text-yellow-400 text-sm mt-0.5">{step.icon}</span>
+                      <p className="text-gray-400 text-xs leading-relaxed">{step.text}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              <p className="text-gray-600 text-xs mb-6 leading-relaxed">
-                Save this code. You will be asked to confirm it when your invitation email arrives.
-                Do not share it.
-              </p>
-
               <div className="flex gap-3 justify-center">
-                <Link to="/fashion"
+                <Link to="/shop"
                   className="bg-yellow-400 text-black px-6 py-3 rounded-xl font-black text-sm uppercase tracking-wide hover:bg-yellow-500 transition">
-                  Browse Collections →
+                  Browse Archive →
                 </Link>
                 <Link to="/"
                   className="border border-gray-700 text-gray-400 px-6 py-3 rounded-xl font-black text-sm uppercase tracking-wide hover:border-yellow-400 hover:text-yellow-400 transition"
@@ -516,15 +470,10 @@ const Syndicate = () => {
       </div>
 
       {/* ── FOOTER ───────────────────────────────────── */}
-      <footer
-        style={{ backgroundColor: '#0d0d00' }}
-        className="border-t border-yellow-900 px-8 py-8"
-      >
+      <footer style={{ backgroundColor: '#0d0d00' }} className="border-t border-yellow-900 px-8 py-8">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <span className="bg-yellow-400 text-black w-7 h-7 rounded-lg flex items-center justify-center font-black text-xs">
-              57
-            </span>
+            <span className="bg-yellow-400 text-black w-7 h-7 rounded-lg flex items-center justify-center font-black text-xs">57</span>
             <div>
               <p className="text-white font-black text-sm">57 ARTS & CUSTOMS</p>
               <p className="text-gray-700 text-xs">The Syndicate · Est. 1957</p>

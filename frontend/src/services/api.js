@@ -93,6 +93,16 @@ export const aiAPI = {
   generateImage:      (data)        => api.post('/ai/generate-image', data, { timeout: 120000 }),
 };
 
+// ── CUSTOM ORDERS ─────────────────────────────────────────────────────────────
+export const customOrderAPI = {
+  create:       (data) => api.post('/custom-orders', data),
+  getMyOrders:  ()     => api.get('/custom-orders/my-orders'),
+  getById:      (id)   => api.get(`/custom-orders/${id}`),
+
+  // Buyer approves a quoted order and pays
+  approve: (id, paymentData) => api.put(`/custom-orders/${id}/approve`, paymentData),
+};
+
 // ── ADMIN ─────────────────────────────────────────────────────────────────────
 export const adminAPI = {
   // Dashboard
@@ -123,12 +133,17 @@ export const adminAPI = {
   suspendAffiliate:  (id)         => api.patch(`/admin/affiliates/${id}/suspend`),
 
   // Custom Orders
-  getCustomOrders:          ()              => api.get('/admin/custom-orders'),
-  updateCustomOrderStatus:  (id, data)      => api.put(`/admin/custom-orders/${id}/status`, data),
+  getCustomOrders:         ()         => api.get('/admin/custom-orders'),
+  updateCustomOrderStatus: (id, data) => api.put(`/admin/custom-orders/${id}/status`, data),
 
   // Settings
   getSettings:       ()           => api.get('/admin/settings'),
   updateSettings:    (data)       => api.put('/admin/settings', data),
+
+  // Subscribers
+  getSubscribers:    ()           => api.get('/subscribers'),
+  approveSubscriber: (id)         => api.patch(`/subscribers/${id}/approve`),
+  rejectSubscriber:  (id)         => api.patch(`/subscribers/${id}/reject`),
 };
 
 export default api;

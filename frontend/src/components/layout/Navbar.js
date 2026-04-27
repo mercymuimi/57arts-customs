@@ -273,10 +273,6 @@ const Navbar = () => {
                       className="block px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white hover:bg-opacity-5 transition">
                       {dashboardLabel}
                     </Link>
-                    <Link to="/profile" onClick={() => setShowUserMenu(false)}
-                      className="block px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white hover:bg-opacity-5 transition">
-                      👤 My Profile
-                    </Link>
                     <Link to="/order-tracking" onClick={() => setShowUserMenu(false)}
                       className="block px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white hover:bg-opacity-5 transition">
                       📦 My Orders

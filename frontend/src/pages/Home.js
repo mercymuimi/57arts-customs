@@ -6,24 +6,22 @@ import { useCart } from '../context/CartContext';
 
 const BASE_URL = 'http://localhost:5000/api';
 
-// ─── Fallback Static Data (used if API is down) ───────────────────────────────
-
+// ─── Fallback Static Data ─────────────────────────────────────────────────────
 const FALLBACK_FEATURED = [
-  { id: 'obsidian-throne-v2', name: 'Obsidian Throne v.2', label: 'Featured Custom', price: 12000, category: 'Furniture', slug: 'obsidian-throne-v2', img: 'https://images.unsplash.com/photo-1592078615290-033ee584e267?w=800' },
-  { id: 'midnight-denim-jacket', name: 'Midnight Denim Jacket', label: 'Limited Drop', price: 1500, category: 'Fashion', slug: 'midnight-denim-jacket', img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=800' },
-  { id: 'gold-pulse-beads', name: 'Gold Pulse Beads', label: 'Heritage Craft', price: 2500, category: 'Beads', slug: 'gold-pulse-beads', img: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800' },
-  { id: 'monarch-carry-all', name: 'Monarch Carry-all', label: 'Bespoke Only', price: 2000, category: 'Fashion', slug: 'monarch-carry-all', img: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=800' },
+  { id: 'obsidian-throne-v2',     name: 'Obsidian Throne v.2',    label: 'Featured Custom', price: 12000, category: 'Furniture', slug: 'obsidian-throne-v2',     img: 'https://images.unsplash.com/photo-1592078615290-033ee584e267?w=800' },
+  { id: 'midnight-denim-jacket',  name: 'Midnight Denim Jacket',  label: 'Limited Drop',    price: 1500,  category: 'Fashion',   slug: 'midnight-denim-jacket',  img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=800' },
+  { id: 'gold-pulse-beads',       name: 'Gold Pulse Beads',       label: 'Heritage Craft',  price: 2500,  category: 'Beads',     slug: 'gold-pulse-beads',       img: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800' },
+  { id: 'monarch-carry-all',      name: 'Monarch Carry-all',      label: 'Bespoke Only',    price: 2000,  category: 'Fashion',   slug: 'monarch-carry-all',      img: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=800' },
 ];
 
 const FALLBACK_TRENDING = [
-  { id: 'distressed-denim-trouser', name: 'Distressed Denim Trouser', price: 3000, category: 'Fashion', tag: 'Hot', slug: 'distressed-denim-trouser', img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=500' },
-  { id: 'vanguard-teak-chair', name: 'Vanguard Teak Chair', price: 12000, category: 'Furniture', tag: 'Custom', slug: 'vanguard-teak-chair', img: 'https://images.unsplash.com/photo-1592078615290-033ee584e267?w=500' },
-  { id: 'gold-infused-obsidian-beads', name: 'Gold-Infused Obsidian Beads', price: 2500, category: 'Beads', tag: 'New', slug: 'gold-infused-obsidian-beads', img: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=500' },
-  { id: 'midnight-velvet-blazer', name: 'Midnight Velvet Blazer', price: 2000, category: 'Fashion', tag: 'Limited', slug: 'midnight-velvet-blazer', img: 'https://images.unsplash.com/photo-1551537482-f2075a1d41f2?w=500' },
+  { id: 'distressed-denim-trouser',   name: 'Distressed Denim Trouser',   price: 3000,  category: 'Fashion',   tag: 'Hot',     slug: 'distressed-denim-trouser',   img: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=500' },
+  { id: 'vanguard-teak-chair',        name: 'Vanguard Teak Chair',        price: 12000, category: 'Furniture', tag: 'Custom',  slug: 'vanguard-teak-chair',        img: 'https://images.unsplash.com/photo-1592078615290-033ee584e267?w=500' },
+  { id: 'gold-infused-obsidian-beads',name: 'Gold-Infused Obsidian Beads',price: 2500,  category: 'Beads',     tag: 'New',     slug: 'gold-infused-obsidian-beads',img: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=500' },
+  { id: 'midnight-velvet-blazer',     name: 'Midnight Velvet Blazer',     price: 2000,  category: 'Fashion',   tag: 'Limited', slug: 'midnight-velvet-blazer',     img: 'https://images.unsplash.com/photo-1551537482-f2075a1d41f2?w=500' },
 ];
 
-// ─── Static Data (never changes) ──────────────────────────────────────────────
-
+// ─── Static Data ──────────────────────────────────────────────────────────────
 const categories = [
   { name: 'Fashion',         desc: 'Street luxury & bespoke apparel', path: '/fashion',   count: '1,200+ pieces', img: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=700' },
   { name: 'Furniture',       desc: 'Artisanal handcrafted pieces',    path: '/furniture', count: '480+ pieces',   img: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=700' },
@@ -44,7 +42,6 @@ const howItWorks = [
 ];
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
-
 const C = {
   bg:      '#0a0a0a',
   surface: '#111111',
@@ -80,8 +77,7 @@ const CATEGORY_FALLBACKS = {
 const resolveImage = (product) => {
   const candidates = [
     product.img, product.image, product.imageUrl, product.thumbnail,
-    product.images?.[0],
-    product.images?.[0]?.url,
+    product.images?.[0], product.images?.[0]?.url,
     product.productImage, product.coverImage,
   ];
   const found = candidates.find(c => c && typeof c === 'string' && c.startsWith('http'));
@@ -110,7 +106,6 @@ const normalizeList = (data) => {
 };
 
 // ─── AI Recommendation Cache ──────────────────────────────────────────────────
-
 const recCache = new Map();
 const CACHE_TTL = 60_000;
 function getCached(key) {
@@ -129,7 +124,6 @@ const STRATEGY_LABELS = {
 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
-
 const SkeletonCard = () => (
   <div style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, overflow: 'hidden' }}>
     <div style={{ height: 200, background: `linear-gradient(90deg, ${C.faint} 25%, ${C.border} 50%, ${C.faint} 75%)`, backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite' }} />
@@ -141,7 +135,6 @@ const SkeletonCard = () => (
   </div>
 );
 
-// Skeleton for hero card while featured products load
 const HeroSkeleton = () => (
   <div style={{ ...s.card }}>
     <div style={{ height: 310, background: `linear-gradient(90deg, ${C.faint} 25%, ${C.border} 50%, ${C.faint} 75%)`, backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite', borderRadius: '16px 16px 0 0' }} />
@@ -192,7 +185,6 @@ const RecCard = ({ item, isWishlisted, onToggleWish, onView, onCart, alreadyInCa
 };
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-
 const Home = () => {
   const navigate = useNavigate();
   const { addToCart, isInCart } = useCart();
@@ -202,11 +194,17 @@ const Home = () => {
   const [wishlist, setWishlist]           = useState([]);
   const [heroCartAdded, setHeroCartAdded] = useState({});
   const [activeTesti, setActiveTesti]     = useState(0);
-  const [email, setEmail]                 = useState('');
-  const [subscribed, setSubscribed]       = useState(false);
   const [searchQuery, setSearchQuery]     = useState('');
 
-  // ── Live product state (fetched from DB) ──
+  // ── Newsletter state ──
+  const [email, setEmail]               = useState('');
+  const [subscribed, setSubscribed]     = useState(false);
+  const [subLoading, setSubLoading]     = useState(false);
+  const [subError, setSubError]         = useState('');
+  // 'idle' | 'checking' | 'approved' | 'pending' | 'not_found'
+  const [approvalStatus, setApprovalStatus] = useState('idle');
+
+  // ── Live product state ──
   const [featuredProducts, setFeaturedProducts] = useState(FALLBACK_FEATURED);
   const [trending, setTrending]                 = useState(FALLBACK_TRENDING);
   const [featuredLoading, setFeaturedLoading]   = useState(true);
@@ -222,30 +220,18 @@ const Home = () => {
   const totalPages = Math.ceil(allRecs.length / ITEMS_PER_PAGE);
   const pageRecs   = allRecs.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  // ── Fetch featured + trending from real DB ──
+  // ── Fetch featured + trending ──
   useEffect(() => {
     const fetchFeatured = axios.get(`${BASE_URL}/products?featured=true&limit=4`)
-      .then(res => {
-        const products = normalizeList(res.data);
-        if (products.length > 0) setFeaturedProducts(products);
-      })
-      .catch(() => {}); // silently keep fallback
-
+      .then(res => { const p = normalizeList(res.data); if (p.length > 0) setFeaturedProducts(p); })
+      .catch(() => {});
     const fetchTrending = axios.get(`${BASE_URL}/products?trending=true&limit=4`)
-      .then(res => {
-        const products = normalizeList(res.data);
-        if (products.length > 0) setTrending(products);
-      })
-      .catch(() => {}); // silently keep fallback
-
-    Promise.allSettled([fetchFeatured, fetchTrending])
-      .finally(() => setFeaturedLoading(false));
+      .then(res => { const p = normalizeList(res.data); if (p.length > 0) setTrending(p); })
+      .catch(() => {});
+    Promise.allSettled([fetchFeatured, fetchTrending]).finally(() => setFeaturedLoading(false));
   }, []);
 
-  // Reset carousel index if products change (e.g. from 4 fallback to real products)
-  useEffect(() => {
-    setCurrent(0);
-  }, [featuredProducts.length]);
+  useEffect(() => { setCurrent(0); }, [featuredProducts.length]);
 
   useEffect(() => {
     if (featuredProducts.length === 0) return;
@@ -267,12 +253,10 @@ const Home = () => {
     if (cached) {
       setAllRecs(cached.recommendations || []);
       setAiStrategy(cached.strategy || '');
-      setAiLoading(false);
-      setAiError(false);
+      setAiLoading(false); setAiError(false);
       return;
     }
-    setAiLoading(true);
-    setAiError(false);
+    setAiLoading(true); setAiError(false);
     try {
       const params = { n: 12 };
       if (category !== 'All') params.category = category;
@@ -282,17 +266,13 @@ const Home = () => {
       setAiStrategy(res.data.strategy || '');
     } catch (err) {
       console.error('AI recommendations error:', err.message);
-      setAiError(true);
-      setAllRecs([]);
+      setAiError(true); setAllRecs([]);
     } finally {
       setAiLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    setCurrentPage(1);
-    fetchRecs(activeCategory);
-  }, [activeCategory, fetchRecs]);
+  useEffect(() => { setCurrentPage(1); fetchRecs(activeCategory); }, [activeCategory, fetchRecs]);
 
   const recordInteraction = (productId, action) => {
     aiAPI.recordInteraction({ user_id: 'guest', product_id: productId, action }).catch(() => {});
@@ -316,15 +296,69 @@ const Home = () => {
     recordInteraction(product.id || product.slug, 'cart');
   };
 
-  const doSearch    = (e) => { e.preventDefault(); if (searchQuery.trim()) navigate(`/search?q=${encodeURIComponent(searchQuery)}`); };
-  const doSubscribe = (e) => { e.preventDefault(); if (email) setSubscribed(true); };
-  const goToPage    = (page) => {
+  const doSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+  };
+
+  // ── Check approval status for already-subscribed email ──
+  const checkApprovalStatus = async (emailToCheck) => {
+    if (!emailToCheck) return;
+    setApprovalStatus('checking');
+    try {
+      const res  = await fetch(`${BASE_URL}/subscribers/check?email=${encodeURIComponent(emailToCheck)}`);
+      const data = await res.json();
+      setApprovalStatus(data.status || 'not_found');
+      // If approved → go straight to members area
+      if (data.status === 'approved') {
+        navigate('/syndicate/members');
+      }
+    } catch {
+      setApprovalStatus('idle');
+    }
+  };
+
+  // ── Newsletter subscribe ──
+  const doSubscribe = async (e) => {
+    e.preventDefault();
+    if (!email) return;
+    setSubLoading(true);
+    setSubError('');
+    try {
+      const res  = await fetch(`${BASE_URL}/subscribers`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (data.message === 'already_approved') {
+          // Already approved → redirect immediately
+          navigate('/syndicate/members');
+        } else if (data.message === 'already_pending') {
+          setSubError('');
+          setApprovalStatus('pending');
+          setSubscribed(true);
+        } else {
+          setSubError(data.message || 'Something went wrong. Try again.');
+        }
+        return;
+      }
+      setSubscribed(true);
+      setApprovalStatus('pending');
+    } catch {
+      setSubError('Network error. Please try again.');
+    } finally {
+      setSubLoading(false);
+    }
+  };
+
+  const goToPage = (page) => {
     if (page < 1 || page > totalPages) return;
     setCurrentPage(page);
     document.getElementById('ai-recommendations-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  // Guard: don't render hero card until we have products
   const fp          = featuredProducts[current] || featuredProducts[0];
   const heroInCart  = fp ? isInCart(fp.id) : false;
   const heroJustAdded = fp ? heroCartAdded[fp.id] : false;
@@ -347,7 +381,6 @@ const Home = () => {
       <section style={{ backgroundColor: C.bg, minHeight: 'calc(100vh - 32px - 65px)', display: 'flex', alignItems: 'center', padding: '80px 0', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: 1, backgroundColor: C.border, pointerEvents: 'none' }} />
         <div style={{ ...s.section, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center', position: 'relative', zIndex: 1 }}>
-          {/* Left: Copy */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28 }}>
               <div style={{ width: 24, height: 1, backgroundColor: C.gold }} />
@@ -380,7 +413,6 @@ const Home = () => {
             </div>
           </div>
 
-          {/* Right: Featured product card */}
           <div style={{ position: 'relative' }}>
             {featuredLoading || !fp ? <HeroSkeleton /> : (
               <div style={{ ...s.card, opacity: fading ? 0 : 1, transition: 'opacity 0.35s ease' }}>
@@ -428,7 +460,6 @@ const Home = () => {
                 </div>
               </div>
             )}
-            {/* Next product thumbnail */}
             {!featuredLoading && featuredProducts.length > 1 && (
               <div onClick={() => goTo((current + 1) % featuredProducts.length)}
                 style={{ position: 'absolute', bottom: -10, right: -10, width: 68, height: 68, borderRadius: 10, overflow: 'hidden', border: `1px solid ${C.bHov}`, cursor: 'pointer', zIndex: 2 }}>
@@ -480,9 +511,7 @@ const Home = () => {
                 <p style={{ color: C.cream, fontWeight: 800, fontSize: 13, marginBottom: 5, letterSpacing: '-0.01em' }}>{p.name}</p>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <p style={{ color: C.muted, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{p.category}</p>
-                  <p style={{ color: C.gold, fontWeight: 900, fontSize: 13 }}>
-                    {typeof p.price === 'number' ? `KSH ${p.price.toLocaleString()}` : p.price}
-                  </p>
+                  <p style={{ color: C.gold, fontWeight: 900, fontSize: 13 }}>{typeof p.price === 'number' ? `KSH ${p.price.toLocaleString()}` : p.price}</p>
                 </div>
               </div>
             ))}
@@ -514,60 +543,48 @@ const Home = () => {
             ))}
             {!aiLoading && allRecs.length > 0 && (
               <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, color: C.muted, fontSize: 11, fontWeight: 700 }}>
-                <span>Page</span>
-                <span style={{ color: C.gold, fontWeight: 900 }}>{currentPage}</span>
-                <span>of</span>
-                <span style={{ color: C.gold, fontWeight: 900 }}>{totalPages}</span>
+                <span>Page</span><span style={{ color: C.gold, fontWeight: 900 }}>{currentPage}</span>
+                <span>of</span><span style={{ color: C.gold, fontWeight: 900 }}>{totalPages}</span>
               </div>
             )}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, minHeight: 440 }}>
-            {aiLoading ? (
-              Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
-            ) : aiError ? (
+            {aiLoading ? Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />) :
+             aiError ? (
               <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 0', gap: 14 }}>
                 <span style={{ fontSize: 32 }}>⚡</span>
-                <p style={{ color: C.muted, fontSize: 13 }}>
-                  AI service is starting up.{' '}
+                <p style={{ color: C.muted, fontSize: 13 }}>AI service is starting up.{' '}
                   <button onClick={() => fetchRecs(activeCategory)} style={{ color: C.gold, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 900, fontSize: 13 }}>Retry</button>
                 </p>
               </div>
-            ) : pageRecs.length > 0 ? (
-              pageRecs.map((item, i) => {
-                const normalized = normalizeProduct(item);
-                return (
-                  <RecCard key={`${normalized.id}-${i}`} item={normalized}
-                    isWishlisted={wishlist.includes(normalized.slug)}
-                    onToggleWish={() => toggleWish(normalized.slug)}
-                    onView={() => { recordInteraction(normalized.id, 'view'); navigate(`/product/${normalized.slug}`); }}
-                    onCart={addRecToCart}
-                    alreadyInCart={isInCart(normalized.id)} />
-                );
-              })
-            ) : (
+             ) : pageRecs.length > 0 ? pageRecs.map((item, i) => {
+              const normalized = normalizeProduct(item);
+              return (
+                <RecCard key={`${normalized.id}-${i}`} item={normalized}
+                  isWishlisted={wishlist.includes(normalized.slug)}
+                  onToggleWish={() => toggleWish(normalized.slug)}
+                  onView={() => { recordInteraction(normalized.id, 'view'); navigate(`/product/${normalized.slug}`); }}
+                  onCart={addRecToCart}
+                  alreadyInCart={isInCart(normalized.id)} />
+              );
+             }) : (
               <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '48px 0', color: C.muted }}>
                 <p style={{ fontSize: 13 }}>No recommendations found for this category.</p>
               </div>
-            )}
+             )}
           </div>
           {!aiLoading && totalPages > 1 && (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 40 }}>
               <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1}
-                style={{ width: 38, height: 38, borderRadius: 9, border: `1px solid ${currentPage === 1 ? C.faint : C.border}`, backgroundColor: 'transparent', color: currentPage === 1 ? C.dim : C.cream, fontSize: 14, cursor: currentPage === 1 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                onMouseEnter={e => { if (currentPage !== 1) e.currentTarget.style.borderColor = C.bHov; }}
-                onMouseLeave={e => { if (currentPage !== 1) e.currentTarget.style.borderColor = C.border; }}>‹</button>
+                style={{ width: 38, height: 38, borderRadius: 9, border: `1px solid ${currentPage === 1 ? C.faint : C.border}`, backgroundColor: 'transparent', color: currentPage === 1 ? C.dim : C.cream, fontSize: 14, cursor: currentPage === 1 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
               {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
                 <button key={page} onClick={() => goToPage(page)}
-                  style={{ width: 38, height: 38, borderRadius: 9, border: `1px solid ${page === currentPage ? C.gold : C.border}`, backgroundColor: page === currentPage ? C.gold : 'transparent', color: page === currentPage ? '#000' : C.muted, fontSize: 12, fontWeight: 900, cursor: 'pointer' }}
-                  onMouseEnter={e => { if (page !== currentPage) { e.currentTarget.style.borderColor = C.bHov; e.currentTarget.style.color = C.cream; } }}
-                  onMouseLeave={e => { if (page !== currentPage) { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.muted; } }}>
+                  style={{ width: 38, height: 38, borderRadius: 9, border: `1px solid ${page === currentPage ? C.gold : C.border}`, backgroundColor: page === currentPage ? C.gold : 'transparent', color: page === currentPage ? '#000' : C.muted, fontSize: 12, fontWeight: 900, cursor: 'pointer' }}>
                   {page}
                 </button>
               ))}
               <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages}
-                style={{ width: 38, height: 38, borderRadius: 9, border: `1px solid ${currentPage === totalPages ? C.faint : C.border}`, backgroundColor: 'transparent', color: currentPage === totalPages ? C.dim : C.cream, fontSize: 14, cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                onMouseEnter={e => { if (currentPage !== totalPages) e.currentTarget.style.borderColor = C.bHov; }}
-                onMouseLeave={e => { if (currentPage !== totalPages) e.currentTarget.style.borderColor = C.border; }}>›</button>
+                style={{ width: 38, height: 38, borderRadius: 9, border: `1px solid ${currentPage === totalPages ? C.faint : C.border}`, backgroundColor: 'transparent', color: currentPage === totalPages ? C.dim : C.cream, fontSize: 14, cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
             </div>
           )}
           <p style={{ color: C.muted, fontSize: 11, textAlign: 'center', marginTop: 20, letterSpacing: '0.04em' }}>
@@ -731,7 +748,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* ── NEWSLETTER ── */}
+      {/* ── NEWSLETTER / SYNDICATE ── */}
       <section style={{ padding: '96px 0' }}>
         <div style={s.section}>
           <div style={{ backgroundColor: C.surface, border: `1px solid ${C.border}`, borderRadius: 18, overflow: 'hidden' }}>
@@ -740,30 +757,90 @@ const Home = () => {
               <div>
                 <p style={s.eyebrow}>Join The Syndicate</p>
                 <h2 style={{ ...s.h2, marginBottom: 12 }}>Get Early Access<br />to Every Release.</h2>
-                <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.85, maxWidth: 340 }}>First access to new artisan drops, exclusive discounts, and Nairobi studio event invitations. No spam — just craft.</p>
+                <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.85, maxWidth: 340 }}>
+                  First access to new artisan drops, exclusive discounts, and Nairobi studio event invitations. No spam — just craft.
+                </p>
               </div>
+
               <div>
-                {!subscribed ? (
+                {/* ── State 1: Already approved → show members area CTA ── */}
+                {approvalStatus === 'approved' ? (
+                  <div style={{ backgroundColor: C.bg, border: `1px solid rgba(201,168,76,0.4)`, borderRadius: 14, padding: 28, textAlign: 'center' }}>
+                    <div style={{ width: 44, height: 44, borderRadius: '50%', backgroundColor: C.gold, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: 18, fontWeight: 900, color: '#000' }}>✦</div>
+                    <p style={{ color: C.gold, fontSize: 10, fontWeight: 900, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 8 }}>Active Member</p>
+                    <p style={{ color: C.cream, fontWeight: 900, fontSize: 16, marginBottom: 6 }}>You're in the Syndicate.</p>
+                    <p style={{ color: C.muted, fontSize: 12, marginBottom: 20, lineHeight: 1.6 }}>Your membership is active. Access your exclusive drops and perks now.</p>
+                    <Link to="/syndicate/members"
+                      style={{ ...s.btnGold, display: 'block', textAlign: 'center', borderRadius: 10, padding: '13px 20px', textDecoration: 'none' }}>
+                      Enter Members Area →
+                    </Link>
+                  </div>
+
+                /* ── State 2: Submitted / pending ── */
+                ) : subscribed ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 12, padding: 22, display: 'flex', alignItems: 'center', gap: 14 }}>
+                      <div style={{ width: 34, height: 34, borderRadius: 8, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <span style={{ color: C.gold, fontSize: 14 }}>✓</span>
+                      </div>
+                      <div>
+                        <p style={{ color: C.cream, fontWeight: 900, fontSize: 13 }}>You're on the list.</p>
+                        <p style={{ color: C.muted, fontSize: 11, marginTop: 3 }}>
+                          {approvalStatus === 'pending'
+                            ? 'Pending admin approval — we\'ll email you once approved.'
+                            : 'Application received — we\'ll be in touch within 24 hours.'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Check approval status button */}
+                    <button
+                      onClick={() => checkApprovalStatus(email)}
+                      disabled={approvalStatus === 'checking'}
+                      style={{ backgroundColor: 'transparent', border: `1px solid ${C.border}`, borderRadius: 10, padding: '11px 20px', color: C.muted, fontSize: 12, fontWeight: 900, letterSpacing: '0.04em', cursor: 'pointer', transition: 'all 0.2s', textTransform: 'uppercase' }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = C.gold; e.currentTarget.style.color = C.gold; }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.muted; }}>
+                      {approvalStatus === 'checking' ? 'Checking...' : '✦ Check Approval Status'}
+                    </button>
+
+                    <p style={{ color: C.dim, fontSize: 11, textAlign: 'center' }}>
+                      Already approved?{' '}
+                      <Link to="/syndicate/members" style={{ color: C.gold, textDecoration: 'none', fontWeight: 900 }}>
+                        Enter Members Area →
+                      </Link>
+                    </p>
+                  </div>
+
+                /* ── State 3: Default form ── */
+                ) : (
                   <form onSubmit={doSubscribe} style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-                    <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" required
-                      style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 9, padding: '12px 15px', color: C.cream, fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box' }}
+                    <input
+                      type="email" value={email}
+                      onChange={e => { setEmail(e.target.value); setSubError(''); }}
+                      placeholder="your@email.com" required
+                      style={{ backgroundColor: C.bg, border: `1px solid ${subError ? 'rgba(224,92,92,0.4)' : C.border}`, borderRadius: 9, padding: '12px 15px', color: C.cream, fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box' }}
                       onFocus={e => e.target.style.borderColor = C.bHov}
-                      onBlur={e => e.target.style.borderColor = C.border} />
-                    <button type="submit" style={{ ...s.btnGold, padding: '13px', borderRadius: 9, textAlign: 'center', width: '100%', boxSizing: 'border-box' }}>
-                      Subscribe & Join the Syndicate →
+                      onBlur={e  => e.target.style.borderColor = C.border}
+                    />
+                    {subError && (
+                      <p style={{ color: '#e05c5c', fontSize: 12, marginTop: -4 }}>⚠ {subError}</p>
+                    )}
+                    <button
+                      type="submit" disabled={subLoading}
+                      style={{ ...s.btnGold, padding: '13px', borderRadius: 9, textAlign: 'center', width: '100%', boxSizing: 'border-box', opacity: subLoading ? 0.7 : 1, cursor: subLoading ? 'not-allowed' : 'pointer' }}
+                    >
+                      {subLoading ? 'Submitting...' : 'Subscribe & Join the Syndicate →'}
                     </button>
                     <p style={{ color: C.muted, fontSize: 11, textAlign: 'center' }}>No spam. Unsubscribe anytime.</p>
+
+                    {/* Already a member? Check link */}
+                    <p style={{ color: C.dim, fontSize: 11, textAlign: 'center', marginTop: 4 }}>
+                      Already approved?{' '}
+                      <Link to="/syndicate/members" style={{ color: C.gold, textDecoration: 'none', fontWeight: 900 }}>
+                        Enter Members Area →
+                      </Link>
+                    </p>
                   </form>
-                ) : (
-                  <div style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 12, padding: 22, display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <div style={{ width: 34, height: 34, borderRadius: 8, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <span style={{ color: C.gold, fontSize: 14 }}>✓</span>
-                    </div>
-                    <div>
-                      <p style={{ color: C.cream, fontWeight: 900, fontSize: 13 }}>You're in the Syndicate.</p>
-                      <p style={{ color: C.muted, fontSize: 11, marginTop: 3 }}>First drops land this Friday. Watch your inbox.</p>
-                    </div>
-                  </div>
                 )}
               </div>
             </div>
@@ -801,10 +878,10 @@ const Home = () => {
             </div>
             <div>
               <h4 style={{ color: C.cream, fontWeight: 900, fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 18 }}>Company</h4>
-              {[['About Us', '/about'], ['Vendor Program', '/vendor'], ['Affiliate', '/affiliate'], ['Artisan Chat', '/artisan-chat'], ['Contact', '/contact'], ['Order Tracking', '/order-tracking']].map(([label, path]) => (
-                <Link key={label} to={path} style={{ display: 'block', color: C.muted, fontSize: 13, marginBottom: 9, textDecoration: 'none' }}
+              {[['About Us', '/about'], ['Vendor Program', '/vendor'], ['Affiliate', '/affiliate'], ['Artisan Chat', '/artisan-chat'], ['Contact', '/contact'], ['Order Tracking', '/order-tracking'], ['Syndicate Members', '/syndicate/members']].map(([label, path]) => (
+                <Link key={label} to={path} style={{ display: 'block', color: label === 'Syndicate Members' ? C.gold : C.muted, fontSize: 13, marginBottom: 9, textDecoration: 'none' }}
                   onMouseEnter={e => e.target.style.color = C.cream}
-                  onMouseLeave={e => e.target.style.color = C.muted}>{label}</Link>
+                  onMouseLeave={e => e.target.style.color = label === 'Syndicate Members' ? C.gold : C.muted}>{label}</Link>
               ))}
             </div>
           </div>
